@@ -17,20 +17,36 @@ type Token struct {
 	value string
 }
 
-const (
-	tokQSTRING = iota
-	tok3LBRACE
-	tok3RBRACE
-	tokLBRACKET
-	tokRBRACKET
-	tokSPACE
-	tokNEWLINE
-	numTokens
-)
-
 func (self Token) String() string {
 	return fmt.Sprintf("{%s:%d: tok %d: %#v}",
 		self.filename, self.line, self.id, self.value)
+}
+
+type TokenDef struct {
+	id int
+	name string
+	re *regexp.Regexp
+}
+
+func (self TokenDef) String() string {
+	return fmt.Sprintf("{%s: %s}", self.name, self.re.String())
+}
+
+var tokenDefs []*TokenDef
+
+func init() {
+	add := func(name string, pattern string) {
+		def := &TokenDef{len(tokenDefs), name, regexp.MustCompile(pattern)}
+		tokenDefs = append(tokenDefs, def)
+	}
+
+	add("qstring", 	 `\"[^\"]*\"`)
+	add("3lbrace", 	 `\{\{\{`)
+	add("3rbrace", 	 `\}\}\}`)
+	add("lbracket",  `\[`)
+	add("rbracket",  `\]`)
+	add("space",     `[ \t]+`)
+	add("newline",   `\n`)
 }
 
 func Scan(filename string, infile io.Reader) ([]Token, error) {
@@ -39,17 +55,16 @@ func Scan(filename string, infile io.Reader) ([]Token, error) {
 		return nil, err
 	}
 
-	regexes := setupScanner()
 	lineno := 1
 	remaining := content
 	tokens := make([]Token, 0)
 	for {
 		leftmost := -1
-		tokid := -1
 		var tokvalue string
 		var tokend int
-		for i := 0; i < numTokens; i++ {
-			match := regexes[i].FindIndex(remaining)
+		var tokdef *TokenDef
+		for _, trydef := range tokenDefs {
+			match := trydef.re.FindIndex(remaining)
 			if match == nil {	// nope, it's not this token
 				continue
 			}
@@ -64,15 +79,14 @@ func Scan(filename string, infile io.Reader) ([]Token, error) {
 				tokvalue = string(remaining[start:end])
 				leftmost = start
 				tokend = end
-				tokid = i
+				tokdef = trydef
 			}
 			if start == 0 {
 				// it won't get any better than this
 				break
 			}
-
 		}
-		if tokid == -1 {
+		if tokdef == nil {
 			// no token regexes matched: must be at EOF
 			break
 		}
@@ -85,39 +99,20 @@ func Scan(filename string, infile io.Reader) ([]Token, error) {
 		remaining = remaining[tokend:]
 
 		//fmt.Printf("matched tokid %d: %#v\n", tokid, tokvalue)
-		if tokid == tokSPACE {	// eat non-newline whitespace
+		if tokdef.name == "space" {	// eat non-newline whitespace
 			continue
 		}
 		token := Token{
 			filename: filename,
 			line: lineno,
-			id: tokid,
+			id: tokdef.id,
 			value: tokvalue,
 		}
 		tokens = append(tokens, token)
-		if tokid == tokNEWLINE {
+		if tokdef.name == "newline" {
 			lineno++
 		}
-
 	}
 
 	return tokens, nil
-}
-
-
-func setupScanner() []*regexp.Regexp {
-	patterns := make([]string, numTokens)
-	patterns[tokQSTRING]  = `\"[^\"]*\"`
-	patterns[tok3LBRACE]  = `\{\{\{`
-	patterns[tok3RBRACE]  = `\}\}\}`
-	patterns[tokLBRACKET] = `\[`
-	patterns[tokRBRACKET] = `\]`
-	patterns[tokSPACE]    = `[ \t]+`
-	patterns[tokNEWLINE]  = `\n`
-
-	regexes := make([]*regexp.Regexp, numTokens)
-	for i := 0; i < numTokens; i++ {
-		regexes[i] = regexp.MustCompile(patterns[i])
-	}
-	return regexes
 }
