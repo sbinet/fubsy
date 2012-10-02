@@ -7,7 +7,6 @@ import (
 	"os"
 	"io"
 	"io/ioutil"
-	"strings"
 	"regexp"
 )
 
@@ -35,42 +34,57 @@ func (self Token) String() string {
 }
 
 func Scan(filename string, infile io.Reader) ([]Token, error) {
-	lexre := setupScanner()
 	content, err := ioutil.ReadAll(infile)
 	if err != nil {
 		return nil, err
 	}
+
+	regexes := setupScanner()
 	lineno := 1
-	prev := 0
 	remaining := content
 	tokens := make([]Token, 0)
-	for len(remaining) > 0 {
-		//fmt.Printf("scanning from prev=%d >%s<\n", prev, remaining)
-		match := lexre.FindSubmatchIndex(remaining)
-		if len(match) < 2 {
-			break
-		}
-		match = match[2:]		// don't care about the whole match
-		var tokid int
+	for {
+		leftmost := -1
+		tokid := -1
 		var tokvalue string
-		for tokid = 0; tokid < numTokens; tokid++ {
-			start := match[tokid * 2]
-			if start == -1 { // did not match this subgroup (tokid)
+		var tokend int
+		for i := 0; i < numTokens; i++ {
+			match := regexes[i].FindIndex(remaining)
+			if match == nil {	// nope, it's not this token
 				continue
 			}
-			if start > 0 {
-				fmt.Fprintf(os.Stderr,
-					"%s:%d: unrecognized token: %#v\n",
-					filename, lineno, string(remaining[0:start]))
+			start := match[0]
+			end := match[1]
+			if leftmost > 0 && start > leftmost {
+				// not good enough: hold out for an earlier match
+				continue
 			}
-			end := match[tokid * 2 + 1]
-			tokvalue = string(remaining[start:end])
-			//fmt.Printf("matched [%d:%d]: tokid %d: >%s<\n",
-			//	start+prev, end+prev, tokid, tokvalue);
-			prev += end			// offset into content
-			remaining = remaining[end:]
+			if leftmost < 0 || start < leftmost {
+				// this is the new leftmost match
+				tokvalue = string(remaining[start:end])
+				leftmost = start
+				tokend = end
+				tokid = i
+			}
+			if start == 0 {
+				// it won't get any better than this
+				break
+			}
+
+		}
+		if tokid == -1 {
+			// no token regexes matched: must be at EOF
 			break
 		}
+		if leftmost > 0 {
+			// leftmost match wasn't leftmost enough
+			fmt.Fprintf(os.Stderr,
+				"%s:%d: unrecognized token: %#v\n",
+				filename, lineno, string(remaining[0:leftmost]))
+		}
+		remaining = remaining[tokend:]
+
+		//fmt.Printf("matched tokid %d: %#v\n", tokid, tokvalue)
 		if tokid == tokSPACE {	// eat non-newline whitespace
 			continue
 		}
@@ -84,12 +98,14 @@ func Scan(filename string, infile io.Reader) ([]Token, error) {
 		if tokid == tokNEWLINE {
 			lineno++
 		}
+
 	}
+
 	return tokens, nil
 }
 
 
-func setupScanner() *regexp.Regexp {
+func setupScanner() []*regexp.Regexp {
 	patterns := make([]string, numTokens)
 	patterns[tokQSTRING]  = `\"[^\"]*\"`
 	patterns[tok3LBRACE]  = `\{\{\{`
@@ -98,10 +114,10 @@ func setupScanner() *regexp.Regexp {
 	patterns[tokRBRACKET] = `\]`
 	patterns[tokSPACE]    = `[ \t]+`
 	patterns[tokNEWLINE]  = `\n`
-	fmt.Println("patterns =", patterns)
 
-	bigpattern := "(" + strings.Join(patterns, ")|(") + ")"
-	fmt.Println("bigpattern =", bigpattern)
-
-	return regexp.MustCompile(bigpattern)
+	regexes := make([]*regexp.Regexp, numTokens)
+	for i := 0; i < numTokens; i++ {
+		regexes[i] = regexp.MustCompile(patterns[i])
+	}
+	return regexes
 }
