@@ -49,6 +49,16 @@ func init() {
 	add("newline",   `\n`)
 }
 
+type ScanError struct {
+	filename string
+	line int
+	message string
+}
+
+func (self ScanError) Error() string {
+	return fmt.Sprintf("%s:%d: %s", self.filename, self.line, self.message)
+}
+
 func Scan(filename string, infile io.Reader) ([]Token, error) {
 	content, err := ioutil.ReadAll(infile)
 	if err != nil {
