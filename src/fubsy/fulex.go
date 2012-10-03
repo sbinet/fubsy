@@ -45,6 +45,7 @@ func init() {
 	add("3rbrace", 	 `\}\}\}`)
 	add("lbracket",  `\[`)
 	add("rbracket",  `\]`)
+	add("name",      `[a-zA-Z_][a-zA-Z0-9]*`)
 	add("space",     `[ \t]+`)
 	add("newline",   `\n`)
 }

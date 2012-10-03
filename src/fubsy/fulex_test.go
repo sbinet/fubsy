@@ -31,11 +31,12 @@ func TestScan_valid(t *testing.T) {
 }
 
 func TestScan_invalid(t *testing.T) {
-	input := strings.NewReader("{{{ ===\n \"yo\" !")
+	input := strings.NewReader("{{{ ===\n \"yo\" pop !")
 	expect := []Token {
 		ttok("3lbrace", "{{{"),
 		ttok("newline", "\n"),
 		ttok("qstring", "\"yo\""),
+		ttok("name",    "pop"),
 	}
 	expecterr := ScanErrors{
 		BadToken{"test", 1, []byte("===")},
