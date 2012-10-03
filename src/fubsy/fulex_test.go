@@ -32,14 +32,18 @@ func TestScan_valid(t *testing.T) {
 
 func TestScan_invalid(t *testing.T) {
 	input := strings.NewReader("{{{ ===\n \"yo\" !")
-	tokens, _ := Scan("test", input)
-	// hmmm: what should err be? and how do we test that invalid
-	// tokens are detected and reported correctly?
 	expect := []Token {
 		ttok("3lbrace", "{{{"),
 		ttok("newline", "\n"),
 		ttok("qstring", "\"yo\""),
 	}
+	expecterr := ScanErrors{
+		BadToken{"test", 1, []byte("===")},
+		BadToken{"test", 2, []byte("!")},
+	}
+
+	tokens, err := Scan("test", input)
+	checkError(t, expecterr, err)
 	checkTokens(t, expect, tokens)
 }
 
@@ -63,7 +67,7 @@ func ttok(name string, value string) Token {
 }
 
 func checkError(t *testing.T, expect error, actual error) {
-	if expect == actual {		// in case both are nil
+	if expect == nil && actual == nil {
 		return
 	} else if expect == nil && actual != nil {
 		t.Error("unexpected error:", actual)

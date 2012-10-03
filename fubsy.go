@@ -22,11 +22,19 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+
+	result := 0
 	tokens, err := fubsy.Scan(script, infile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "lexical errors:\n%s\n", err)
+		result = 1
+	}
 	for _, tok := range tokens {
 		fmt.Println(tok)
 	}
 
 	runtime := fubsy.NewRuntime(script, ast)
 	runtime.LoadPlugins()
+
+	os.Exit(result)
 }

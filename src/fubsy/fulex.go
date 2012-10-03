@@ -4,7 +4,7 @@ package fubsy
 
 import (
 	"fmt"
-	"os"
+	"strings"
 	"io"
 	"io/ioutil"
 	"regexp"
@@ -49,21 +49,34 @@ func init() {
 	add("newline",   `\n`)
 }
 
-type ScanError struct {
+type BadToken struct {
 	filename string
 	line int
-	message string
+	badtext []byte
 }
 
-func (self ScanError) Error() string {
-	return fmt.Sprintf("%s:%d: %s", self.filename, self.line, self.message)
+func (self BadToken) Error() string {
+	return fmt.Sprintf("%s:%d: invalid token: %#v",
+		self.filename, self.line, string(self.badtext))
+}
+
+type ScanErrors []error
+
+func (self ScanErrors) Error() string {
+	messages := make([]string, len(self))
+	for i, err := range self {
+		messages[i] = err.Error()
+	}
+	return strings.Join(messages, "\n")
 }
 
 func Scan(filename string, infile io.Reader) ([]Token, error) {
-	content, err := ioutil.ReadAll(infile)
-	if err != nil {
-		return nil, err
+	content, readerr := ioutil.ReadAll(infile)
+	if readerr != nil {
+		return nil, readerr
 	}
+
+	errs := make(ScanErrors, 0)
 
 	lineno := 1
 	remaining := content
@@ -97,14 +110,18 @@ func Scan(filename string, infile io.Reader) ([]Token, error) {
 			}
 		}
 		if tokdef == nil {
-			// no token regexes matched: must be at EOF
+			// no tokens matched: any remaining text is junk at EOF
+			if len(remaining) > 0 {
+				errs = append(errs,
+					BadToken{filename, lineno, remaining})
+			}
+			// but in any case, we are at EOF
 			break
 		}
 		if leftmost > 0 {
 			// leftmost match wasn't leftmost enough
-			fmt.Fprintf(os.Stderr,
-				"%s:%d: unrecognized token: %#v\n",
-				filename, lineno, string(remaining[0:leftmost]))
+			errs = append(errs,
+				BadToken{filename, lineno, remaining[0:leftmost]})
 		}
 		remaining = remaining[tokend:]
 
@@ -124,5 +141,8 @@ func Scan(filename string, infile io.Reader) ([]Token, error) {
 		}
 	}
 
-	return tokens, nil
+	if len(errs) == 0 {
+		return tokens, nil
+	}
+	return tokens, errs
 }
