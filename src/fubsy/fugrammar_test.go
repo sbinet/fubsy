@@ -17,11 +17,11 @@ func TestParse_valid(t *testing.T) {
 	parser.Parse(RBRACKET, ptok("rbracket", "]"))
 	parser.Parse(0, nil)
 	if false { _ast.Dump(os.Stdout, "") }
-	checkASTEquals(t, expect, _ast)
+	checkASTEquals(t, &expect, _ast)
 }
 
-func checkASTEquals(t *testing.T, expect RootNode, actual RootNode) {
-	if ! expect.Equal(actual) {
+func checkASTEquals(t *testing.T, expect *RootNode, actual *RootNode) {
+	if ! expect.Equal(*actual) {
 		expectbuf := new(bytes.Buffer)
 		actualbuf := new(bytes.Buffer)
 		expect.Dump(expectbuf, "")

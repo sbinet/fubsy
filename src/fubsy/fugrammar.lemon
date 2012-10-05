@@ -5,7 +5,7 @@ import "os"
 
 // looks like a global variable is the only way to get info
 // out of the parser ;-(
-var _ast RootNode
+var _ast *RootNode
 }
 
 %token_type { *ASTNode }
@@ -22,5 +22,5 @@ script ::= LBRACKET QSTRING(s) RBRACKET . {
 		listnode := ListNode {values: []string{sval}}
 		node.elements = []ASTNode {listnode}
 	}
-	_ast = node
+	_ast = &node
 }
