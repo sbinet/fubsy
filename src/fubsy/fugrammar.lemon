@@ -1,0 +1,26 @@
+/* grammar for fubsy DSL (uses golemon to generate fugrammar.go) */
+
+%include {
+import "os"
+
+// looks like a global variable is the only way to get info
+// out of the parser ;-(
+var _ast RootNode
+}
+
+%token_type { *ASTNode }
+
+%syntax_error {
+	fmt.Fprintf(os.Stderr, "syntax error\n")
+}
+
+script ::= LBRACKET QSTRING(s) RBRACKET . {
+	node := RootNode{}
+	if token, ok := (*s).(Token); ok {
+		// strip quote characters from the token
+		sval := token.value[1:len(token.value)-1]
+		listnode := ListNode {values: []string{sval}}
+		node.elements = []ASTNode {listnode}
+	}
+	_ast = node
+}

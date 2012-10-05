@@ -18,8 +18,18 @@ type Token struct {
 }
 
 func (self Token) String() string {
-	return fmt.Sprintf("{%s:%d: tok %d: %#v}",
-		self.filename, self.line, self.id, self.value)
+	return self.value
+}
+
+// implement ASTNode because lemon insists that terminals (tokens) and
+// non-terminals (AST nodes) be of the same type
+func (self Token) Dump(writer io.Writer, indent string) {
+	fmt.Fprintf(writer, "%s{tok %d (%s:%d): %#v}",
+		indent, self.id, self.filename, self.line, self.value)
+}
+
+func (self Token) Equal(other ASTNode) bool {
+	panic("Token.Equal() not implemented")
 }
 
 type TokenDef struct {

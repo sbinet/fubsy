@@ -2,3 +2,4 @@
 ^fubsy$
 ~$
 ^golemon$
+^src/fubsy/fugrammar.*\.(go|out)$
