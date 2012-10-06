@@ -78,6 +78,18 @@ func (self ListNode) Equal(other_ ASTNode) bool {
 	return false
 }
 
+// hmmm: this is *awfully* similar to BadToken in fulex.go
+type SyntaxError struct {
+	filename string
+	line int
+	badtoken string
+}
+
+func (self SyntaxError) Error() string {
+	return fmt.Sprintf("%s:%d: syntax error near %v",
+		self.filename, self.line, self.badtoken)
+}
+
 func Parse(filename string) (AST, error) {
 	if filename == "bogus" {
 		return nil, ParseError{"that's a bogus filename"}

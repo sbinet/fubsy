@@ -1,17 +1,32 @@
 /* grammar for fubsy DSL (uses golemon to generate fugrammar.go) */
 
 %include {
-import "os"
 
-// looks like a global variable is the only way to get info
+// looks like global variables are the only way to get info
 // out of the parser ;-(
 var _ast *RootNode
+var _syntaxerror *SyntaxError
 }
 
 %token_type { *ASTNode }
 
 %syntax_error {
-	fmt.Fprintf(os.Stderr, "syntax error\n")
+	// blechh, gag, barf, retch: I'm not sure if I should blame
+	// golemon for excessive type aliasing, or Go for the awkward
+	// dance of extracting the Token I really need from the
+	// YYMINORTYPE that I receive ;-(
+	if token1, ok1 := minor.(ParseTOKENTYPE); ok1 {
+		token2 := *(*ASTNode)(token1)
+		if token3, ok3 := token2.(Token); ok3 {
+			_syntaxerror = &SyntaxError{
+				filename: token3.filename,
+				line:     token3.line,
+				badtoken: token3.value,
+			}
+		}
+	} else {
+		panic("minor has unexpected type")
+	}
 }
 
 script ::= LBRACKET QSTRING(s) RBRACKET . {
