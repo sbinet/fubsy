@@ -15,32 +15,28 @@ func TestScan_empty(t *testing.T) {
 }
 
 func TestScan_valid(t *testing.T) {
-	input := strings.NewReader("  {{{\n \"foo! bar'baz\"\n ] [")
+	input := strings.NewReader("\"foo! bar'baz\"][\"\"")
 	tokens, err := Scan("test", input)
 	checkError(t, nil, err)
 
 	expect := []Token {
-		ttok("3lbrace", "{{{"),
-		ttok("newline", "\n"),
 		ttok("qstring", "\"foo! bar'baz\""),
-		ttok("newline", "\n"),
 		ttok("rbracket", "]"),
 		ttok("lbracket", "["),
+		ttok("qstring", "\"\""),
 	}
 	checkTokens(t, expect, tokens)
 }
 
 func TestScan_invalid(t *testing.T) {
-	input := strings.NewReader("{{{ ===\n \"yo\" pop !")
+	input := strings.NewReader("]===\"yo\" pop !")
 	expect := []Token {
-		ttok("3lbrace", "{{{"),
-		ttok("newline", "\n"),
+		ttok("rbracket", "]"),
 		ttok("qstring", "\"yo\""),
-		ttok("name",    "pop"),
 	}
 	expecterr := ScanErrors{
 		BadToken{"test", 1, []byte("===")},
-		BadToken{"test", 2, []byte("!")},
+		BadToken{"test", 1, []byte(" pop !")},
 	}
 
 	tokens, err := Scan("test", input)
@@ -89,8 +85,8 @@ func checkTokens(t *testing.T, expect []Token, actual []Token) {
 			atok := actual[i]
 			if (etok.id != atok.id) || (etok.value != atok.value) {
 				t.Error(fmt.Sprintf(
-					"expected token %v, but got %v",
-					etok, atok))
+					"expected token %d (%v), but got %d (%v)",
+					etok.id, etok.value, atok.id, atok.value))
 			}
 		}
 	}

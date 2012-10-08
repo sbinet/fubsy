@@ -39,25 +39,39 @@ type TokenDef struct {
 }
 
 func (self TokenDef) String() string {
-	return fmt.Sprintf("{%s: %s}", self.name, self.re.String())
+	pattern := "<none>"
+	if self.re != nil {
+		pattern = self.re.String()
+	}
+	return fmt.Sprintf("{%s: %s}", self.name, pattern)
 }
 
-var tokenDefs []*TokenDef
+// len() of this slice MUST match number of tokens in the grammar
+// (fugrammar_tokens.go)!
+var tokenDefs = make([]*TokenDef, 3 + 1)
 
 func init() {
-	add := func(name string, pattern string) {
-		def := &TokenDef{len(tokenDefs), name, regexp.MustCompile(pattern)}
-		tokenDefs = append(tokenDefs, def)
+	add := func(id int, name string, pattern string) {
+		var re *regexp.Regexp
+		if len(pattern) > 0 {
+			re = regexp.MustCompile(pattern)
+		}
+		def := &TokenDef{id, name, re}
+		tokenDefs[id] = def
 	}
 
-	add("qstring", 	 `\"[^\"]*\"`)
-	add("3lbrace", 	 `\{\{\{`)
-	add("3rbrace", 	 `\}\}\}`)
-	add("lbracket",  `\[`)
-	add("rbracket",  `\]`)
-	add("name",      `[a-zA-Z_][a-zA-Z0-9]*`)
-	add("space",     `[ \t]+`)
-	add("newline",   `\n`)
+	// these MUST match the tokens emitted by lemon (fugrammar_tokens.go)!
+	// (hmmmm: token 0 is implicitly EOF)
+	add(0,        "eof",      "")
+	add(LBRACKET, "lbracket", `\[`)
+	add(QSTRING,  "qstring",  `\"[^\"]*\"`)
+	add(RBRACKET, "rbracket", `\]`)
+
+	// add("3lbrace", 	 `\{\{\{`)
+	// add("3rbrace", 	 `\}\}\}`)
+	// add("name",      `[a-zA-Z_][a-zA-Z0-9]*`)
+	// add("space",     `[ \t]+`)
+	// add("newline",   `\n`)
 }
 
 type BadToken struct {
@@ -98,6 +112,9 @@ func Scan(filename string, infile io.Reader) ([]Token, error) {
 		var tokend int
 		var tokdef *TokenDef
 		for _, trydef := range tokenDefs {
+			if trydef.re == nil { // EOF is a dummy token
+				continue
+			}
 			match := trydef.re.FindIndex(remaining)
 			if match == nil {	// nope, it's not this token
 				continue

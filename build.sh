@@ -10,5 +10,6 @@ for fn in fugrammar.go fugrammar_tokens.go ; do
     mv $dir/$fn.tmp $dir/$fn
 done
 
-go build -v
-go test fubsy -v
+# unoptimized (for debugging)
+go build -v -gcflags "-N -l"
+go test fubsy -v -gcflags "-N -l"
