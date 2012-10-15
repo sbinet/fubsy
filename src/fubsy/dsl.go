@@ -82,12 +82,13 @@ func (self ListNode) Equal(other_ ASTNode) bool {
 type SyntaxError struct {
 	filename string
 	line int
+	message string
 	badtoken string
 }
 
 func (self SyntaxError) Error() string {
-	return fmt.Sprintf("%s:%d: syntax error near %v",
-		self.filename, self.line, self.badtoken)
+	return fmt.Sprintf("%s:%d: %s (near %v)",
+		self.filename, self.line, self.message, self.badtoken)
 }
 
 func Parse(filename string) (AST, error) {
@@ -95,15 +96,8 @@ func Parse(filename string) (AST, error) {
 		return nil, ParseError{"that's a bogus filename"}
 	}
 
-	parser := NewParser()
-	defer parser.Dispose()
 
-	parser.Parse(0, nil)
-	fmt.Println("_ast =", _ast)
-	return _ast, nil
-
-	// ast_ := ast{plugins: []string{"foo", "bar", "baz"}}
-	// return ast_, nil
+	return nil, nil
 }
 
 type ParseError struct {

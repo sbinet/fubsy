@@ -2,13 +2,7 @@
 export GOPATH=$PWD
 set -ex
 
-./golemon/golemon src/fubsy/fugrammar.lemon
-
-dir=src/fubsy
-for fn in fugrammar.go fugrammar_tokens.go ; do
-    sed 's/package main/package fubsy/' $dir/$fn > $dir/$fn.tmp
-    mv $dir/$fn.tmp $dir/$fn
-done
+go tool yacc -p fu -o src/fubsy/fugrammar.go src/fubsy/fugrammar.y
 
 # unoptimized (for debugging)
 go build -v -gcflags "-N -l"

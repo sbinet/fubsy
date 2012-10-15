@@ -13,9 +13,10 @@ func main() {
 	script := os.Args[1]
 	ast, err := fubsy.Parse(script)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	 	fmt.Fprintln(os.Stderr, err)
+	 	os.Exit(1)
 	}
+	_ = ast
 
 	infile, err := os.Open(script)
 	if err != nil {
@@ -23,7 +24,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	_ = infile
 	result := 0
+/*
 	tokens, err := fubsy.Scan(script, infile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "lexical errors:\n%s\n", err)
@@ -35,6 +38,6 @@ func main() {
 
 	runtime := fubsy.NewRuntime(script, ast)
 	runtime.LoadPlugins()
-
+*/
 	os.Exit(result)
 }

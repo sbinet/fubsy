@@ -2,44 +2,58 @@ package fubsy
 
 import (
 	"testing"
-	"os"
 	"fmt"
 	"bytes"
 )
 
 func TestParse_valid(t *testing.T) {
-	parser := NewParser()
-	defer parser.Dispose()
+	lexer := &DummyLexer{tokens: []toktext {
+			{1, '[', "["},
+			{1, QSTRING, "\"foo\"" },
+			{1, ']', "]"},
+		}}
+	result := fuParse(lexer)
+	if result != 0 {
+		t.Errorf("expected fuParse() to return 0, not %d", result)
+	}
+	assertNil(t, "_syntaxerror", _syntaxerror)
+	if _ast == nil {
+		t.Errorf("expected _ast to be set, but it's nil")
+	}
 
 	expect := RootNode{elements: []ASTNode {ListNode{values: []string {"foo"}}}}
-	parser.Parse(LBRACKET, ptok("lbracket", "["))
-	parser.Parse(QSTRING,  ptok("qstring",  "\"foo\""))
-	parser.Parse(RBRACKET, ptok("rbracket", "]"))
-	parser.Parse(0, nil)
-	if false { _ast.Dump(os.Stdout, "") }
 	checkASTEquals(t, &expect, _ast)
 }
 
 func TestParse_invalid(t *testing.T) {
-	parser := NewParser()
-	defer parser.Dispose()
-
-	// hmmm: we just print syntax errors to stderr -- can't test that!
-	parser.Parse(QSTRING, ptok("qstring", "\"boo\""))
-	parser.Parse(LBRACKET, ptok("lbracket", "["))
-	parser.Parse(0, nil)
-
+	reset()
+	lexer := &DummyLexer{tokens: []toktext {
+			{2, QSTRING, "\"ding\"" },
+			{3, '[', "["},
+		}}
+	result := fuParse(lexer)
+	if result != 1 {
+		t.Errorf("expected fuParse() to return 1, not %d", result)
+	}
+	if _ast != nil {
+		t.Errorf("expected nil _ast, but it's: %v", _ast)
+	}
 	assertNotNil(t, "_syntaxerror", _syntaxerror)
-	if _syntaxerror.badtoken != "\"boo\"" {
-		t.Errorf("_syntaxerror.badtoken = %v (expected \"boo\")",
-			_syntaxerror.badtoken)
+	expect := &SyntaxError{
+		line: 2,
+		message: "syntax error",
+		badtoken: "\"ding\"",
 	}
-	expect := ":0: syntax error near \"boo\""
-	actual := _syntaxerror.Error()
-	if actual != expect {
-		t.Errorf("bad syntax error message: %s\n(expected: %s)",
-			actual, expect)
+	if *expect != *_syntaxerror {
+		t.Errorf("expected syntax error:\n%#v\nbut got:\n%#v", expect, _syntaxerror)
 	}
+}
+
+func reset() {
+	// restore default parser state
+	_lasttok = nil
+	_ast = nil
+	_syntaxerror = nil
 }
 
 func checkASTEquals(t *testing.T, expect *RootNode, actual *RootNode) {
@@ -54,14 +68,22 @@ func checkASTEquals(t *testing.T, expect *RootNode, actual *RootNode) {
 	}
 }
 
+func assertNil(t *testing.T, name string, p *SyntaxError) {
+	if p != nil {
+		t.Fatal(fmt.Sprintf("%s != nil (expected nil)", name))
+	}
+}
+
 func assertNotNil(t *testing.T, name string, p *SyntaxError) {
 	if p == nil {
 		t.Fatal(fmt.Sprintf("%s == nil (expected non-nil)", name))
 	}
 }
 
+/*
 // return a token in the form expected by parser.Parse()
 func ptok(name string, value string) ParseTOKENTYPE {
 	tok := ASTNode(ttok(name, value)) // ttok() is in fulex_test.go
 	return ParseTOKENTYPE(&tok)
 }
+*/

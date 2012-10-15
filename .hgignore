@@ -1,5 +1,5 @@
 ^pkg$
 ^fubsy$
 ~$
-^golemon$
+^y.output$
 ^src/fubsy/fugrammar.*\.(go|out)$
