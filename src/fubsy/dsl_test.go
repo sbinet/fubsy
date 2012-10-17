@@ -2,6 +2,9 @@ package fubsy
 
 import (
 	"testing"
+	"os"
+	"io/ioutil"
+	"path"
 )
 
 func TestRootNode_Equal(t *testing.T) {
@@ -51,4 +54,62 @@ func TestListNode_Equal(t *testing.T) {
 	if node1.Equal(node2) {
 		t.Error("list node equal to list node with different length")
 	}
+}
+
+func TestParse_valid(t *testing.T) {
+	tmpdir, cleanup := mktemp()
+	defer cleanup()
+
+	fn := mkfile(tmpdir, "valid.fubsy", "  [\n\"hey ${there}\"    ]\n ")
+
+	expect := RootNode{elements: []ASTNode {ListNode{values: []string {"hey ${there}"}}}}
+	ast_, err := Parse(fn)
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+	if ast, ok := ast_.(*RootNode); ok {
+		checkASTEquals(t, &expect, ast)
+	} else {
+		t.Fatalf("expected ast_ to be RootNode, not %v", ast_)
+	}
+}
+
+func TestParse_invalid_1(t *testing.T) {
+	tmpdir, cleanup := mktemp()
+	defer cleanup()
+
+	// invalid: no closing rbracket
+	fn := mkfile(tmpdir, "invalid_1.fubsy", "  [\n\"borf\"\n ")
+	_, err := Parse(fn)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	expect := fn + ":2: syntax error (near \"borf\")"
+	if err.Error() != expect {
+		t.Errorf("expected error message\n%s\nbut got\n%s",
+			expect, err.Error())
+	}
+}
+
+func mktemp() (tmpdir string, cleanup func()) {
+	tmpdir, err := ioutil.TempDir("", "dsl_test.")
+	if err != nil {
+		panic(err)
+	}
+	cleanup = func() {
+		err := os.RemoveAll(tmpdir)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return
+}
+
+func mkfile(tmpdir string, basename string, data string) string {
+	fn := path.Join(tmpdir, basename)
+	err := ioutil.WriteFile(fn, []byte(data), 0644)
+	if err != nil {
+		panic(err)
+	}
+	return fn
 }

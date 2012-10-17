@@ -7,10 +7,12 @@ import (
 	"strings"
 )
 
+
 // interface for the whole AST, not just a particular node
 // (implemented by RootNode)
 type AST interface {
 	ListPlugins() []string
+	ASTNode
 }
 
 // interface for any particular node in the AST (root, internal,
@@ -32,8 +34,10 @@ type ListNode struct {
 // argh: why not pointer receiver?
 func (self RootNode) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer, indent + "RootNode {")
-	for _, child := range self.elements {
-		child.Dump(writer, indent + "  ")
+	if self.elements != nil {
+		for _, child := range self.elements {
+			child.Dump(writer, indent + "  ")
+		}
 	}
 	fmt.Fprintln(writer, indent + "}")
 }
@@ -79,7 +83,6 @@ func (self ListNode) Equal(other_ ASTNode) bool {
 	return false
 }
 
-// hmmm: this is *awfully* similar to BadToken in fulex.go
 type SyntaxError struct {
 	filename string
 	line int
@@ -93,22 +96,19 @@ func (self SyntaxError) Error() string {
 }
 
 func Parse(filename string) (AST, error) {
-	if filename == "bogus" {
-		return nil, ParseError{"that's a bogus filename"}
-	}
-
 	infile, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer infile.Close()
-	lexer, err := NewFileLexer(filename, infile)
+	scanner, err := NewFileScanner(filename, infile)
 	if err != nil {
 		return nil, err
 	}
-	lexer.scan()
-	fmt.Println("tokens:")
-	for i, toktext := range lexer.tokens {
+	scanner.scan()
+/*
+	fmt.Printf("scanner found %d tokens:\n", len(scanner.tokens))
+	for i, toktext := range scanner.tokens {
 		if toktext.token == BADTOKEN {
 			fmt.Fprintf(os.Stderr, "%s, line %d: invalid input: %s (ignored)\n",
 				toktext.filename, toktext.lineno, toktext.text)
@@ -116,14 +116,13 @@ func Parse(filename string) (AST, error) {
 			fmt.Printf("[%d] %#v\n", i, toktext)
 		}
 	}
+*/
 
-	return nil, nil
-}
-
-type ParseError struct {
-	msg string
-}
-
-func (self ParseError) Error() string {
-	return self.msg
+	lexer := NewLexer(scanner.tokens)
+	err = nil
+	fuParse(lexer)
+	if _syntaxerror != nil {
+		err = _syntaxerror
+	}
+	return _ast, err
 }

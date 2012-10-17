@@ -12,32 +12,20 @@ func main() {
 	}
 	script := os.Args[1]
 	ast, err := fubsy.Parse(script)
+	if ast == nil && err == nil {
+		panic("ast == nil && err == nil")
+	}
 	if err != nil {
-	 	fmt.Fprintln(os.Stderr, err)
+	 	fmt.Fprintln(os.Stderr, "parse error:", err)
 	 	os.Exit(1)
 	}
-	_ = ast
-
-	infile, err := os.Open(script)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	if ast != nil {
+		fmt.Printf("ast:\n")
+		ast.Dump(os.Stdout, "")
 	}
 
-	_ = infile
-	result := 0
 /*
-	tokens, err := fubsy.Scan(script, infile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "lexical errors:\n%s\n", err)
-		result = 1
-	}
-	for _, tok := range tokens {
-		fmt.Println(tok)
-	}
-
 	runtime := fubsy.NewRuntime(script, ast)
 	runtime.LoadPlugins()
 */
-	os.Exit(result)
 }

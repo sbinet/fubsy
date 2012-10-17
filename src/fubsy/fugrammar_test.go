@@ -6,12 +6,13 @@ import (
 	"bytes"
 )
 
-func TestParse_valid(t *testing.T) {
-	lexer := &DummyLexer{tokens: toklist([]minitok{
+func Test_fuParse_valid(t *testing.T) {
+	reset()
+	lexer := NewLexer(toklist([]minitok{
 		{'[', "["},
 		{QSTRING, "\"foo\"" },
 		{']', "]"},
-	})}
+	}))
 
 	result := fuParse(lexer)
 	if result != 0 {
@@ -26,14 +27,14 @@ func TestParse_valid(t *testing.T) {
 	checkASTEquals(t, &expect, _ast)
 }
 
-func TestParse_invalid(t *testing.T) {
+func Test_fuParse_invalid(t *testing.T) {
 	reset()
 	tokens := toklist([]minitok{
 			{QSTRING, "\"ding\"" },
 			{'[', "["},
 	})
 	tokens[0].lineno = 2		// ensure this makes it to the SyntaxError
-	lexer := &DummyLexer{tokens: tokens}
+	lexer := NewLexer(tokens)
 	result := fuParse(lexer)
 	if result != 1 {
 		t.Errorf("expected fuParse() to return 1, not %d", result)

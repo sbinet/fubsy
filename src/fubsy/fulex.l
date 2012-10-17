@@ -7,7 +7,7 @@ import (
 	//"fmt"
 )
 
-type Lexer struct {
+type Scanner struct {
 	filename string
 	input []byte
 	pos int
@@ -24,19 +24,19 @@ type Lexer struct {
 	tokens []toktext
 }
 
-func NewLexer(filename string, input []byte) *Lexer {
-	return &Lexer{filename: filename, input: input}
+func NewScanner(filename string, input []byte) *Scanner {
+	return &Scanner{filename: filename, input: input}
 }
 
-func NewFileLexer(filename string, reader io.Reader) (*Lexer, error) {
+func NewFileScanner(filename string, reader io.Reader) (*Scanner, error) {
 	input, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
-	return NewLexer(filename, input), nil
+	return NewScanner(filename, input), nil
 }
 
-func (self *Lexer) nextchar() {
+func (self *Scanner) nextchar() {
 	if self.cur > 0 {
 		self.buf = append(self.buf, self.cur)
 	}
@@ -52,7 +52,7 @@ func (self *Lexer) nextchar() {
 	}
 }
 
-func (self *Lexer) scan() {
+func (self *Scanner) scan() {
 	//fmt.Printf("scan: input=>%s<\n", self.input)
 
 	checkbad := func() {

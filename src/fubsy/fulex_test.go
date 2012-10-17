@@ -5,20 +5,20 @@ import (
 )
 
 func TestScan_valid(t *testing.T) {
-	lexer := NewLexer("nofile", []byte("]  [\"foo!bar\"\n ]"))
-	lexer.scan()
+	scanner := NewScanner("nofile", []byte("]  [\"foo!bar\"\n ]"))
+	scanner.scan()
 	expect := []toktext{
 		{"nofile", 1, ']', "]"},
 		{"nofile", 1, '[', "["},
 		{"nofile", 1, QSTRING, "\"foo!bar\""},
 		{"nofile", 2, ']', "]"},
 	}
-	checkTokens(t, expect, lexer.tokens)
+	checkTokens(t, expect, scanner.tokens)
 }
 
 func TestScan_invalid(t *testing.T) {
-	lexer := NewLexer("fwob", []byte("]]\n!-\"whee]\" x whizz\nbang"))
-	lexer.scan()
+	scanner := NewScanner("fwob", []byte("]]\n!-\"whee]\" x whizz\nbang"))
+	scanner.scan()
 	expect := []toktext{
 		{"fwob", 1, ']', "]"},
 		{"fwob", 1, ']', "]"},
@@ -28,7 +28,7 @@ func TestScan_invalid(t *testing.T) {
 		{"fwob", 2, BADTOKEN, "whizz"},
 		{"fwob", 3, BADTOKEN, "bang"},
 		}
-	checkTokens(t, expect, lexer.tokens)
+	checkTokens(t, expect, scanner.tokens)
 }
 
 func checkTokens(t *testing.T, expect []toktext, actual []toktext) {
