@@ -10,6 +10,8 @@ import (
 var _lasttok *toktext
 var _ast *RootNode
 var _syntaxerror *SyntaxError
+
+const BADTOKEN = -1
 %}
 
 %union {
@@ -36,6 +38,7 @@ script:
 
 // a token together with its location, text, etc.
 type toktext struct {
+	filename string
 	lineno int
 	token int
 	text string

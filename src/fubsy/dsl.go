@@ -2,6 +2,7 @@ package fubsy
 
 import (
 	"io"
+	"os"
 	"fmt"
 	"strings"
 )
@@ -96,6 +97,25 @@ func Parse(filename string) (AST, error) {
 		return nil, ParseError{"that's a bogus filename"}
 	}
 
+	infile, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer infile.Close()
+	lexer, err := NewFileLexer(filename, infile)
+	if err != nil {
+		return nil, err
+	}
+	lexer.scan()
+	fmt.Println("tokens:")
+	for i, toktext := range lexer.tokens {
+		if toktext.token == BADTOKEN {
+			fmt.Fprintf(os.Stderr, "%s, line %d: invalid input: %s (ignored)\n",
+				toktext.filename, toktext.lineno, toktext.text)
+		} else {
+			fmt.Printf("[%d] %#v\n", i, toktext)
+		}
+	}
 
 	return nil, nil
 }

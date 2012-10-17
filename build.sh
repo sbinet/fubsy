@@ -2,6 +2,14 @@
 export GOPATH=$PWD
 set -ex
 
+golex=bin/golex
+if [ ! -f $golex ]; then
+    go install github.com/cznic/golex
+fi
+
+$golex -o src/fubsy/fulex.go src/fubsy/fulex.l
+gofmt -w src/fubsy/fulex.go
+
 go tool yacc -p fu -o src/fubsy/fugrammar.go src/fubsy/fugrammar.y
 
 # unoptimized (for debugging)

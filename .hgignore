@@ -1,5 +1,6 @@
 ^pkg$
+^bin$
 ^fubsy$
 ~$
 ^y.output$
-^src/fubsy/fugrammar.*\.(go|out)$
+^src/fubsy/fu(grammar|lex)\.go$

@@ -7,11 +7,12 @@ import (
 )
 
 func TestParse_valid(t *testing.T) {
-	lexer := &DummyLexer{tokens: []toktext {
-			{1, '[', "["},
-			{1, QSTRING, "\"foo\"" },
-			{1, ']', "]"},
-		}}
+	lexer := &DummyLexer{tokens: toklist([]minitok{
+		{'[', "["},
+		{QSTRING, "\"foo\"" },
+		{']', "]"},
+	})}
+
 	result := fuParse(lexer)
 	if result != 0 {
 		t.Errorf("expected fuParse() to return 0, not %d", result)
@@ -27,10 +28,12 @@ func TestParse_valid(t *testing.T) {
 
 func TestParse_invalid(t *testing.T) {
 	reset()
-	lexer := &DummyLexer{tokens: []toktext {
-			{2, QSTRING, "\"ding\"" },
-			{3, '[', "["},
-		}}
+	tokens := toklist([]minitok{
+			{QSTRING, "\"ding\"" },
+			{'[', "["},
+	})
+	tokens[0].lineno = 2		// ensure this makes it to the SyntaxError
+	lexer := &DummyLexer{tokens: tokens}
 	result := fuParse(lexer)
 	if result != 1 {
 		t.Errorf("expected fuParse() to return 1, not %d", result)
@@ -54,6 +57,20 @@ func reset() {
 	_lasttok = nil
 	_ast = nil
 	_syntaxerror = nil
+}
+
+// useful for constructing test data
+type minitok struct {
+	tok int
+	text string
+}
+
+func toklist(tokens []minitok) []toktext {
+	result := make([]toktext, len(tokens))
+	for i, mtok := range tokens {
+		result[i] = toktext{token: mtok.tok, text: mtok.text}
+	}
+	return result
 }
 
 func checkASTEquals(t *testing.T, expect *RootNode, actual *RootNode) {
