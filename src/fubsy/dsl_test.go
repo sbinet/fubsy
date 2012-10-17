@@ -81,14 +81,19 @@ func TestParse_invalid_1(t *testing.T) {
 	// invalid: no closing rbracket
 	fn := mkfile(tmpdir, "invalid_1.fubsy", "  [\n\"borf\"\n ")
 	_, err := Parse(fn)
-	if err == nil {
-		t.Fatal("expected error")
-	}
 	expect := fn + ":2: syntax error (near \"borf\")"
-	if err.Error() != expect {
-		t.Errorf("expected error message\n%s\nbut got\n%s",
-			expect, err.Error())
-	}
+	assertError(t, expect, err)
+}
+
+func TestParse_invalid_2(t *testing.T) {
+	tmpdir, cleanup := mktemp()
+	defer cleanup()
+
+	// invalid: bad token
+	fn := mkfile(tmpdir, "invalid_2.fubsy", "\n [\n xx \"whizz\"]\n")
+	_, err := Parse(fn)
+	expect := fn + ":3: syntax error (near xx)"
+	assertError(t, expect, err)
 }
 
 func mktemp() (tmpdir string, cleanup func()) {
@@ -112,4 +117,14 @@ func mkfile(tmpdir string, basename string, data string) string {
 		panic(err)
 	}
 	return fn
+}
+
+func assertError(t *testing.T, expect string, actual error) {
+	if actual == nil {
+		t.Fatal("expected error, but got nil")
+	}
+	if actual.Error() != expect {
+		t.Errorf("expected error message\n%s\nbut got\n%s",
+			expect, actual.Error())
+	}
 }
