@@ -4,7 +4,7 @@ package fubsy
 import (
 	"io"
 	"io/ioutil"
-	//"fmt"
+	"fmt"
 )
 
 type Scanner struct {
@@ -55,20 +55,37 @@ func (self *Scanner) nextchar() {
 func (self *Scanner) scan() {
 	//fmt.Printf("scan: input=>%s<\n", self.input)
 
+	// start conditions (lexical modes)
+	const (
+		SC_INITIAL = iota
+		SC_INLINE
+	)
+
+	condition := SC_INITIAL
+	var inline []byte
+	var inlinestart int
+
+	begin := func(cond int) {
+		if cond < SC_INITIAL || cond > SC_INLINE {
+			panic(fmt.Sprintf("invalid start condition: %d", cond))
+		}
+		condition = cond
+	}
+	addtok := func(filename string, lineno int, token int, text []byte) {
+		tt := toktext{filename, lineno, token, string(text)}
+		self.tokens = append(self.tokens, tt)
+	}
 	checkbad := func() {
 		if len(self.badtext) > 0 {
 			//fmt.Printf("line %d: invalid token: %s\n", self.badlineno, self.badtext)
-			tt := toktext{
-				self.filename, self.badlineno, BADTOKEN, string(self.badtext)}
-			self.tokens = append(self.tokens, tt)
+			addtok(self.filename, self.badlineno, BADTOKEN, self.badtext)
 			self.badtext = self.badtext[:0]
 		}
 	}
 	tokfound := func(token int) {
 		checkbad()
 		//fmt.Printf("token: >%s<\n", self.buf)
-		tt := toktext{self.filename, self.lineno, token, string(self.buf)}
-		self.tokens = append(self.tokens, tt)
+		addtok(self.filename, self.lineno, token, self.buf)
 	}
 	badchar := func() {
 		//fmt.Printf("badchar: >%c<\n", self.buf[0])
@@ -76,6 +93,20 @@ func (self *Scanner) scan() {
 		// as badtext does not span lines
 		self.badlineno = self.lineno
 		self.badtext = append(self.badtext, self.buf[0])
+	}
+
+	startinline := func() {
+		begin(SC_INLINE)
+		inlinestart = self.lineno
+		tokfound(L3BRACE)
+	}
+	stopinline := func() {
+		addtok(self.filename, inlinestart, INLINE, inline)
+		begin(SC_INITIAL)
+		tokfound(R3BRACE)
+	}
+	inlinecontent := func() {
+		inline = append(inline, self.buf...)
 	}
 
 	self.lineno = 1
@@ -86,18 +117,25 @@ func (self *Scanner) scan() {
 %yyc self.cur
 %yyn self.nextchar()
 %yyb self.prev == 0 || self.prev == '\n'
-%yyt 0
+%yyt condition
+
+/* start conditions (lexical modes) */
+%x SC_INLINE
 
 %%
 
  // truncate current token text before every scan cycle
-				self.buf = self.buf[:0]
+ self.buf = self.buf[:0]
 
 [ \t\n]+		checkbad()
 \[				tokfound('[')
 \]				tokfound(']')
 \"[^\"]+\"		tokfound(QSTRING)
 .				badchar()
+
+\{\{\{			startinline()
+<SC_INLINE>\}\}\}	stopinline()
+<SC_INLINE>.*\n	inlinecontent()
 
 %%
 

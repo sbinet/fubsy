@@ -21,6 +21,7 @@ const BADTOKEN = -1
 %type <node> script
 
 %token <qstring> QSTRING
+%token L3BRACE INLINE R3BRACE
 
 %%
 
@@ -33,6 +34,12 @@ script:
 		root.elements = []ASTNode {ListNode{values: values}}
 		_ast = &root
 	}
+	|
+        L3BRACE INLINE R3BRACE
+        {
+		_ast = &RootNode{}
+	}
+
 %%
 
 // a token together with its location, text, etc.

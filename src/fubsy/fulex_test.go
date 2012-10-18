@@ -16,6 +16,30 @@ func TestScan_valid(t *testing.T) {
 	checkTokens(t, expect, scanner.tokens)
 }
 
+func TestScan_inline(t *testing.T) {
+	scanner := NewScanner("blop.txt", []byte(" \n{{{yo\nhello\nthere\n}}}"))
+	scanner.scan()
+	expect := []toktext{
+		{"blop.txt", 2, L3BRACE, "{{{"},
+		{"blop.txt", 2, INLINE, "yo\nhello\nthere\n"},
+		{"blop.txt", 5, R3BRACE, "}}}"},
+	}
+	checkTokens(t, expect, scanner.tokens)
+}
+
+func TestScan_inline_open(t *testing.T) {
+	// bad input: unclosed {{{ (should be a syntax error, not an
+	// infinite loop!) (hmmm: would be nice to report the trailing
+	// inline contents as a BADTOKEN; might give a better syntax error)
+	scanner := NewScanner("foo", []byte("] {{{bip\nbop!["))
+	scanner.scan()
+	expect := []toktext{
+		{"foo", 1, ']', "]"},
+		{"foo", 1, L3BRACE, "{{{"},
+	}
+	checkTokens(t, expect, scanner.tokens)
+}
+
 func TestScan_invalid(t *testing.T) {
 	scanner := NewScanner("fwob", []byte("]]\n!-\"whee]\" x whizz\nbang"))
 	scanner.scan()
