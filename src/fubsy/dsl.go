@@ -5,6 +5,7 @@ import (
 	"os"
 	"fmt"
 	"strings"
+	"reflect"
 )
 
 
@@ -50,15 +51,7 @@ func (self RootNode) Dump(writer io.Writer, indent string) {
 
 func (self RootNode) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(RootNode); ok {
-		if len(self.elements) != len(other.elements) {
-			return false
-		}
-		for i := range self.elements {
-			if !self.elements[i].Equal(other.elements[i]) {
-				return false
-			}
-		}
-		return true
+		return reflect.DeepEqual(self, other)
 	}
 	return false
 }
@@ -74,17 +67,8 @@ func (self ListNode) Dump(writer io.Writer, indent string) {
 }
 
 func (self ListNode) Equal(other_ ASTNode) bool {
-	// XXX *very* similar to RootNode.Equal()!
 	if other, ok := other_.(ListNode); ok {
-		if len(self.values) != len(other.values) {
-			return false
-		}
-		for i := range self.values {
-			if self.values[i] != other.values[i] {
-				return false
-			}
-		}
-		return true
+		return reflect.DeepEqual(self, other)
 	}
 	return false
 }
@@ -96,7 +80,7 @@ func (self InlineNode) Dump(writer io.Writer, indent string) {
 
 func (self InlineNode) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(InlineNode); ok {
-		return (self.lang == other.lang && self.content == other.content)
+		return self == other
 	}
 	return false
 }

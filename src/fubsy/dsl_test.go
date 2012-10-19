@@ -24,6 +24,11 @@ func TestRootNode_Equal(t *testing.T) {
 	if !node1.Equal(node2) {
 		t.Error("root nodes with one child each not equal")
 	}
+
+	other := ListNode{}
+	if node1.Equal(other) {
+		t.Error("nodes of different type are equal")
+	}
 }
 
 func TestListNode_Equal(t *testing.T) {
