@@ -127,6 +127,7 @@ func (self *Scanner) scan() {
  // truncate current token text before every scan cycle
  self.buf = self.buf[:0]
 
+<*>\0			goto eof
 [ \t\n]+		checkbad()
 \[				tokfound('[')
 \]				tokfound(']')
@@ -135,9 +136,11 @@ func (self *Scanner) scan() {
 
 \{\{\{			startinline()
 <SC_INLINE>\}\}\}	stopinline()
-<SC_INLINE>.*\n	inlinecontent()
+<SC_INLINE>.*	inlinecontent()
+<SC_INLINE>\n	inlinecontent()
 
 %%
 
+eof:
 	checkbad()
 }

@@ -16,13 +16,30 @@ func TestScan_valid(t *testing.T) {
 	checkTokens(t, expect, scanner.tokens)
 }
 
-func TestScan_inline(t *testing.T) {
-	scanner := NewScanner("blop.txt", []byte(" \n{{{yo\nhello\nthere\n}}}"))
+func TestScan_inline_1(t *testing.T) {
+	scanner := NewScanner(
+		"blop.txt", []byte(" \n{{{yo\nhello\nthere\n}}}"))
 	scanner.scan()
 	expect := []toktext{
 		{"blop.txt", 2, L3BRACE, "{{{"},
 		{"blop.txt", 2, INLINE, "yo\nhello\nthere\n"},
 		{"blop.txt", 5, R3BRACE, "}}}"},
+	}
+	checkTokens(t, expect, scanner.tokens)
+}
+
+func TestScan_inline_2(t *testing.T) {
+	// despite appearances, the original motivation for this test case
+	// was newline (or indeed anything at all) after }}} -- I just
+	// threw a bunch of punctuation into the inline text to be sure
+	// that works too
+	scanner := NewScanner(
+		"blop.txt", []byte("{{{ any!chars\"are\nallowed'here\n}}}\n"))
+	scanner.scan()
+	expect := []toktext{
+		{"blop.txt", 1, L3BRACE, "{{{"},
+		{"blop.txt", 1, INLINE, " any!chars\"are\nallowed'here\n"},
+		{"blop.txt", 3, R3BRACE, "}}}"},
 	}
 	checkTokens(t, expect, scanner.tokens)
 }
@@ -37,6 +54,11 @@ func TestScan_inline_open(t *testing.T) {
 		{"foo", 1, ']', "]"},
 		{"foo", 1, L3BRACE, "{{{"},
 	}
+	checkTokens(t, expect, scanner.tokens)
+
+	// same result on incomplete }}}
+	scanner = NewScanner("foo", append(scanner.input, "\n}}"...))
+	scanner.scan()
 	checkTokens(t, expect, scanner.tokens)
 }
 
