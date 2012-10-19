@@ -127,17 +127,21 @@ func (self *Scanner) scan() {
  // truncate current token text before every scan cycle
  self.buf = self.buf[:0]
 
-<*>\0			goto eof
-[ \t\n]+		checkbad()
-\[				tokfound('[')
-\]				tokfound(']')
-\"[^\"]+\"		tokfound(QSTRING)
-.				badchar()
+<*>\0						goto eof
+[ \t\n]+					checkbad()
 
-\{\{\{			startinline()
-<SC_INLINE>\}\}\}	stopinline()
-<SC_INLINE>.*	inlinecontent()
-<SC_INLINE>\n	inlinecontent()
+"plugin"					tokfound(PLUGIN)
+
+[a-zA-Z_][a-zA-Z_0-9]*		tokfound(NAME)
+\[							tokfound('[')
+\]							tokfound(']')
+\"[^\"]+\"					tokfound(QSTRING)
+.							badchar()
+
+\{\{\{						startinline()
+<SC_INLINE>\}\}\}			stopinline()
+<SC_INLINE>.*				inlinecontent()
+<SC_INLINE>\n				inlinecontent()
 
 %%
 

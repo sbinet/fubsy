@@ -30,17 +30,20 @@ func Test_fuParse_valid_1(t *testing.T) {
 func Test_fuParse_valid_inline(t *testing.T) {
 	reset()
 	lexer := NewLexer(toklist([]minitok{
+		{PLUGIN, "plugin"},
+		{NAME, "whatever"},
 		{L3BRACE, "{{{"},
 		{INLINE, "beep!\"\nblam'" },
 		{R3BRACE, "}}}"},
 	}))
 
 	result := fuParse(lexer)
-	assertTrue(t, result == 0, "fuParse() returned %d (expected 0)", result)
 	assertNil(t, "_syntaxerror", _syntaxerror)
+	assertTrue(t, result == 0, "fuParse() returned %d (expected 0)", result)
 	assertTrue(t, _ast != nil, "_ast is nil (expected non-nil)")
 
-	expect := RootNode{elements: []ASTNode {InlineNode{content: "beep!\"\nblam'"}}}
+	expect := RootNode{elements: []ASTNode {
+			InlineNode{lang: "whatever", content: "beep!\"\nblam'"}}}
 	assertASTEquals(t, &expect, _ast)
 }
 

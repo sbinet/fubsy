@@ -25,8 +25,8 @@ const BADTOKEN = -1
 %type <node> stringlist
 %type <node> inline
 
-%token <text> QSTRING INLINE
-%token L3BRACE R3BRACE
+%token <text> NAME QSTRING INLINE
+%token PLUGIN L3BRACE R3BRACE
 
 %%
 
@@ -53,9 +53,9 @@ stringlist:
 	}
 
 inline:
-	L3BRACE INLINE R3BRACE
+	PLUGIN NAME L3BRACE INLINE R3BRACE
 	{
-		$$ = InlineNode{content: $2}
+		$$ = InlineNode{lang: $2, content: $4}
 	}
 
 %%
@@ -92,7 +92,7 @@ func (self *Lexer) Lex(lval *fuSymType) int {
 		// strip the quotes: they're preserved by the tokenizer,
 		// but not part of the string value
 		lval.text = toktext.text[1:len(toktext.text)-1]
-	case INLINE:
+	case INLINE, NAME:
 		lval.text = toktext.text
 	}
 	_lasttok = &toktext

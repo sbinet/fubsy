@@ -110,13 +110,13 @@ func TestParse_valid_2(t *testing.T) {
 	fn := mkfile(
 		tmpdir,
 		"valid_2.fubsy",
-		"[\"boo\"]\n\n{{{o'malley & friends\n}}}\n[\"meep\"]")
+		"[\"boo\"]\n\nplugin foo {{{o'malley & friends\n}}}\n[\"meep\"]")
 	ast_, err := Parse(fn)
 	assertNoError(t, err)
 
 	expect := RootNode{elements: []ASTNode {
 			ListNode{values: []string {"boo"}},
-			InlineNode{content: "o'malley & friends\n"},
+			InlineNode{lang: "foo", content: "o'malley & friends\n"},
 			ListNode{values: []string {"meep"}},
 	}}
 	if ast, ok := ast_.(*RootNode); ok {
