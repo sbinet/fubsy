@@ -6,7 +6,7 @@ import (
 	"bytes"
 )
 
-func Test_fuParse_valid(t *testing.T) {
+func Test_fuParse_valid_1(t *testing.T) {
 	reset()
 	lexer := NewLexer(toklist([]minitok{
 		{'[', "["},
@@ -24,7 +24,30 @@ func Test_fuParse_valid(t *testing.T) {
 	}
 
 	expect := RootNode{elements: []ASTNode {ListNode{values: []string {"foo"}}}}
-	checkASTEquals(t, &expect, _ast)
+	assertASTEquals(t, &expect, _ast)
+}
+
+func Test_fuParse_valid_inline(t *testing.T) {
+	reset()
+	lexer := NewLexer(toklist([]minitok{
+		{L3BRACE, "{{{"},
+		{INLINE, "beep!\"\nblam'" },
+		{R3BRACE, "}}}"},
+	}))
+
+	result := fuParse(lexer)
+	assertTrue(t, result == 0, "fuParse() returned %d (expected 0)", result)
+	assertNil(t, "_syntaxerror", _syntaxerror)
+	assertTrue(t, _ast != nil, "_ast is nil (expected non-nil)")
+
+	expect := RootNode{elements: []ASTNode {InlineNode{content: "beep!\"\nblam'"}}}
+	assertASTEquals(t, &expect, _ast)
+}
+
+func assertTrue(t *testing.T, p bool, fmt string, args ...interface{}) {
+	if !p {
+		t.Fatalf(fmt, args...)
+	}
 }
 
 func Test_fuParse_invalid(t *testing.T) {
@@ -75,14 +98,12 @@ func toklist(tokens []minitok) []toktext {
 	return result
 }
 
-func checkASTEquals(t *testing.T, expect *RootNode, actual *RootNode) {
+func assertASTEquals(t *testing.T, expect *RootNode, actual *RootNode) {
 	if ! expect.Equal(*actual) {
 		expectbuf := new(bytes.Buffer)
 		actualbuf := new(bytes.Buffer)
 		expect.Dump(expectbuf, "")
 		actual.Dump(actualbuf, "")
-		fmt.Printf("expect.elements[0] = %#v\n", expect.elements[0])
-		fmt.Printf("actual.elements[0] = %#v\n", actual.elements[0])
 		t.Errorf("expected AST node:\n%sbut got:\n%s", expectbuf, actualbuf)
 	}
 }

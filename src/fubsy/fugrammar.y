@@ -15,29 +15,47 @@ const BADTOKEN = -1
 %}
 
 %union {
-	qstring string
+	root RootNode
+	node ASTNode
+	text string
 }
 
-%type <node> script
+%type <root> script
+%type <node> element
+%type <node> stringlist
+%type <node> inline
 
-%token <qstring> QSTRING
-%token L3BRACE INLINE R3BRACE
+%token <text> QSTRING INLINE
+%token L3BRACE R3BRACE
 
 %%
 
 script:
+	script element
+	{
+		$1.elements = append($1.elements, $2)
+		$$ = $1
+	}
+|	element
+	{
+		$$ = RootNode{elements: []ASTNode {$1}}
+		_ast = &$$
+	}
+
+element:
+	stringlist
+|	inline
+
+stringlist:
 	'[' QSTRING ']'
 	{
-		//fmt.Printf("parser: got qstring >%s< in brackets\n", $2)
-		values := []string {$2}
-		root := RootNode{}
-		root.elements = []ASTNode {ListNode{values: values}}
-		_ast = &root
+		$$ = ListNode{values: []string {$2}}
 	}
-	|
-        L3BRACE INLINE R3BRACE
-        {
-		_ast = &RootNode{}
+
+inline:
+	L3BRACE INLINE R3BRACE
+	{
+		$$ = InlineNode{content: $2}
 	}
 
 %%
@@ -69,10 +87,13 @@ func (self *Lexer) Lex(lval *fuSymType) int {
 	}
 	toktext := self.tokens[self.next]
 	self.next += 1
-	if toktext.token == QSTRING {
+    switch toktext.token {
+	case QSTRING:
 		// strip the quotes: they're preserved by the tokenizer,
 		// but not part of the string value
-		lval.qstring = toktext.text[1:len(toktext.text)-1]
+		lval.text = toktext.text[1:len(toktext.text)-1]
+	case INLINE:
+		lval.text = toktext.text
 	}
 	_lasttok = &toktext
 	return toktext.token

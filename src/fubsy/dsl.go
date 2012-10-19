@@ -31,6 +31,12 @@ type ListNode struct {
 	values []string
 }
 
+// an inline plugin, e.g. "plugin LANG {{{ CONTENT }}}"
+type InlineNode struct {
+	lang string
+	content string
+}
+
 // argh: why not pointer receiver?
 func (self RootNode) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer, indent + "RootNode {")
@@ -79,6 +85,18 @@ func (self ListNode) Equal(other_ ASTNode) bool {
 			}
 		}
 		return true
+	}
+	return false
+}
+
+func (self InlineNode) Dump(writer io.Writer, indent string) {
+	fmt.Fprintf(writer,
+		"%sInlineNode[%s] %#v\n", indent, self.lang, self.content)
+}
+
+func (self InlineNode) Equal(other_ ASTNode) bool {
+	if other, ok := other_.(InlineNode); ok {
+		return (self.lang == other.lang && self.content == other.content)
 	}
 	return false
 }

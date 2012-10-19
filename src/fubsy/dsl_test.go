@@ -56,21 +56,73 @@ func TestListNode_Equal(t *testing.T) {
 	}
 }
 
-func TestParse_valid(t *testing.T) {
+func TestInlineNode_Equal(t *testing.T) {
+	node1 := InlineNode{}
+	node2 := InlineNode{}
+	if !node1.Equal(node1) {
+		t.Error("InlineNode not equal to itself")
+	}
+	if !node1.Equal(node2) {
+		t.Error("empty InlineNodes not equal")
+	}
+	node1.lang = "foo"
+	node2.lang = "bar"
+	if node1.Equal(node2) {
+		t.Error("InlineNodes equal despite different lang")
+	}
+	node2.lang = "foo"
+	if !node1.Equal(node2) {
+		t.Error("InlineNodes not equal")
+	}
+	node1.content = "hello\nworld\n"
+	node2.content = "hello\nworld"
+	if node1.Equal(node2) {
+		t.Error("InlineNodes equal despite different content")
+	}
+	node2.content += "\n"
+	if !node1.Equal(node2) {
+		t.Error("InlineNodes not equal")
+	}
+}
+
+func TestParse_valid_1(t *testing.T) {
 	tmpdir, cleanup := mktemp()
 	defer cleanup()
 
+	// dead simple: a single top-level element
 	fn := mkfile(tmpdir, "valid.fubsy", "  [\n\"hey ${there}\"    ]\n ")
 
 	expect := RootNode{elements: []ASTNode {ListNode{values: []string {"hey ${there}"}}}}
 	ast_, err := Parse(fn)
-	if err != nil {
-		t.Fatal("unexpected error:", err)
-	}
+	assertNoError(t, err)
 	if ast, ok := ast_.(*RootNode); ok {
-		checkASTEquals(t, &expect, ast)
+		assertASTEquals(t, &expect, ast)
 	} else {
-		t.Fatalf("expected ast_ to be RootNode, not %v", ast_)
+		t.Fatalf("expected ast_ to be RootNode, not %v (type %T)", ast_, ast_)
+	}
+}
+
+func TestParse_valid_2(t *testing.T) {
+	tmpdir, cleanup := mktemp()
+	defer cleanup()
+
+	// sequence of top-level elements
+	fn := mkfile(
+		tmpdir,
+		"valid_2.fubsy",
+		"[\"boo\"]\n\n{{{o'malley & friends\n}}}\n[\"meep\"]")
+	ast_, err := Parse(fn)
+	assertNoError(t, err)
+
+	expect := RootNode{elements: []ASTNode {
+			ListNode{values: []string {"boo"}},
+			InlineNode{content: "o'malley & friends\n"},
+			ListNode{values: []string {"meep"}},
+	}}
+	if ast, ok := ast_.(*RootNode); ok {
+		assertASTEquals(t, &expect, ast)
+	} else {
+		t.Fatalf("expected ast_ to be RootNode, not %v (type %T)", ast_, ast_)
 	}
 }
 
@@ -117,6 +169,12 @@ func mkfile(tmpdir string, basename string, data string) string {
 		panic(err)
 	}
 	return fn
+}
+
+func assertNoError(t *testing.T, actual error) {
+	if actual != nil {
+		t.Fatal("unexpected error:", actual)
+	}
 }
 
 func assertError(t *testing.T, expect string, actual error) {
