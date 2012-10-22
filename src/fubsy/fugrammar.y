@@ -18,6 +18,7 @@ const BADTOKEN = -1
 	root RootNode
 	node ASTNode
 	nodelist []ASTNode
+	expr ExpressionNode
 	text string
 	stringlist []string
 }
@@ -31,7 +32,12 @@ const BADTOKEN = -1
 %type <nodelist> block
 %type <nodelist> statementlist
 %type <node> statement
-%type <node> stringlist
+%type <node> assignment
+%type <expr> expr
+%type <expr> primaryexpr
+%type <expr> functioncall
+%type <expr> selection
+%type <expr> stringlist
 
 %token <text> NAME QSTRING INLINE
 %token IMPORT PLUGIN L3BRACE R3BRACE
@@ -104,12 +110,41 @@ statementlist:
 	}
 
 statement:
-	stringlist
+	assignment ';'			{ $$ = $1 }
+|	expr ';'				{ $$ = $1 }
+
+assignment:
+	NAME '=' expr
+	{
+		$$ = AssignmentNode{target: $1, expr: $3}
+	}
+
+expr:
+	primaryexpr
+|	functioncall
+|	selection
+
+primaryexpr:
+	'(' expr ')'			{ $$ = $2 }
+|	NAME					{ $$ = NameNode{$1}}
+|	stringlist				{ $$ = $1}
 
 stringlist:
 	'[' QSTRING ']'
 	{
 		$$ = ListNode{values: []string {$2}}
+	}
+
+functioncall:
+	expr '(' ')'
+	{
+		$$ = FunctionCallNode{function: $1, args: []ExpressionNode {}}
+	}
+
+selection:
+	expr '.' NAME
+	{
+		$$ = SelectionNode{container: $1, member: $3}
 	}
 
 %%

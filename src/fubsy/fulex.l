@@ -138,7 +138,11 @@ func (self *Scanner) scan() {
 \]							tokfound(']')
 \{							tokfound('{')
 \}							tokfound('}')
+\(							tokfound('(')
+\)							tokfound(')')
 \.							tokfound('.')
+\;							tokfound(';')
+=							tokfound('=')
 \"[^\"]+\"					tokfound(QSTRING)
 .							badchar()
 

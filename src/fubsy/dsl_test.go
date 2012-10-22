@@ -4,6 +4,7 @@ import (
 	"testing"
 	"os"
 	"io/ioutil"
+	"bytes"
 	"path"
 )
 
@@ -90,13 +91,48 @@ func TestInlineNode_Equal(t *testing.T) {
 	}
 }
 
+func TestInlineNode_Dump(t *testing.T) {
+	node := InlineNode{lang: "foo"}
+	assertASTDump(t, "InlineNode[foo] {{{}}}\n", node)
+
+	node.content = "foobar"
+	assertASTDump(t, "InlineNode[foo] {{{foobar}}}\n", node)
+
+	node.content = "foobar\n"
+	assertASTDump(t, "InlineNode[foo] {{{foobar\n}}}\n", node)
+
+	node.content = "hello\nworld"
+	assertASTDump(t, "InlineNode[foo] {{{hello\n  world}}}\n", node)
+
+	node.content = "\nhello\nworld"
+	assertASTDump(t, "InlineNode[foo] {{{\n  hello\n  world}}}\n", node)
+
+	node.content = "\nhello\nworld\n"
+	assertASTDump(t, "InlineNode[foo] {{{\n  hello\n  world\n}}}\n", node)
+
+	node.content = "hello\n  world"
+	assertASTDump(t, "InlineNode[foo] {{{hello\n    world}}}\n", node)
+
+	node.content = "hello\n  world\n"
+	assertASTDump(t, "InlineNode[foo] {{{hello\n    world\n}}}\n", node)
+
+}
+
+func assertASTDump(t *testing.T, expect string, node ASTNode) {
+	var buf bytes.Buffer
+	node.Dump(&buf, "")
+	actual := buf.String()
+	if expect != actual {
+		t.Errorf("AST dump: expected\n%s\nbut got\n%s", expect, actual)
+	}
+}
+
 func TestParse_valid_1(t *testing.T) {
 	tmpdir, cleanup := mktemp()
 	defer cleanup()
 
 	// dead simple: a single top-level element
-	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n[\"meep\"]\n}\n")
-	//fn := mkfile(tmpdir, "valid_1.fubsy", "main{[\"foo\"][\"bar\"]}")
+	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n[\"meep\"];\n}\n")
 
 	expect := RootNode{elements: []ASTNode {
 			PhaseNode{name: "main", statements: []ASTNode {
@@ -114,9 +150,9 @@ func TestParse_valid_sequence(t *testing.T) {
 	fn := mkfile(
 		tmpdir,
 		"valid_2.fubsy",
-		"main {\n[\"boo\"]\n}\n" +
+		"main {\n[\"boo\"];\n}\n" +
 		"plugin foo {{{o'malley & friends\n}}}\n" +
-		"blob { [\"meep\"] }")
+		"blob { [\"meep\"]; }")
 	ast, err := Parse(fn)
 	assertNoError(t, err)
 
@@ -153,6 +189,50 @@ func TestParse_invalid_2(t *testing.T) {
 	_, err := Parse(fn)
 	expect := fn + ":3: syntax error (near *&!)"
 	assertError(t, expect, err)
+	reset()
+}
+
+// this one tries to exercise every token type and grammar rule
+func TestParse_everything(t *testing.T) {
+	tmpdir, cleanup := mktemp()
+	defer cleanup()
+
+	fn := mkfile(tmpdir, "everything.fubsy",
+		"import foo\n" +
+		"import foo.bar.baz\n" +
+		"plugin funky {{{\n" +
+		"any ol' crap! \"bring it on,\n" +
+		"dude\" ...\n" +
+		"}}}\n" +
+		"main {\n" +
+		"  a   =(b);\n" +
+		"  c=(d.e)  ();\n" +
+		"x.y.z;\n" +
+		"}\n",
+	)
+	ast, err := Parse(fn)
+	assertNoError(t, err)
+
+	expect :=
+		"RootNode {\n" +
+		"  ImportNode[foo]\n" +
+		"  ImportNode[foo.bar.baz]\n" +
+		"  InlineNode[funky] {{{\n" +
+		"    any ol' crap! \"bring it on,\n" +
+		"    dude\" ...\n" +
+		"  }}}\n" +
+		"  PhaseNode[main] {\n" +
+		"    AssignmentNode[a: b]\n" +
+		"    AssignmentNode[c: d.e()]\n" +
+		"    SelectionNode[x.y: z]\n" +
+		"  }\n" +
+		"}\n"
+	var actual_ bytes.Buffer
+	ast.Dump(&actual_, "")
+	actual := actual_.String()
+	if expect != actual {
+		t.Errorf("expected AST:\n%s\nbut got:\n%s", expect, actual)
+	}
 }
 
 func mktemp() (tmpdir string, cleanup func()) {

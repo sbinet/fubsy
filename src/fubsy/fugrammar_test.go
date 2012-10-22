@@ -38,9 +38,13 @@ func Test_fuParse_valid_phase(t *testing.T) {
 		{'[', "["},
 		{QSTRING, "\"foo\""},
 		{']', "]"},
+		{';', ";"},
+		{NAME, "x"},
+		{'=', "="},
 		{'[', "["},
 		{QSTRING, "\"bar\""},
 		{']', "]"},
+		{';', ";"},
 		{'}', "}"},
 	}))
 
@@ -53,8 +57,11 @@ func Test_fuParse_valid_phase(t *testing.T) {
 			name: "main",
 			statements: []ASTNode {
 					ListNode{values: []string {"foo"}},
-					ListNode{values: []string {"bar"}},
-	}}}}
+					AssignmentNode{
+						target: "x",
+						expr: ListNode{values: []string {"bar"}}},
+			}},
+	}}
 	assertASTEquals(t, &expect, _ast)
 }
 
@@ -79,6 +86,64 @@ func Test_fuParse_empty_phase(t *testing.T) {
 	assertASTEquals(t, &expect, _ast)
 }
 
+func Test_fuParse_expr_1(t *testing.T) {
+	reset()
+	// parse "blorp { stuff = (foo); }"
+	lexer := NewLexer(toklist([]minitok{
+		{NAME, "blorp"},
+		{'{', "{"},
+		{NAME, "stuff"},
+		{'=', "="},
+		{'(', "("},
+		{NAME, "foo"},
+		{')', ")"},
+		{';', ";"},
+		{'}', "}"},
+	}))
+
+	result := fuParse(lexer)
+	assertParseSuccess(t, result)
+	expect := RootNode{
+		elements: []ASTNode {
+			PhaseNode{
+				name: "blorp",
+				statements: []ASTNode {
+					AssignmentNode{
+						target: "stuff",
+						expr: NameNode{"foo"},
+				}},
+	}}}
+	assertASTEquals(t, &expect, _ast)
+}
+
+func Test_fuParse_expr_2(t *testing.T) {
+	reset()
+	// parse "frob { foo(); }"
+	lexer := NewLexer(toklist([]minitok{
+		{NAME, "frob"},
+		{'{', "{"},
+		{NAME, "foo"},
+		{'(', "("},
+		{')', ")"},
+		{';', ";"},
+		{'}', "}"},
+	}))
+
+	result := fuParse(lexer)
+	assertParseSuccess(t, result)
+	expect := RootNode{
+		elements: []ASTNode {
+			PhaseNode{
+				name: "frob",
+				statements: []ASTNode {
+					FunctionCallNode{
+						function: NameNode{"foo"},
+						args: []ExpressionNode {}},
+				},
+			},
+	}}
+	assertASTEquals(t, &expect, _ast)
+}
 
 func Test_fuParse_valid_inline(t *testing.T) {
 	reset()
@@ -149,8 +214,10 @@ func toklist(tokens []minitok) []toktext {
 }
 
 func assertParseSuccess(t *testing.T, result int) {
-	assertNil(t, "_syntaxerror", _syntaxerror)
 	//assertNoError(t, _syntaxerror)
+	if _syntaxerror != nil {
+		t.Fatal(fmt.Sprintf("unexpected syntax error: %s", _syntaxerror))
+	}
 	assertTrue(t, result == 0, "fuParse() returned %d (expected 0)", result)
 	assertTrue(t, _ast != nil, "_ast is nil (expected non-nil)")
 }
@@ -183,12 +250,6 @@ func assertASTEquals(t *testing.T, expect *RootNode, actual *RootNode) {
 		expect.Dump(expectbuf, "")
 		actual.Dump(actualbuf, "")
 		t.Errorf("expected AST node:\n%sbut got:\n%s", expectbuf, actualbuf)
-	}
-}
-
-func assertNil(t *testing.T, name string, p *SyntaxError) {
-	if p != nil {
-		t.Fatal(fmt.Sprintf("%s != nil (expected nil)", name))
 	}
 }
 
