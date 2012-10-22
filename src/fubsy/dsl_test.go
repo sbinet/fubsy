@@ -98,13 +98,9 @@ func TestParse_valid_1(t *testing.T) {
 	fn := mkfile(tmpdir, "valid.fubsy", "  [\n\"hey ${there}\"    ]\n ")
 
 	expect := RootNode{elements: []ASTNode {ListNode{values: []string {"hey ${there}"}}}}
-	ast_, err := Parse(fn)
+	ast, err := Parse(fn)
 	assertNoError(t, err)
-	if ast, ok := ast_.(*RootNode); ok {
-		assertASTEquals(t, &expect, ast)
-	} else {
-		t.Fatalf("expected ast_ to be RootNode, not %v (type %T)", ast_, ast_)
-	}
+	assertASTEquals(t, &expect, ast)
 }
 
 func TestParse_valid_2(t *testing.T) {
@@ -116,7 +112,7 @@ func TestParse_valid_2(t *testing.T) {
 		tmpdir,
 		"valid_2.fubsy",
 		"[\"boo\"]\n\nplugin foo {{{o'malley & friends\n}}}\n[\"meep\"]")
-	ast_, err := Parse(fn)
+	ast, err := Parse(fn)
 	assertNoError(t, err)
 
 	expect := RootNode{elements: []ASTNode {
@@ -124,11 +120,7 @@ func TestParse_valid_2(t *testing.T) {
 			InlineNode{lang: "foo", content: "o'malley & friends\n"},
 			ListNode{values: []string {"meep"}},
 	}}
-	if ast, ok := ast_.(*RootNode); ok {
-		assertASTEquals(t, &expect, ast)
-	} else {
-		t.Fatalf("expected ast_ to be RootNode, not %v (type %T)", ast_, ast_)
-	}
+	assertASTEquals(t, &expect, ast)
 }
 
 func TestParse_invalid_1(t *testing.T) {

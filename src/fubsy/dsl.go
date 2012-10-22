@@ -13,7 +13,6 @@ import (
 // (implemented by RootNode)
 type AST interface {
 	ListPlugins() []string
-	ASTNode
 }
 
 // interface for any particular node in the AST (root, internal,
@@ -97,7 +96,7 @@ func (self SyntaxError) Error() string {
 		self.filename, self.line, self.message, self.badtoken)
 }
 
-func Parse(filename string) (AST, error) {
+func Parse(filename string) (*RootNode, error) {
 	infile, err := os.Open(filename)
 	if err != nil {
 		return nil, err
