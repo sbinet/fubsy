@@ -62,7 +62,7 @@ element:
 |	phase
 
 import:
-	IMPORT dottedname
+	IMPORT dottedname ';'
 	{
 		$$ = ImportNode{plugin: $2}
 	}

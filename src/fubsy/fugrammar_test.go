@@ -11,12 +11,14 @@ func Test_fuParse_valid_imports(t *testing.T) {
 	lexer := NewLexer(toklist([]minitok{
 		{IMPORT, "import"},
 		{NAME, "ding"},
+		{';', ";"},
 		{IMPORT, "import"},
 		{NAME, "dong"},
 		{'.', "."},
 		{NAME, "ping"},
 		{'.', "."},
 		{NAME, "whoo"},
+		{';', ";"},
 	}))
 
 	result := fuParse(lexer)

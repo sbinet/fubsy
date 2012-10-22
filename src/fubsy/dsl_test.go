@@ -198,8 +198,8 @@ func TestParse_everything(t *testing.T) {
 	defer cleanup()
 
 	fn := mkfile(tmpdir, "everything.fubsy",
-		"import foo\n" +
-		"import foo.bar.baz\n" +
+		"import foo;\n" +
+		"import foo.bar.baz;\n" +
 		"plugin funky {{{\n" +
 		"any ol' crap! \"bring it on,\n" +
 		"dude\" ...\n" +
