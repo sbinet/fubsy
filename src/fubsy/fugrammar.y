@@ -19,19 +19,22 @@ const BADTOKEN = -1
 	node ASTNode
 	nodelist []ASTNode
 	text string
+	stringlist []string
 }
 
 %type <root> script
 %type <node> element
-%type <node> stringlist
+%type <node> import
+%type <stringlist> dottedname
 %type <node> inline
 %type <node> phase
 %type <nodelist> block
 %type <nodelist> statementlist
 %type <node> statement
+%type <node> stringlist
 
 %token <text> NAME QSTRING INLINE
-%token PLUGIN L3BRACE R3BRACE
+%token IMPORT PLUGIN L3BRACE R3BRACE
 
 %%
 
@@ -48,8 +51,25 @@ script:
 	}
 
 element:
-	inline
+	import
+|	inline
 |	phase
+
+import:
+	IMPORT dottedname
+	{
+		$$ = ImportNode{plugin: $2}
+	}
+
+dottedname:
+	dottedname '.' NAME
+	{
+		$$ = append($1, $3)
+	}
+|	NAME
+	{
+		$$ = []string {$1}
+	}
 
 inline:
 	PLUGIN NAME L3BRACE INLINE R3BRACE

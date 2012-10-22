@@ -31,6 +31,19 @@ func TestScan_valid_2(t *testing.T) {
 	assertScan(t, expect, "a.txt", input)
 }
 
+func TestScan_keywords(t *testing.T) {
+	input := "plugim\nimport\n_import\nimportant\n.plugin\n"
+	expect := []toktext{
+		{"b.txt", 1, NAME, "plugim"},
+		{"b.txt", 2, IMPORT, "import"},
+		{"b.txt", 3, NAME, "_import"},
+		{"b.txt", 4, NAME, "important"},
+		{"b.txt", 5, '.', "."},
+		{"b.txt", 5, PLUGIN, "plugin"},
+	}
+	assertScan(t, expect, "b.txt", input)
+}
+
 func TestScan_inline_1(t *testing.T) {
 	input := " plugin bob\n{{{yo\nhello\nthere\n}}}"
 	expect := []toktext{

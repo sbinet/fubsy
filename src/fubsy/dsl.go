@@ -26,9 +26,9 @@ type RootNode struct {
 	elements []ASTNode
 }
 
-// a list of strings, e.g. ["foo"]
-type ListNode struct {
-	values []string
+// import a single plugin, e.g. "import NAME"
+type ImportNode struct {
+	plugin []string				// fully-qualified name split on '.'
 }
 
 // an inline plugin, e.g. "plugin LANG {{{ CONTENT }}}"
@@ -41,6 +41,11 @@ type InlineNode struct {
 type PhaseNode struct {
 	name string
 	statements []ASTNode
+}
+
+// a list of strings, e.g. ["foo"]
+type ListNode struct {
+	values []string
 }
 
 // argh: why not pointer receiver?
@@ -65,14 +70,12 @@ func (self RootNode) ListPlugins() []string {
 	return []string {"foo", "bar", "baz"}
 }
 
-// argh: why not pointer receiver?
-func (self ListNode) Dump(writer io.Writer, indent string) {
-	fmt.Fprintln(writer,
-		indent + "ListNode[" + strings.Join(self.values, ", ") + "]")
+func (self ImportNode) Dump(writer io.Writer, indent string) {
+	fmt.Fprintf(writer, "%sImportNode[%s]\n", indent, self.plugin)
 }
 
-func (self ListNode) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ListNode); ok {
+func (self ImportNode) Equal(other_ ASTNode) bool {
+	if other, ok := other_.(ImportNode); ok {
 		return reflect.DeepEqual(self, other)
 	}
 	return false
@@ -100,6 +103,19 @@ func (self PhaseNode) Dump(writer io.Writer, indent string) {
 
 func (self PhaseNode) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(PhaseNode); ok {
+		return reflect.DeepEqual(self, other)
+	}
+	return false
+}
+
+// argh: why not pointer receiver?
+func (self ListNode) Dump(writer io.Writer, indent string) {
+	fmt.Fprintln(writer,
+		indent + "ListNode[" + strings.Join(self.values, ", ") + "]")
+}
+
+func (self ListNode) Equal(other_ ASTNode) bool {
+	if other, ok := other_.(ListNode); ok {
 		return reflect.DeepEqual(self, other)
 	}
 	return false

@@ -130,6 +130,7 @@ func (self *Scanner) scan() {
 <*>\0						goto eof
 [ \t\n]+					checkbad()
 
+"import"					tokfound(IMPORT)
 "plugin"					tokfound(PLUGIN)
 
 [a-zA-Z_][a-zA-Z_0-9]*		tokfound(NAME)
@@ -137,6 +138,7 @@ func (self *Scanner) scan() {
 \]							tokfound(']')
 \{							tokfound('{')
 \}							tokfound('}')
+\.							tokfound('.')
 \"[^\"]+\"					tokfound(QSTRING)
 .							badchar()
 

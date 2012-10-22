@@ -106,7 +106,7 @@ func TestParse_valid_1(t *testing.T) {
 	assertASTEquals(t, &expect, ast)
 }
 
-func TestParse_valid_2(t *testing.T) {
+func TestParse_valid_sequence(t *testing.T) {
 	tmpdir, cleanup := mktemp()
 	defer cleanup()
 

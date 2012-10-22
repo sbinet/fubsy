@@ -6,6 +6,30 @@ import (
 	"bytes"
 )
 
+func Test_fuParse_valid_imports(t *testing.T) {
+	reset()
+	lexer := NewLexer(toklist([]minitok{
+		{IMPORT, "import"},
+		{NAME, "ding"},
+		{IMPORT, "import"},
+		{NAME, "dong"},
+		{'.', "."},
+		{NAME, "ping"},
+		{'.', "."},
+		{NAME, "whoo"},
+	}))
+
+	result := fuParse(lexer)
+	assertParseSuccess(t, result)
+
+	expect := RootNode{
+		elements: []ASTNode {
+			ImportNode{plugin: []string {"ding"}},
+			ImportNode{plugin: []string {"dong", "ping", "whoo"}},
+		}}
+	assertASTEquals(t, &expect, _ast)
+}
+
 func Test_fuParse_valid_phase(t *testing.T) {
 	reset()
 	lexer := NewLexer(toklist([]minitok{
