@@ -37,6 +37,12 @@ type InlineNode struct {
 	content string
 }
 
+// a build phase, e.g. "NAME { STMTS }"
+type PhaseNode struct {
+	name string
+	statements []ASTNode
+}
+
 // argh: why not pointer receiver?
 func (self RootNode) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer, indent + "RootNode {")
@@ -80,6 +86,21 @@ func (self InlineNode) Dump(writer io.Writer, indent string) {
 func (self InlineNode) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(InlineNode); ok {
 		return self == other
+	}
+	return false
+}
+
+func (self PhaseNode) Dump(writer io.Writer, indent string) {
+	fmt.Fprintf(writer, "%sPhaseNode[%s] {\n", indent, self.name)
+	for _, node := range self.statements {
+		node.Dump(writer, indent + "  ")
+	}
+	fmt.Fprintln(writer, indent + "}")
+}
+
+func (self PhaseNode) Equal(other_ ASTNode) bool {
+	if other, ok := other_.(PhaseNode); ok {
+		return reflect.DeepEqual(self, other)
 	}
 	return false
 }

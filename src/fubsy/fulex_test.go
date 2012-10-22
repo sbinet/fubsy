@@ -15,6 +15,22 @@ func TestScan_valid_1(t *testing.T) {
 	assertScan(t, expect, "nofile", input)
 }
 
+func TestScan_valid_2(t *testing.T) {
+	input := "main{[\"foo\"][\"bar\"]}"
+	expect := []toktext{
+		{"a.txt", 1, NAME, "main"},
+		{"a.txt", 1, '{', "{"},
+		{"a.txt", 1, '[', "["},
+		{"a.txt", 1, QSTRING, "\"foo\""},
+		{"a.txt", 1, ']', "]"},
+		{"a.txt", 1, '[', "["},
+		{"a.txt", 1, QSTRING, "\"bar\""},
+		{"a.txt", 1, ']', "]"},
+		{"a.txt", 1, '}', "}"},
+	}
+	assertScan(t, expect, "a.txt", input)
+}
+
 func TestScan_inline_1(t *testing.T) {
 	input := " plugin bob\n{{{yo\nhello\nthere\n}}}"
 	expect := []toktext{

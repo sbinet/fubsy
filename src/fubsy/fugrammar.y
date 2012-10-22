@@ -17,6 +17,7 @@ const BADTOKEN = -1
 %union {
 	root RootNode
 	node ASTNode
+	nodelist []ASTNode
 	text string
 }
 
@@ -24,6 +25,10 @@ const BADTOKEN = -1
 %type <node> element
 %type <node> stringlist
 %type <node> inline
+%type <node> phase
+%type <nodelist> block
+%type <nodelist> statementlist
+%type <node> statement
 
 %token <text> NAME QSTRING INLINE
 %token PLUGIN L3BRACE R3BRACE
@@ -43,19 +48,48 @@ script:
 	}
 
 element:
-	stringlist
-|	inline
-
-stringlist:
-	'[' QSTRING ']'
-	{
-		$$ = ListNode{values: []string {$2}}
-	}
+	inline
+|	phase
 
 inline:
 	PLUGIN NAME L3BRACE INLINE R3BRACE
 	{
 		$$ = InlineNode{lang: $2, content: $4}
+	}
+
+phase:
+	NAME block
+	{
+		$$ = PhaseNode{name: $1, statements: $2}
+	}
+
+block:
+	'{' statementlist '}'
+	{
+		$$ = $2
+	}
+|	'{' '}'
+	{
+		$$ = []ASTNode {}
+	}
+
+statementlist:
+	statementlist statement
+	{
+		$$ = append($1, $2)
+	}
+|	statement
+	{
+		$$ = []ASTNode {$1}
+	}
+
+statement:
+	stringlist
+
+stringlist:
+	'[' QSTRING ']'
+	{
+		$$ = ListNode{values: []string {$2}}
 	}
 
 %%
@@ -87,7 +121,7 @@ func (self *Lexer) Lex(lval *fuSymType) int {
 	}
 	toktext := self.tokens[self.next]
 	self.next += 1
-    switch toktext.token {
+	switch toktext.token {
 	case QSTRING:
 		// strip the quotes: they're preserved by the tokenizer,
 		// but not part of the string value

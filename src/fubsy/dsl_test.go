@@ -95,9 +95,12 @@ func TestParse_valid_1(t *testing.T) {
 	defer cleanup()
 
 	// dead simple: a single top-level element
-	fn := mkfile(tmpdir, "valid.fubsy", "  [\n\"hey ${there}\"    ]\n ")
+	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n[\"meep\"]\n}\n")
+	//fn := mkfile(tmpdir, "valid_1.fubsy", "main{[\"foo\"][\"bar\"]}")
 
-	expect := RootNode{elements: []ASTNode {ListNode{values: []string {"hey ${there}"}}}}
+	expect := RootNode{elements: []ASTNode {
+			PhaseNode{name: "main", statements: []ASTNode {
+					ListNode {values: []string {"meep"}}}}}}
 	ast, err := Parse(fn)
 	assertNoError(t, err)
 	assertASTEquals(t, &expect, ast)
@@ -111,14 +114,21 @@ func TestParse_valid_2(t *testing.T) {
 	fn := mkfile(
 		tmpdir,
 		"valid_2.fubsy",
-		"[\"boo\"]\n\nplugin foo {{{o'malley & friends\n}}}\n[\"meep\"]")
+		"main {\n[\"boo\"]\n}\n" +
+		"plugin foo {{{o'malley & friends\n}}}\n" +
+		"blob { [\"meep\"] }")
 	ast, err := Parse(fn)
 	assertNoError(t, err)
 
 	expect := RootNode{elements: []ASTNode {
-			ListNode{values: []string {"boo"}},
-			InlineNode{lang: "foo", content: "o'malley & friends\n"},
-			ListNode{values: []string {"meep"}},
+			PhaseNode{
+				name: "main",
+				statements: []ASTNode {ListNode{values: []string {"boo"}}}},
+			InlineNode{
+				lang: "foo", content: "o'malley & friends\n"},
+			PhaseNode{
+				name: "blob",
+				statements: []ASTNode {ListNode{values: []string {"meep"}}}},
 	}}
 	assertASTEquals(t, &expect, ast)
 }
@@ -128,9 +138,9 @@ func TestParse_invalid_1(t *testing.T) {
 	defer cleanup()
 
 	// invalid: no closing rbracket
-	fn := mkfile(tmpdir, "invalid_1.fubsy", "  [\n\"borf\"\n ")
+	fn := mkfile(tmpdir, "invalid_1.fubsy", "main{  [\n\"borf\"\n }")
 	_, err := Parse(fn)
-	expect := fn + ":2: syntax error (near \"borf\")"
+	expect := fn + ":3: syntax error (near })"
 	assertError(t, expect, err)
 }
 
@@ -139,9 +149,9 @@ func TestParse_invalid_2(t *testing.T) {
 	defer cleanup()
 
 	// invalid: bad token
-	fn := mkfile(tmpdir, "invalid_2.fubsy", "\n [\n xx \"whizz\"]\n")
+	fn := mkfile(tmpdir, "invalid_2.fubsy", "main\n{[\n *&! \"whizz\"]\n}")
 	_, err := Parse(fn)
-	expect := fn + ":3: syntax error (near xx)"
+	expect := fn + ":3: syntax error (near *&!)"
 	assertError(t, expect, err)
 }
 
@@ -166,20 +176,4 @@ func mkfile(tmpdir string, basename string, data string) string {
 		panic(err)
 	}
 	return fn
-}
-
-func assertNoError(t *testing.T, actual error) {
-	if actual != nil {
-		t.Fatal("unexpected error:", actual)
-	}
-}
-
-func assertError(t *testing.T, expect string, actual error) {
-	if actual == nil {
-		t.Fatal("expected error, but got nil")
-	}
-	if actual.Error() != expect {
-		t.Errorf("expected error message\n%s\nbut got\n%s",
-			expect, actual.Error())
-	}
 }

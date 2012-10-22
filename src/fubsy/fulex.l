@@ -135,6 +135,8 @@ func (self *Scanner) scan() {
 [a-zA-Z_][a-zA-Z_0-9]*		tokfound(NAME)
 \[							tokfound('[')
 \]							tokfound(']')
+\{							tokfound('{')
+\}							tokfound('}')
 \"[^\"]+\"					tokfound(QSTRING)
 .							badchar()
 
