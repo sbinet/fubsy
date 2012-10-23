@@ -72,6 +72,11 @@ type NameNode struct {
 	name string
 }
 
+// a single string
+type StringNode struct {
+	value string
+}
+
 // a list of strings, e.g. ["foo"]
 type ListNode struct {
 	values []string
@@ -210,6 +215,23 @@ func (self NameNode) Equal(other_ ASTNode) bool {
 
 func (self NameNode) String() string {
 	return self.name
+}
+
+func (self StringNode) Dump(writer io.Writer, indent string) {
+	fmt.Fprintln(writer,
+		indent + "StringNode[" + self.value + "]")
+}
+
+func (self StringNode) Equal(other_ ASTNode) bool {
+	if other, ok := other_.(StringNode); ok {
+		return self == other
+	}
+	return false
+}
+
+func (self StringNode) String() string {
+	// this assumes that Go syntax for strings is Fubsy syntax!
+	return fmt.Sprintf("%#v", self.value)
 }
 
 func (self ListNode) Dump(writer io.Writer, indent string) {

@@ -127,6 +127,7 @@ expr:
 primaryexpr:
 	'(' expr ')'			{ $$ = $2 }
 |	NAME					{ $$ = NameNode{$1}}
+|	QSTRING					{ $$ = StringNode{$1}}
 |	stringlist				{ $$ = $1}
 
 stringlist:

@@ -33,21 +33,21 @@ func TestParse_valid_sequence(t *testing.T) {
 	fn := mkfile(
 		tmpdir,
 		"valid_2.fubsy",
-		"main {\n[\"boo\"];\n}\n" +
+		"main {\n\"boo\";\n}\n" +
 		"plugin foo {{{o'malley & friends\n}}}\n" +
-		"blob { [\"meep\"]; }")
+		"blob { \"meep\"; }")
 	ast, err := Parse(fn)
 	testutils.AssertNoError(t, err)
 
 	expect := RootNode{elements: []ASTNode {
 			PhaseNode{
 				name: "main",
-				statements: []ASTNode {ListNode{values: []string {"boo"}}}},
+				statements: []ASTNode {StringNode{"boo"}}},
 			InlineNode{
 				lang: "foo", content: "o'malley & friends\n"},
 			PhaseNode{
 				name: "blob",
-				statements: []ASTNode {ListNode{values: []string {"meep"}}}},
+				statements: []ASTNode {StringNode{"meep"}}},
 	}}
 	assertASTEquals(t, &expect, ast)
 }
@@ -68,7 +68,7 @@ func TestParse_invalid_2(t *testing.T) {
 	defer cleanup()
 
 	// invalid: bad token
-	fn := mkfile(tmpdir, "invalid_2.fubsy", "main\n{[\n *&! \"whizz\"]\n}")
+	fn := mkfile(tmpdir, "invalid_2.fubsy", "main\n{\n *&! \"whizz\"\n}")
 	_, err := Parse(fn)
 	expect := fn + ":3: syntax error (near *&!)"
 	testutils.AssertError(t, expect, err)
@@ -88,7 +88,7 @@ func TestParse_everything(t *testing.T) {
 		"dude\" ...\n" +
 		"}}}\n" +
 		"main {\n" +
-		"  a   =(b);\n" +
+		"  a   =(\"foo\");\n" +
 		"  c=(d.e)  ();\n" +
 		"x.y.z;\n" +
 		"}\n",
@@ -105,7 +105,7 @@ func TestParse_everything(t *testing.T) {
 		"    dude\" ...\n" +
 		"  }}}\n" +
 		"  PhaseNode[main] {\n" +
-		"    AssignmentNode[a: b]\n" +
+		"    AssignmentNode[a: \"foo\"]\n" +
 		"    AssignmentNode[c: d.e()]\n" +
 		"    SelectionNode[x.y: z]\n" +
 		"  }\n" +

@@ -37,15 +37,11 @@ func Test_fuParse_valid_phase(t *testing.T) {
 	lexer := NewLexer(toklist([]minitok{
 		{NAME, "main"},
 		{'{', "{"},
-		{'[', "["},
 		{QSTRING, "\"foo\""},
-		{']', "]"},
 		{';', ";"},
 		{NAME, "x"},
 		{'=', "="},
-		{'[', "["},
 		{QSTRING, "\"bar\""},
-		{']', "]"},
 		{';', ";"},
 		{'}', "}"},
 	}))
@@ -58,12 +54,11 @@ func Test_fuParse_valid_phase(t *testing.T) {
 			PhaseNode{
 			name: "main",
 			statements: []ASTNode {
-					ListNode{values: []string {"foo"}},
+					StringNode{"foo"},
 					AssignmentNode{
 						target: "x",
-						expr: ListNode{values: []string {"bar"}}},
-			}},
-	}}
+						expr: StringNode{"bar"},
+	}}}}}
 	assertASTEquals(t, &expect, _ast)
 }
 
@@ -182,10 +177,8 @@ func Test_fuParse_badtoken(t *testing.T) {
 	tokens := toklist([]minitok{
 		{NAME, "blah"},
 		{'{', "{"},
-		{'[', "["},
 		{QSTRING, "\"pop!\""},
 		{BADTOKEN, "!#*$"},
-		{']', "]"},
 		{'}', "}"},
 	})
 	lexer := NewLexer(tokens)

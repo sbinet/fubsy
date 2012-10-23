@@ -14,16 +14,16 @@ func TestRootNode_Equal(t *testing.T) {
 	if !node1.Equal(node2) {
 		t.Error("empty root nodes not equal")
 	}
-	node1.elements = []ASTNode {ListNode{}}
+	node1.elements = []ASTNode {StringNode{}}
 	if node1.Equal(node2) {
 		t.Error("non-empty root node equals empty root node")
 	}
-	node2.elements = []ASTNode {ListNode{}}
+	node2.elements = []ASTNode {StringNode{}}
 	if !node1.Equal(node2) {
 		t.Error("root nodes with one child each not equal")
 	}
 
-	other := ListNode{}
+	other := StringNode{}
 	if node1.Equal(other) {
 		t.Error("nodes of different type are equal")
 	}
