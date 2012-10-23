@@ -21,6 +21,7 @@ const BADTOKEN = -1
 	node ASTNode
 	nodelist []ASTNode
 	expr ExpressionNode
+	exprlist []ExpressionNode
 	text string
 	stringlist []string
 }
@@ -38,6 +39,7 @@ const BADTOKEN = -1
 %type <expr> expr
 %type <expr> primaryexpr
 %type <expr> functioncall
+%type <exprlist> arglist
 %type <expr> selection
 %type <expr> stringlist
 
@@ -143,6 +145,25 @@ functioncall:
 	{
 		$$ = FunctionCallNode{function: $1, args: []ExpressionNode {}}
 	}
+|	expr '(' arglist ')'
+	{
+		$$ = FunctionCallNode{function: $1, args: $3}
+	}
+|	expr '(' arglist ',' ')'
+	{
+		$$ = FunctionCallNode{function: $1, args: $3}
+	}
+
+arglist:
+	arglist ',' expr
+	{
+		$$ = append($1, $3)
+	}
+|	expr
+	{
+		$$ = []ExpressionNode{$1}
+	}
+
 
 selection:
 	expr '.' NAME

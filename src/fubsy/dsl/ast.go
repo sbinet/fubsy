@@ -165,7 +165,7 @@ func (self AssignmentNode) Equal(other_ ASTNode) bool {
 }
 
 func (self FunctionCallNode) Dump(writer io.Writer, indent string) {
-	fmt.Fprintf(writer, "FunctionCallNode[%s]\n", self.function)
+	fmt.Fprintf(writer, "%sFunctionCallNode[%s]\n", indent, self.function)
 	for _, arg := range self.args {
 		arg.Dump(writer, indent + "  ")
 	}
@@ -203,7 +203,7 @@ func (self SelectionNode) String() string {
 }
 
 func (self NameNode) Dump(writer io.Writer, indent string) {
-	fmt.Fprintf(writer, "NameNode[%s]\n", self.name)
+	fmt.Fprintf(writer, "%sNameNode[%s]\n", indent, self.name)
 }
 
 func (self NameNode) Equal(other_ ASTNode) bool {
