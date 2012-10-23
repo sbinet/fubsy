@@ -3,4 +3,5 @@
 ^fubsy$
 ~$
 ^y.output$
-^src/fubsy/fu(grammar|lex)\.go$
+^[a-z]+\.test$
+^src/fubsy/dsl/fu(grammar|lex)\.go$

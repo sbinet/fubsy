@@ -3,7 +3,7 @@ package main
 import "os"
 import "fmt"
 
-import "fubsy"
+import "fubsy/dsl"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -11,7 +11,7 @@ func main() {
 		os.Exit(2)
 	}
 	script := os.Args[1]
-	ast, err := fubsy.Parse(script)
+	ast, err := dsl.Parse(script)
 	if ast == nil && err == nil {
 		panic("ast == nil && err == nil")
 	}

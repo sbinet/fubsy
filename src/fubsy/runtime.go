@@ -1,13 +1,16 @@
 package fubsy
 
-import "fmt"
+import (
+	"fmt"
+	"fubsy/dsl"
+)
 
 type Runtime struct {
 	script string
-	ast AST
+	ast dsl.AST
 }
 
-func NewRuntime(script string, ast AST) *Runtime {
+func NewRuntime(script string, ast dsl.AST) *Runtime {
 	return &Runtime{script, ast}
 }
 

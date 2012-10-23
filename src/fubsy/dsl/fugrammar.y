@@ -1,5 +1,5 @@
 %{
-package fubsy
+package dsl
 
 import (
 	"fmt"

@@ -1,16 +1,16 @@
-package fubsy
+package testutils
 
 import (
 	"testing"
 )
 
-func assertNoError(t *testing.T, actual error) {
+func AssertNoError(t *testing.T, actual error) {
 	if actual != nil {
 		t.Fatal("unexpected error:", actual)
 	}
 }
 
-func assertError(t *testing.T, expect string, actual error) {
+func AssertError(t *testing.T, expect string, actual error) {
 	if actual == nil {
 		t.Fatal("expected error, but got nil")
 	}

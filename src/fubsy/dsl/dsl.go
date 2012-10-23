@@ -1,4 +1,4 @@
-package fubsy
+package dsl
 
 import (
 	"io"

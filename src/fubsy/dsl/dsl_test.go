@@ -1,4 +1,4 @@
-package fubsy
+package dsl
 
 import (
 	"testing"
@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"bytes"
 	"path"
+
+	"fubsy/testutils"
 )
 
 func TestRootNode_Equal(t *testing.T) {
@@ -138,7 +140,7 @@ func TestParse_valid_1(t *testing.T) {
 			PhaseNode{name: "main", statements: []ASTNode {
 					ListNode {values: []string {"meep"}}}}}}
 	ast, err := Parse(fn)
-	assertNoError(t, err)
+	testutils.AssertNoError(t, err)
 	assertASTEquals(t, &expect, ast)
 }
 
@@ -154,7 +156,7 @@ func TestParse_valid_sequence(t *testing.T) {
 		"plugin foo {{{o'malley & friends\n}}}\n" +
 		"blob { [\"meep\"]; }")
 	ast, err := Parse(fn)
-	assertNoError(t, err)
+	testutils.AssertNoError(t, err)
 
 	expect := RootNode{elements: []ASTNode {
 			PhaseNode{
@@ -177,7 +179,7 @@ func TestParse_invalid_1(t *testing.T) {
 	fn := mkfile(tmpdir, "invalid_1.fubsy", "main{  [\n\"borf\"\n }")
 	_, err := Parse(fn)
 	expect := fn + ":3: syntax error (near })"
-	assertError(t, expect, err)
+	testutils.AssertError(t, expect, err)
 }
 
 func TestParse_invalid_2(t *testing.T) {
@@ -188,7 +190,7 @@ func TestParse_invalid_2(t *testing.T) {
 	fn := mkfile(tmpdir, "invalid_2.fubsy", "main\n{[\n *&! \"whizz\"]\n}")
 	_, err := Parse(fn)
 	expect := fn + ":3: syntax error (near *&!)"
-	assertError(t, expect, err)
+	testutils.AssertError(t, expect, err)
 	reset()
 }
 
@@ -211,7 +213,7 @@ func TestParse_everything(t *testing.T) {
 		"}\n",
 	)
 	ast, err := Parse(fn)
-	assertNoError(t, err)
+	testutils.AssertNoError(t, err)
 
 	expect :=
 		"RootNode {\n" +
