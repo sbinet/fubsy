@@ -5,7 +5,7 @@ import (
 )
 
 func TestScan_valid_1(t *testing.T) {
-	input := "]  [\"foo!bar\"\n ]"
+	input := "]  [\"foo!bar\" # comment\n ]"
 	expect := []toktext{
 		{"nofile", 1, ']', "]"},
 		{"nofile", 1, '[', "["},
@@ -16,7 +16,7 @@ func TestScan_valid_1(t *testing.T) {
 }
 
 func TestScan_valid_2(t *testing.T) {
-	input := "main{[\"foo\"][\"bar\"]}"
+	input := "main{[\"foo\"][\"bar\"]} #ignore"
 	expect := []toktext{
 		{"a.txt", 1, NAME, "main"},
 		{"a.txt", 1, '{', "{"},

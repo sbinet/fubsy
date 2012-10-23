@@ -129,6 +129,7 @@ func (self *Scanner) scan() {
 
 <*>\0						goto eof
 [ \t\n]+					checkbad()
+\#.*						checkbad()
 
 "import"					tokfound(IMPORT)
 "plugin"					tokfound(PLUGIN)
