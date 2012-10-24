@@ -106,6 +106,7 @@ func (self *Scanner) scan() {
 	}
 	stopinline := func() {
 		addtok(self.filename, inlinestart, INLINE, inline)
+		inline = inline[:0]
 		begin(SC_INITIAL)
 		tokfound(R3BRACE)
 	}

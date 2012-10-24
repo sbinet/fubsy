@@ -100,6 +100,19 @@ func TestScan_inline_open(t *testing.T) {
 	assertScan(t, expect, "foo", input)
 }
 
+func TestScan_inline_consecutive(t *testing.T) {
+	input := "{{{\nbop\n}}}\n\n{{{meep\n}}}\n"
+	expect := []toktext{
+		{"con", 1, L3BRACE, "{{{"},
+		{"con", 1, INLINE, "\nbop\n"},
+		{"con", 3, R3BRACE, "}}}"},
+		{"con", 5, L3BRACE, "{{{"},
+		{"con", 5, INLINE, "meep\n"},
+		{"con", 6, R3BRACE, "}}}"},
+	}
+	assertScan(t, expect, "con", input)
+}
+
 func TestScan_invalid(t *testing.T) {
 	input := "\n!-\"whee]\" whizz&^%\n?bang"
 	expect := []toktext{
