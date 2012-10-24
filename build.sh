@@ -1,4 +1,10 @@
 #!/bin/sh
+
+tests=""
+if [ $# -eq 1 ]; then
+    tests="-test.run=$1"
+fi
+
 export GOPATH=$PWD
 set -ex
 
@@ -16,6 +22,6 @@ go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y
 go install -v -gcflags "-N -l" fubsy
 go test -v -gcflags "-N -l" -i fubsy/dsl
 go test -v -gcflags "-N -l" -c fubsy/dsl
-./dsl.test -test.v=true
+./dsl.test -test.v=true $tests
 
 go build -v -gcflags "-N -l"
