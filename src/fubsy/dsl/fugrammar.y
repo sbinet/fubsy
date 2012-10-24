@@ -51,18 +51,23 @@ const BADTOKEN = -1
 %%
 
 script:
-	eolopt elementlist
+	elementlist EOF
 	{
-		$$ = RootNode{elements: $2}
+		$$ = RootNode{elements: $1}
+		_ast = &$$
+	}
+|	EOF
+	{
+		$$ = RootNode{}
 		_ast = &$$
 	}
 
 elementlist:
-	elementlist element
+	elementlist element EOL
 	{
 		$$ = append($1, $2)
 	}
-|	element
+|	element EOL
 	{
 		$$ = []ASTNode {$1}
 	}
@@ -73,7 +78,7 @@ element:
 |	phase
 
 import:
-	IMPORT dottedname eol
+	IMPORT dottedname
 	{
 		$$ = ImportNode{plugin: $2}
 	}
@@ -89,7 +94,7 @@ dottedname:
 	}
 
 inline:
-	PLUGIN NAME L3BRACE INLINE R3BRACE eol
+	PLUGIN NAME L3BRACE INLINE R3BRACE
 	{
 		$$ = InlineNode{lang: $2, content: $4}
 	}
@@ -101,11 +106,11 @@ phase:
 	}
 
 block:
-	'{' eol statementlist '}' eol
+	'{' EOL statementlist '}'
 	{
 		$$ = $3
 	}
-|	'{' '}' eol
+|	'{' '}'
 	{
 		$$ = []ASTNode {}
 	}
@@ -121,8 +126,8 @@ statementlist:
 	}
 
 statement:
-	assignment eol			{ $$ = $1 }
-|	expr eol				{ $$ = $1 }
+	assignment EOL			{ $$ = $1 }
+|	expr EOL				{ $$ = $1 }
 
 assignment:
 	NAME '=' expr
@@ -186,18 +191,6 @@ selection:
 	{
 		$$ = SelectionNode{container: $1, member: $3}
 	}
-
-// mandatory end-of-line (or end-of-file)
-eol:
-	eol EOL
-|	EOL
-|	eol EOF
-|	EOF
-
-// optional end-of-line (zero or more)
-eolopt:
-	eol
-|
 
 %%
 

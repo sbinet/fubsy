@@ -2,6 +2,8 @@ package dsl
 
 import (
 	"testing"
+	"fmt"
+	"strings"
 )
 
 func TestScan_valid_1(t *testing.T) {
@@ -16,6 +18,20 @@ func TestScan_valid_1(t *testing.T) {
 	assertScan(t, expect, "nofile", input)
 }
 
+func TestScan_eof(t *testing.T) {
+	// input with no trailing newline generates a synthetic EOL
+	// (text == "" so we can tell it was EOF)
+	input := "main{  \n\"borf\""
+	expect := []toktext{
+		{"eof", 1, NAME, "main"},
+		{"eof", 1, '{', "{"},
+		{"eof", 1, EOL, "\n"},
+		{"eof", 2, QSTRING, "\"borf\""},
+		{"eof", 2, EOL, ""},
+	}
+	assertScan(t, expect, "eof", input)
+}
+
 func TestScan_filelist(t *testing.T) {
 	input := "bop { \n<**/*.[ch] [a-z]*.o\n>}"
 	expect := []toktext{
@@ -27,6 +43,7 @@ func TestScan_filelist(t *testing.T) {
 		{"bop", 2, FILEPATTERN, "[a-z]*.o"},
 		{"bop", 3, '>', ">"},
 		{"bop", 3, '}', "}"},
+		{"bop", 3, EOL, ""},
 	}
 	assertScan(t, expect, "bop", input)
 }
@@ -42,6 +59,7 @@ func TestScan_valid_2(t *testing.T) {
 		{"a.txt", 1, FILEPATTERN, ")baz"},
 		{"a.txt", 1, '>', ">"},
 		{"a.txt", 1, '}', "}"},
+		{"a.txt", 1, EOL, ""},
 	}
 	assertScan(t, expect, "a.txt", input)
 }
@@ -61,14 +79,15 @@ func TestScan_keywords(t *testing.T) {
 }
 
 func TestScan_inline_1(t *testing.T) {
-	input := " plugin bob\n{{{yo\nhello\nthere\n}}}"
+	input := " plugin bob\n\n{{{yo\nhello\nthere\n}}}"
 	expect := []toktext{
 		{"blop.txt", 1, PLUGIN, "plugin"},
 		{"blop.txt", 1, NAME, "bob"},
 		{"blop.txt", 1, EOL, "\n"},
-		{"blop.txt", 2, L3BRACE, "{{{"},
-		{"blop.txt", 2, INLINE, "yo\nhello\nthere\n"},
-		{"blop.txt", 5, R3BRACE, "}}}"},
+		{"blop.txt", 3, L3BRACE, "{{{"},
+		{"blop.txt", 3, INLINE, "yo\nhello\nthere\n"},
+		{"blop.txt", 6, R3BRACE, "}}}"},
+		{"blop.txt", 6, EOL, ""},
 	}
 	assertScan(t, expect, "blop.txt", input)
 }
@@ -91,18 +110,25 @@ func TestScan_inline_2(t *testing.T) {
 	assertScan(t, expect, "blop.txt", input)
 }
 
-func TestScan_inline_open(t *testing.T) {
+func TestScan_inline_unclosed_1(t *testing.T) {
 	// bad input: unclosed {{{ (should be a syntax error, not an
 	// infinite loop!) (hmmm: would be nice to report the trailing
 	// inline contents as a BADTOKEN; might give a better syntax error)
 	input := " {{{bip\nbop!["
 	expect := []toktext{
 		{"foo", 1, L3BRACE, "{{{"},
+		{"foo", 2, EOL, ""},
 	}
 	assertScan(t, expect, "foo", input)
+}
 
-	// same result on incomplete }}}
-	input += "\n}}"
+func TestScan_inline_unclosed_2(t *testing.T) {
+	// very similar to above, but with incomplete }}}
+	input := " {{{bip\nbop![\n}}"
+	expect := []toktext{
+		{"foo", 1, L3BRACE, "{{{"},
+		{"foo", 3, EOL, ""},
+	}
 	assertScan(t, expect, "foo", input)
 }
 
@@ -113,7 +139,6 @@ func TestScan_inline_consecutive(t *testing.T) {
 		{"con", 1, INLINE, "\nbop\n"},
 		{"con", 3, R3BRACE, "}}}"},
 		{"con", 3, EOL, "\n"},
-		{"con", 4, EOL, "\n"},
 		{"con", 5, L3BRACE, "{{{"},
 		{"con", 5, INLINE, "meep\n"},
 		{"con", 6, R3BRACE, "}}}"},
@@ -125,7 +150,6 @@ func TestScan_inline_consecutive(t *testing.T) {
 func TestScan_invalid(t *testing.T) {
 	input := "\n!-\"whee]\" whizz&^%\n?bang"
 	expect := []toktext{
-		{"fwob", 1, EOL, "\n"},
 		{"fwob", 2, BADTOKEN, "!-"},
 		{"fwob", 2, QSTRING, "\"whee]\""},
 		{"fwob", 2, NAME, "whizz"},
@@ -133,6 +157,7 @@ func TestScan_invalid(t *testing.T) {
 		{"fwob", 2, EOL, "\n"},
 		{"fwob", 3, BADTOKEN, "?"},
 		{"fwob", 3, NAME, "bang"},
+		{"fwob", 3, EOL, ""},
 		}
 	assertScan(t, expect, "fwob", input)
 }
@@ -142,16 +167,20 @@ func assertScan(t *testing.T, expect []toktext, filename string, input string) {
 	scanner.scan()
 	lasttok := scanner.tokens[len(scanner.tokens)-1]
 	if lasttok.token != EOF {
-		t.Errorf("expected last token to be EOF, but got %d (%#v)",
-			lasttok.token, lasttok.text)
+			t.Errorf("expected last token to be EOF, but got %d (%#v)",
+					lasttok.token, lasttok.text)
 	}
 	assertTokens(t, expect, scanner.tokens[0:len(scanner.tokens)-1])
 }
 
 func assertTokens(t *testing.T, expect []toktext, actual []toktext) {
 	if len(expect) != len(actual) {
-		t.Fatalf("expected %d tokens, but got %d",
-			len(expect), len(actual))
+		tokens := make([]string, len(actual))
+		for i, tok := range actual {
+			tokens[i] = fmt.Sprintf("%#v", tok)
+		}
+		t.Fatalf("expected %d tokens, but got %d:\n%s",
+			len(expect), len(actual), strings.Join(tokens, "\n"))
 	}
 	for i, etok := range expect {
 		atok := actual[i]

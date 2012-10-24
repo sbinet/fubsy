@@ -45,8 +45,7 @@ func (self *Scanner) nextchar() {
 	if self.cur == '\n' {
 		// increment lineno after consuming the newline (self.cur will
 		// be replaced by the next char momentarily), but before we
-		// produce the EOL token -- that necessitates an adjustment
-		// in addtok() below
+		// produce the EOL token (see maybeeol() for compensation)
 		self.lineno++
 	}
 	if self.pos >= len(self.input) {
@@ -77,6 +76,9 @@ func (self *Scanner) scan() {
 	var inline []byte
 	var inlinestart int
 
+	// current line contains only whitespace or comments (no tokens)
+	blank := true
+
 	begin := func(cond int) {
 		if cond < SC_INITIAL || cond >= maxsc {
 			panic(fmt.Sprintf("invalid start condition: %d", cond))
@@ -84,13 +86,9 @@ func (self *Scanner) scan() {
 		condition = cond
 	}
 	addtok := func(filename string, lineno int, token int, text []byte) {
-		if token == EOL {
-			// compensate for newchar()'s lineno++ before we produce
-			// an EOL token
-			lineno--
-		}
 		tt := toktext{filename, lineno, token, string(text)}
 		self.tokens = append(self.tokens, tt)
+		blank = false
 	}
 	checkbad := func() {
 		if len(self.badtext) > 0 {
@@ -112,6 +110,17 @@ func (self *Scanner) scan() {
 		// as badtext does not span lines
 		self.badlineno = self.lineno
 		self.badtext = append(self.badtext, self.buf[0])
+	}
+	maybeeol := func() {
+		// Don't want the parser to worry about blank/whitespace/comment
+		// lines, so only report "significant" newlines -- ie. newlines
+		// at the end of a line that contains at least one other token.
+		checkbad()
+		if !blank {
+			// decrement lineno to compensate for lineno++ in nextchar()
+			addtok(self.filename, self.lineno-1, EOL, self.buf)
+		}
+		blank = true
 	}
 
 	startinline := func() {
@@ -162,7 +171,7 @@ func (self *Scanner) scan() {
 
 <*>\0						goto eof
 [ \t]+						checkbad()
-\n							tokfound(EOL)
+\n							maybeeol()
 \#.*						checkbad()
 
 "import"					tokfound(IMPORT)
@@ -193,5 +202,11 @@ func (self *Scanner) scan() {
 %%
 
 eof:
+	if self.tokens[len(self.tokens)-1].token != EOL {
+		// synthetic EOL so the parser only has to worry about EOL as a
+		// statement terminator (not EOF too)
+		tokfound(EOL)
+	}
+	// special EOF token to improve syntax error reporting
 	tokfound(EOF)
 }

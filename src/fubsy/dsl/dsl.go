@@ -13,9 +13,13 @@ type SyntaxError struct {
 func (self SyntaxError) Error() string {
 	badtok := self.badtoken.token
 	badtext := self.badtoken.text
-	if badtok == EOL {
+	if badtok == EOF {
+		badtext = "EOF"
+	} else if badtok == EOL && badtext == "\n" {
 		badtext = "EOL"
-	} else if badtok == EOF {
+	} else 	if badtok == EOL && badtext == "" {
+		// synthetic EOL inserted right before EOF -- perhaps this
+		// should be reported as EOL too?
 		badtext = "EOF"
 	} else if badtok == '\'' {
 		badtext = "\"'\""

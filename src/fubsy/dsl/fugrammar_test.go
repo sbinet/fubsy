@@ -19,6 +19,7 @@ func Test_fuParse_valid_imports(t *testing.T) {
 		{'.', "."},
 		{NAME, "whoo"},
 		{EOL, "\n"},
+		{EOF, ""},
 	}))
 
 	result := fuParse(lexer)
@@ -46,6 +47,7 @@ func Test_fuParse_valid_phase(t *testing.T) {
 		{EOL, "\n"},
 		{'}', "}"},
 		{EOL, "\n"},
+		{EOF, ""},
 	}))
 
 	result := fuParse(lexer)
@@ -71,6 +73,7 @@ func Test_fuParse_empty_phase(t *testing.T) {
 		{'{', "{"},
 		{'}', "}"},
 		{EOL, "\n"},
+		{EOF, ""},
 	}))
 
 	result := fuParse(lexer)
@@ -100,7 +103,8 @@ func Test_fuParse_expr_1(t *testing.T) {
 		{')', ")"},
 		{EOL, "\n"},
 		{'}', "}"},
-		{EOL, "\n"},
+		{EOL, ""},
+		{EOF, ""},
 	}))
 
 	result := fuParse(lexer)
@@ -131,6 +135,7 @@ func Test_fuParse_funccall_1(t *testing.T) {
 		{EOL, "\n"},
 		{'}', "}"},
 		{EOL, "\n"},
+		{EOF, ""},
 	}))
 
 	result := fuParse(lexer)
@@ -167,6 +172,7 @@ func Test_fuParse_funccall_2(t *testing.T) {
 		{')', ")"},
 		{EOL, "\n"},
 		{'}', "}"},
+		{EOL, ""},
 		{EOF, ""},
 	}))
 
@@ -200,6 +206,7 @@ func Test_fuParse_funccall_2(t *testing.T) {
 		{')', ")"},
 		{EOL, "\n"},
 		{'}', "}"},
+		{EOL, ""},
 		{EOF, ""},
 	}))
 	reset()
@@ -222,6 +229,7 @@ func Test_fuParse_filelist(t *testing.T) {
 		{'>', ">"},
 		{EOL, "\n"},
 		{'}', "}"},
+		{EOL, ""},
 		{EOF, ""},
 		}))
 
@@ -238,6 +246,7 @@ func Test_fuParse_valid_inline(t *testing.T) {
 		{INLINE, "beep!\"\nblam'" },
 		{R3BRACE, "}}}"},
 		{EOL, "\n"},
+		{EOF, ""},
 	}))
 
 	result := fuParse(lexer)
@@ -252,6 +261,7 @@ func Test_fuParse_invalid(t *testing.T) {
 	tokens := toklist([]minitok{
 		{QSTRING, "\"ding\"" },
 		{'<', "<"},
+		{EOF, ""},
 	})
 	tokens[0].lineno = 2		// ensure this makes it to the SyntaxError
 	lexer := NewLexer(tokens)
@@ -269,6 +279,7 @@ func Test_fuParse_badtoken(t *testing.T) {
 		{QSTRING, "\"pop!\""},
 		{BADTOKEN, "!#*$"},
 		{'}', "}"},
+		{EOF, ""},
 	})
 	lexer := NewLexer(tokens)
 	result := fuParse(lexer)
