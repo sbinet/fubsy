@@ -109,8 +109,10 @@ func TestParse_everything(t *testing.T) {
 		"    dude\" ...\n" +
 		"  }}}\n" +
 		"  PhaseNode[main] {\n" +
-		"    AssignmentNode[a: \"foo\"]\n" +
-		"    AssignmentNode[c: d.e()]\n" +
+		"    AssignmentNode[a]\n" +
+		"      StringNode[foo]\n" +
+		"    AssignmentNode[c]\n" +
+		"      FunctionCallNode[d.e] (0 args)\n" +
 		"    SelectionNode[x.y: z]\n" +
 		"    FileListNode[lib1/*.c lib2/**/*.c]\n" +
 		"  }\n" +

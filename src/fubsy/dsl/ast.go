@@ -152,8 +152,8 @@ func (self PhaseNode) Equal(other_ ASTNode) bool {
 }
 
 func (self AssignmentNode) Dump(writer io.Writer, indent string) {
-	fmt.Fprintf(writer, "%sAssignmentNode[%s: %s]\n",
-		indent, self.target, self.expr)
+	fmt.Fprintf(writer, "%sAssignmentNode[%s]\n", indent, self.target)
+	self.expr.Dump(writer, indent + "  ")
 }
 
 func (self AssignmentNode) Equal(other_ ASTNode) bool {
@@ -164,7 +164,8 @@ func (self AssignmentNode) Equal(other_ ASTNode) bool {
 }
 
 func (self FunctionCallNode) Dump(writer io.Writer, indent string) {
-	fmt.Fprintf(writer, "%sFunctionCallNode[%s]\n", indent, self.function)
+	fmt.Fprintf(writer, "%sFunctionCallNode[%s] (%d args)\n",
+		indent, self.function, len(self.args))
 	for _, arg := range self.args {
 		arg.Dump(writer, indent + "  ")
 	}
