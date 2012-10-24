@@ -15,7 +15,7 @@ func TestParse_valid_1(t *testing.T) {
 	defer cleanup()
 
 	// dead simple: a single top-level element
-	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n<meep>;\n}\n")
+	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n<meep>\n\n}")
 
 	expect := RootNode{elements: []ASTNode {
 			PhaseNode{name: "main", statements: []ASTNode {
@@ -33,9 +33,9 @@ func TestParse_valid_sequence(t *testing.T) {
 	fn := mkfile(
 		tmpdir,
 		"valid_2.fubsy",
-		"main {\n\"boo\";\n}\n" +
+		"main {\n\"boo\"\n}\n" +
 		"plugin foo {{{o'malley & friends\n}}}\n" +
-		"blob { \"meep\"; }")
+		"blob {\n \"meep\"\n }")
 	ast, err := Parse(fn)
 	testutils.AssertNoError(t, err)
 
@@ -57,9 +57,9 @@ func TestParse_invalid_1(t *testing.T) {
 	defer cleanup()
 
 	// invalid: no closing rbracket
-	fn := mkfile(tmpdir, "invalid_1.fubsy", "main{  \n\"borf\";\n")
+	fn := mkfile(tmpdir, "invalid_1.fubsy", "main{  \n\"borf\"\n")
 	_, err := Parse(fn)
-	expect := fn + ":2: syntax error (near ;)"
+	expect := fn + ":2: syntax error (near EOL)"
 	testutils.AssertError(t, expect, err)
 }
 
@@ -68,9 +68,9 @@ func TestParse_invalid_2(t *testing.T) {
 	defer cleanup()
 
 	// invalid: bad token
-	fn := mkfile(tmpdir, "invalid_2.fubsy", "main\n{\n *&! \"whizz\"\n}")
+	fn := mkfile(tmpdir, "invalid_2.fubsy", "main{\n *&! \"whizz\"\n}")
 	_, err := Parse(fn)
-	expect := fn + ":3: syntax error (near *&!)"
+	expect := fn + ":2: syntax error (near *&!)"
 	testutils.AssertError(t, expect, err)
 	reset()
 }
@@ -81,20 +81,22 @@ func TestParse_everything(t *testing.T) {
 	defer cleanup()
 
 	fn := mkfile(tmpdir, "everything.fubsy",
-		"import foo;\n" +
-		"import foo.bar.baz;\n" +
+		"# start with a comment\n" +
+		"import foo\n" +
+		"import foo.bar.baz\n" +
+		"\n     # blank lines are OK!\n" +
 		"plugin funky {{{\n" +
 		"any ol' crap! \"bring it on,\n" +
 		"dude\" ...\n" +
 		"}}}\n" +
 		"main {\n" +
-		"  a   =(\"foo\");\n" +
-		"  c=(d.e)  ();\n" +
-		"x.y.z;\n" +
+		"  a   =(\"foo\")\n" +
+		"  c=(d.e)  ()\n" +
+		"x.y.z\n" +
 		"  <\n" +
 		"    lib1/*.c\n" +
 		"    lib2/**/*.c\n" +
-		"  >;\n" +
+		"  >\n" +
 		"}\n",
 	)
 	ast, err := Parse(fn)

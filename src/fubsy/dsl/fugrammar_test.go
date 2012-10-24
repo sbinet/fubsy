@@ -11,14 +11,14 @@ func Test_fuParse_valid_imports(t *testing.T) {
 	lexer := NewLexer(toklist([]minitok{
 		{IMPORT, "import"},
 		{NAME, "ding"},
-		{';', ";"},
+		{EOL, "\n"},
 		{IMPORT, "import"},
 		{NAME, "dong"},
 		{'.', "."},
 		{NAME, "ping"},
 		{'.', "."},
 		{NAME, "whoo"},
-		{';', ";"},
+		{EOL, "\n"},
 	}))
 
 	result := fuParse(lexer)
@@ -37,12 +37,13 @@ func Test_fuParse_valid_phase(t *testing.T) {
 	lexer := NewLexer(toklist([]minitok{
 		{NAME, "main"},
 		{'{', "{"},
+		{EOL, "\n"},
 		{QSTRING, "\"foo\""},
-		{';', ";"},
+		{EOL, "\n"},
 		{NAME, "x"},
 		{'=', "="},
 		{QSTRING, "\"bar\""},
-		{';', ";"},
+		{EOL, "\n"},
 		{'}', "}"},
 	}))
 
@@ -89,12 +90,13 @@ func Test_fuParse_expr_1(t *testing.T) {
 	lexer := NewLexer(toklist([]minitok{
 		{NAME, "blorp"},
 		{'{', "{"},
+		{EOL, "\n"},
 		{NAME, "stuff"},
 		{'=', "="},
 		{'(', "("},
 		{NAME, "foo"},
 		{')', ")"},
-		{';', ";"},
+		{EOL, "\n"},
 		{'}', "}"},
 	}))
 
@@ -119,10 +121,11 @@ func Test_fuParse_funccall_1(t *testing.T) {
 	lexer := NewLexer(toklist([]minitok{
 		{NAME, "frob"},
 		{'{', "{"},
+		{EOL, "\n"},
 		{NAME, "foo"},
 		{'(', "("},
 		{')', ")"},
-		{';', ";"},
+		{EOL, "\n"},
 		{'}', "}"},
 	}))
 
@@ -144,17 +147,21 @@ func Test_fuParse_funccall_1(t *testing.T) {
 
 func Test_fuParse_funccall_2(t *testing.T) {
 	reset()
-	// parse "frob { foo("bip", x); }"
+	// parse:
+	// frob {
+	//   foo("bip", x)
+    // }
 	lexer := NewLexer(toklist([]minitok{
 		{NAME, "frob"},
 		{'{', "{"},
+		{EOL, "\n"},
 		{NAME, "foo"},
 		{'(', "("},
 		{QSTRING, "\"bip\""},
 		{',', ","},
 		{NAME, "x"},
 		{')', ")"},
-		{';', ";"},
+		{EOL, "\n"},
 		{'}', "}"},
 	}))
 
@@ -178,6 +185,7 @@ func Test_fuParse_funccall_2(t *testing.T) {
 	lexer = NewLexer(toklist([]minitok{
 		{NAME, "frob"},
 		{'{', "{"},
+		{EOL, "\n"},
 		{NAME, "foo"},
 		{'(', "("},
 		{QSTRING, "\"bip\""},
@@ -185,7 +193,7 @@ func Test_fuParse_funccall_2(t *testing.T) {
 		{NAME, "x"},
 		{',', ","},
 		{')', ")"},
-		{';', ";"},
+		{EOL, "\n"},
 		{'}', "}"},
 	}))
 	reset()
@@ -200,12 +208,13 @@ func Test_fuParse_filelist(t *testing.T) {
 	lexer := NewLexer(toklist([]minitok{
 		{NAME, "main"},
 		{'{', "{"},
+		{EOL, "\n"},
 		{NAME, "x"},
 		{'=', "="},
 		{'<', "<"},
 		{FILEPATTERN, "**/*.c"},
 		{'>', ">"},
-		{';', ";"},
+		{EOL, "\n"},
 		{'}', "}"},
 		}))
 
@@ -221,6 +230,7 @@ func Test_fuParse_valid_inline(t *testing.T) {
 		{L3BRACE, "{{{"},
 		{INLINE, "beep!\"\nblam'" },
 		{R3BRACE, "}}}"},
+		{EOL, "\n"},
 	}))
 
 	result := fuParse(lexer)
@@ -248,6 +258,7 @@ func Test_fuParse_badtoken(t *testing.T) {
 	tokens := toklist([]minitok{
 		{NAME, "blah"},
 		{'{', "{"},
+		{EOL, "\n"},
 		{QSTRING, "\"pop!\""},
 		{BADTOKEN, "!#*$"},
 		{'}', "}"},

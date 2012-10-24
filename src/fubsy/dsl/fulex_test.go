@@ -5,26 +5,28 @@ import (
 )
 
 func TestScan_valid_1(t *testing.T) {
-	input := "xyz  <foo*bar\n > # comment\n"
+	input := "xyz <foo*bar\n > # comment\n"
 	expect := []toktext{
 		{"nofile", 1, NAME, "xyz"},
 		{"nofile", 1, '<', "<"},
 		{"nofile", 1, FILEPATTERN, "foo*bar"},
 		{"nofile", 2, '>', ">"},
+		{"nofile", 2, EOL, "\n"},
 	}
 	assertScan(t, expect, "nofile", input)
 }
 
 func TestScan_filelist(t *testing.T) {
-	input := "bop\n { \n<**/*.[ch] [a-z]*.o\n>}"
+	input := "bop { \n<**/*.[ch] [a-z]*.o\n>}"
 	expect := []toktext{
 		{"bop", 1, NAME, "bop"},
-		{"bop", 2, '{', "{"},
-		{"bop", 3, '<', "<"},
-		{"bop", 3, FILEPATTERN, "**/*.[ch]"},
-		{"bop", 3, FILEPATTERN, "[a-z]*.o"},
-		{"bop", 4, '>', ">"},
-		{"bop", 4, '}', "}"},
+		{"bop", 1, '{', "{"},
+		{"bop", 1, EOL, "\n"},
+		{"bop", 2, '<', "<"},
+		{"bop", 2, FILEPATTERN, "**/*.[ch]"},
+		{"bop", 2, FILEPATTERN, "[a-z]*.o"},
+		{"bop", 3, '>', ">"},
+		{"bop", 3, '}', "}"},
 	}
 	assertScan(t, expect, "bop", input)
 }
@@ -45,14 +47,15 @@ func TestScan_valid_2(t *testing.T) {
 }
 
 func TestScan_keywords(t *testing.T) {
-	input := "plugim\nimport\n_import\nimportant\n.plugin\n"
+	input := "plugim import _import important .plugin\n"
 	expect := []toktext{
 		{"b.txt", 1, NAME, "plugim"},
-		{"b.txt", 2, IMPORT, "import"},
-		{"b.txt", 3, NAME, "_import"},
-		{"b.txt", 4, NAME, "important"},
-		{"b.txt", 5, '.', "."},
-		{"b.txt", 5, PLUGIN, "plugin"},
+		{"b.txt", 1, IMPORT, "import"},
+		{"b.txt", 1, NAME, "_import"},
+		{"b.txt", 1, NAME, "important"},
+		{"b.txt", 1, '.', "."},
+		{"b.txt", 1, PLUGIN, "plugin"},
+		{"b.txt", 1, EOL, "\n"},
 	}
 	assertScan(t, expect, "b.txt", input)
 }
@@ -62,6 +65,7 @@ func TestScan_inline_1(t *testing.T) {
 	expect := []toktext{
 		{"blop.txt", 1, PLUGIN, "plugin"},
 		{"blop.txt", 1, NAME, "bob"},
+		{"blop.txt", 1, EOL, "\n"},
 		{"blop.txt", 2, L3BRACE, "{{{"},
 		{"blop.txt", 2, INLINE, "yo\nhello\nthere\n"},
 		{"blop.txt", 5, R3BRACE, "}}}"},
@@ -77,10 +81,12 @@ func TestScan_inline_2(t *testing.T) {
 	input := "plugin\ntim{{{ any!chars\"are\nallowed'here\n}}}\n"
 	expect := []toktext{
 		{"blop.txt", 1, PLUGIN, "plugin"},
+		{"blop.txt", 1, EOL, "\n"},
 		{"blop.txt", 2, NAME, "tim"},
 		{"blop.txt", 2, L3BRACE, "{{{"},
 		{"blop.txt", 2, INLINE, " any!chars\"are\nallowed'here\n"},
 		{"blop.txt", 4, R3BRACE, "}}}"},
+		{"blop.txt", 4, EOL, "\n"},
 	}
 	assertScan(t, expect, "blop.txt", input)
 }
@@ -106,9 +112,12 @@ func TestScan_inline_consecutive(t *testing.T) {
 		{"con", 1, L3BRACE, "{{{"},
 		{"con", 1, INLINE, "\nbop\n"},
 		{"con", 3, R3BRACE, "}}}"},
+		{"con", 3, EOL, "\n"},
+		{"con", 4, EOL, "\n"},
 		{"con", 5, L3BRACE, "{{{"},
 		{"con", 5, INLINE, "meep\n"},
 		{"con", 6, R3BRACE, "}}}"},
+		{"con", 6, EOL, "\n"},
 	}
 	assertScan(t, expect, "con", input)
 }
@@ -116,10 +125,12 @@ func TestScan_inline_consecutive(t *testing.T) {
 func TestScan_invalid(t *testing.T) {
 	input := "\n!-\"whee]\" whizz&^%\n?bang"
 	expect := []toktext{
+		{"fwob", 1, EOL, "\n"},
 		{"fwob", 2, BADTOKEN, "!-"},
 		{"fwob", 2, QSTRING, "\"whee]\""},
 		{"fwob", 2, NAME, "whizz"},
 		{"fwob", 2, BADTOKEN, "&^%"},
+		{"fwob", 2, EOL, "\n"},
 		{"fwob", 3, BADTOKEN, "?"},
 		{"fwob", 3, NAME, "bang"},
 		}

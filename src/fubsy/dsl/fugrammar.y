@@ -27,6 +27,7 @@ const BADTOKEN = -1
 }
 
 %type <root> script
+%type <nodelist> elementlist
 %type <node> element
 %type <node> import
 %type <stringlist> dottedname
@@ -45,20 +46,25 @@ const BADTOKEN = -1
 %type <stringlist> patternlist
 
 %token <text> NAME QSTRING INLINE FILEPATTERN
-%token IMPORT PLUGIN L3BRACE R3BRACE
+%token EOL IMPORT PLUGIN L3BRACE R3BRACE
 
 %%
 
 script:
-	script element
+	eolopt elementlist
 	{
-		$1.elements = append($1.elements, $2)
-		$$ = $1
+		$$ = RootNode{elements: $2}
+		_ast = &$$
+	}
+
+elementlist:
+	elementlist element
+	{
+		$$ = append($1, $2)
 	}
 |	element
 	{
-		$$ = RootNode{elements: []ASTNode {$1}}
-		_ast = &$$
+		$$ = []ASTNode {$1}
 	}
 
 element:
@@ -67,7 +73,7 @@ element:
 |	phase
 
 import:
-	IMPORT dottedname ';'
+	IMPORT dottedname eol
 	{
 		$$ = ImportNode{plugin: $2}
 	}
@@ -83,7 +89,7 @@ dottedname:
 	}
 
 inline:
-	PLUGIN NAME L3BRACE INLINE R3BRACE
+	PLUGIN NAME L3BRACE INLINE R3BRACE eol
 	{
 		$$ = InlineNode{lang: $2, content: $4}
 	}
@@ -95,11 +101,11 @@ phase:
 	}
 
 block:
-	'{' statementlist '}'
+	'{' eol statementlist '}' eolopt
 	{
-		$$ = $2
+		$$ = $3
 	}
-|	'{' '}'
+|	'{' '}' eolopt
 	{
 		$$ = []ASTNode {}
 	}
@@ -115,8 +121,8 @@ statementlist:
 	}
 
 statement:
-	assignment ';'			{ $$ = $1 }
-|	expr ';'				{ $$ = $1 }
+	assignment eol			{ $$ = $1 }
+|	expr eol				{ $$ = $1 }
 
 assignment:
 	NAME '=' expr
@@ -175,12 +181,21 @@ arglist:
 		$$ = []ExpressionNode{$1}
 	}
 
-
 selection:
 	expr '.' NAME
 	{
 		$$ = SelectionNode{container: $1, member: $3}
 	}
+
+// sequence of one or more newlines
+eol:
+	eol EOL
+|	EOL
+
+// sequence of zero or more newlines
+eolopt:
+	eol
+|
 
 %%
 

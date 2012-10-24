@@ -42,15 +42,23 @@ func (self *Scanner) nextchar() {
 	if self.cur > 0 {
 		self.buf = append(self.buf, self.cur)
 	}
+	if self.cur == '\n' {
+		// increment lineno after consuming the newline (self.cur will
+		// be replaced by the next char momentarily), but before we
+		// produce the EOL token -- that necessitates an adjustment
+		// in addtok() below
+		self.lineno++
+	}
 	if self.pos >= len(self.input) {
+		//fmt.Printf("nextchar: at eof (post=%d, lineno=%d)\n",
+		//	self.pos, self.lineno)
 		self.cur = 0				// not a very good eof marker!
 	} else {
-		if self.cur == '\n' {
-			self.lineno += 1
-		}
+		//fmt.Printf("nextchar: pos=%d, lineno=%d: advancing from %#v to %#v\n",
+		//	self.pos, self.lineno, string(self.cur), string(self.input[self.pos]))
 		self.prev = self.cur
 		self.cur = self.input[self.pos]
-		self.pos += 1
+		self.pos++
 	}
 }
 
@@ -76,6 +84,11 @@ func (self *Scanner) scan() {
 		condition = cond
 	}
 	addtok := func(filename string, lineno int, token int, text []byte) {
+		if token == EOL {
+			// compensate for newchar()'s lineno++ before we produce
+			// an EOL token
+			lineno--
+		}
 		tt := toktext{filename, lineno, token, string(text)}
 		self.tokens = append(self.tokens, tt)
 	}
@@ -88,7 +101,9 @@ func (self *Scanner) scan() {
 	}
 	tokfound := func(token int) {
 		checkbad()
-		//fmt.Printf("token: >%s<\n", self.buf)
+		//fmt.Printf("token: %#v (prev=%#v, cur=%#v, pos=%d, lineno=%d)\n",
+		//	string(self.buf), string(self.prev), string(self.cur),
+		//	self.pos, self.lineno)
 		addtok(self.filename, self.lineno, token, self.buf)
 	}
 	badchar := func() {
@@ -146,7 +161,8 @@ func (self *Scanner) scan() {
  self.buf = self.buf[:0]
 
 <*>\0						goto eof
-[ \t\n]+					checkbad()
+[ \t]+						checkbad()
+\n							tokfound(EOL)
 \#.*						checkbad()
 
 "import"					tokfound(IMPORT)
@@ -159,7 +175,6 @@ func (self *Scanner) scan() {
 \)							tokfound(')')
 \.							tokfound('.')
 \,							tokfound(',')
-\;							tokfound(';')
 =							tokfound('=')
 \"[^\"]+\"					tokfound(QSTRING)
 

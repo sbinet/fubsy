@@ -13,8 +13,16 @@ type SyntaxError struct {
 }
 
 func (self SyntaxError) Error() string {
-	return fmt.Sprintf("%s:%d: %s (near %v)",
-		self.filename, self.line, self.message, self.badtoken)
+	badtoken := self.badtoken
+	if badtoken == "\n" {
+		badtoken = "EOL"
+	} else if badtoken == "'" {
+		badtoken = "\"'\""
+	} else if len(badtoken) == 1 {
+		badtoken = "'" + badtoken + "'"
+	}
+	return fmt.Sprintf("%s:%d: %s (near %s)",
+		self.filename, self.line, self.message, badtoken)
 }
 
 func Parse(filename string) (*RootNode, error) {
