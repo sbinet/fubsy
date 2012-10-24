@@ -41,9 +41,10 @@ const BADTOKEN = -1
 %type <expr> functioncall
 %type <exprlist> arglist
 %type <expr> selection
-%type <expr> stringlist
+%type <expr> filelist
+%type <stringlist> patternlist
 
-%token <text> NAME QSTRING INLINE
+%token <text> NAME QSTRING INLINE FILEPATTERN
 %token IMPORT PLUGIN L3BRACE R3BRACE
 
 %%
@@ -132,12 +133,22 @@ primaryexpr:
 	'(' expr ')'			{ $$ = $2 }
 |	NAME					{ $$ = NameNode{$1}}
 |	QSTRING					{ $$ = StringNode{$1}}
-|	stringlist				{ $$ = $1}
+|	filelist				{ $$ = $1}
 
-stringlist:
-	'[' QSTRING ']'
+filelist:
+	'[' patternlist ']'
 	{
-		$$ = ListNode{values: []string {$2}}
+		$$ = FileListNode{patterns: $2}
+	}
+
+patternlist:
+	patternlist FILEPATTERN
+	{
+		$$ = append($1, $2)
+	}
+|	FILEPATTERN
+	{
+		$$ = []string {$1}
 	}
 
 functioncall:
@@ -205,7 +216,7 @@ func (self *Lexer) Lex(lval *fuSymType) int {
 		// strip the quotes: they're preserved by the tokenizer,
 		// but not part of the string value
 		lval.text = toktext.text[1:len(toktext.text)-1]
-	case INLINE, NAME:
+	case INLINE, NAME, FILEPATTERN:
 		lval.text = toktext.text
 	}
 	_lasttok = &toktext

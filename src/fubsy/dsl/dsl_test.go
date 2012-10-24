@@ -15,11 +15,11 @@ func TestParse_valid_1(t *testing.T) {
 	defer cleanup()
 
 	// dead simple: a single top-level element
-	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n[\"meep\"];\n}\n")
+	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n[meep];\n}\n")
 
 	expect := RootNode{elements: []ASTNode {
 			PhaseNode{name: "main", statements: []ASTNode {
-					ListNode {values: []string {"meep"}}}}}}
+					FileListNode{patterns: []string {"meep"}}}}}}
 	ast, err := Parse(fn)
 	testutils.AssertNoError(t, err)
 	assertASTEquals(t, &expect, ast)
@@ -91,6 +91,10 @@ func TestParse_everything(t *testing.T) {
 		"  a   =(\"foo\");\n" +
 		"  c=(d.e)  ();\n" +
 		"x.y.z;\n" +
+		"  [\n" +
+		"    lib1/*.c\n" +
+		"    lib2/**/*.c\n" +
+		"  ];\n" +
 		"}\n",
 	)
 	ast, err := Parse(fn)
@@ -108,6 +112,7 @@ func TestParse_everything(t *testing.T) {
 		"    AssignmentNode[a: \"foo\"]\n" +
 		"    AssignmentNode[c: d.e()]\n" +
 		"    SelectionNode[x.y: z]\n" +
+		"    FileListNode[lib1/*.c lib2/**/*.c]\n" +
 		"  }\n" +
 		"}\n"
 	var actual_ bytes.Buffer

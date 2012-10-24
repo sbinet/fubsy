@@ -194,6 +194,25 @@ func Test_fuParse_funccall_2(t *testing.T) {
 	assertASTEquals(t, &expect, _ast)
 }
 
+func Test_fuParse_filelist(t *testing.T) {
+	reset()
+	// parse "main { x = [**/*.c]; }"
+	lexer := NewLexer(toklist([]minitok{
+		{NAME, "main"},
+		{'{', "{"},
+		{NAME, "x"},
+		{'=', "="},
+		{'[', "["},
+		{FILEPATTERN, "**/*.c"},
+		{']', "]"},
+		{';', ";"},
+		{'}', "}"},
+		}))
+
+	result := fuParse(lexer)
+	assertParseSuccess(t, result)
+}
+
 func Test_fuParse_valid_inline(t *testing.T) {
 	reset()
 	lexer := NewLexer(toklist([]minitok{

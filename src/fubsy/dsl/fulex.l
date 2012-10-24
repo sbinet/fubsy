@@ -61,6 +61,8 @@ func (self *Scanner) scan() {
 	const (
 		SC_INITIAL = iota
 		SC_INLINE
+		SC_FILELIST
+		maxsc
 	)
 
 	condition := SC_INITIAL
@@ -68,7 +70,7 @@ func (self *Scanner) scan() {
 	var inlinestart int
 
 	begin := func(cond int) {
-		if cond < SC_INITIAL || cond > SC_INLINE {
+		if cond < SC_INITIAL || cond >= maxsc {
 			panic(fmt.Sprintf("invalid start condition: %d", cond))
 		}
 		condition = cond
@@ -111,6 +113,18 @@ func (self *Scanner) scan() {
 		inline = append(inline, self.buf...)
 	}
 
+	startfilelist := func() {
+		begin(SC_FILELIST)
+		tokfound('[')
+	}
+	filepattern := func() {
+		tokfound(FILEPATTERN)
+	}
+	stopfilelist := func() {
+		begin(SC_INITIAL)
+		tokfound(']')
+	}
+
 	self.lineno = 1
 	self.nextchar()
 
@@ -123,6 +137,7 @@ func (self *Scanner) scan() {
 
 /* start conditions (lexical modes) */
 %x SC_INLINE
+%x SC_FILELIST
 
 %%
 
@@ -137,8 +152,6 @@ func (self *Scanner) scan() {
 "plugin"					tokfound(PLUGIN)
 
 [a-zA-Z_][a-zA-Z_0-9]*		tokfound(NAME)
-\[							tokfound('[')
-\]							tokfound(']')
 \{							tokfound('{')
 \}							tokfound('}')
 \(							tokfound('(')
@@ -148,12 +161,18 @@ func (self *Scanner) scan() {
 \;							tokfound(';')
 =							tokfound('=')
 \"[^\"]+\"					tokfound(QSTRING)
-.							badchar()
 
 \{\{\{						startinline()
 <SC_INLINE>\}\}\}			stopinline()
 <SC_INLINE>.*				inlinecontent()
 <SC_INLINE>\n				inlinecontent()
+
+\[							startfilelist()
+<SC_FILELIST>[^ \t\n\]]+	filepattern()
+<SC_FILELIST>[ \t\n]		// ignore
+<SC_FILELIST>\]				stopfilelist()
+
+.							badchar()
 
 %%
 

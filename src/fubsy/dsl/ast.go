@@ -77,12 +77,11 @@ type StringNode struct {
 	value string
 }
 
-// a list of strings, e.g. ["foo"]
-type ListNode struct {
-	values []string
+// a list of filename patterns, e.g. [foo*.c **/*.h]
+type FileListNode struct {
+	patterns []string
 }
 
-// argh: why not pointer receiver?
 func (self RootNode) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer, indent + "RootNode {")
 	if self.elements != nil {
@@ -234,23 +233,18 @@ func (self StringNode) String() string {
 	return fmt.Sprintf("%#v", self.value)
 }
 
-func (self ListNode) Dump(writer io.Writer, indent string) {
+func (self FileListNode) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer,
-		indent + "ListNode[" + strings.Join(self.values, ", ") + "]")
+		indent + "FileListNode[" + strings.Join(self.patterns, " ") + "]")
 }
 
-func (self ListNode) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ListNode); ok {
+func (self FileListNode) Equal(other_ ASTNode) bool {
+	if other, ok := other_.(FileListNode); ok {
 		return reflect.DeepEqual(self, other)
 	}
 	return false
 }
 
-func (self ListNode) String() string {
-	quoted := make([]string, len(self.values))
-	for i, s := range self.values {
-		// this assumes that Go syntax for strings is Fubsy syntax!
-		quoted[i] = fmt.Sprintf("%#v", s)
-	}
-	return "[" + strings.Join(quoted, ", ") + "]"
+func (self FileListNode) String() string {
+	return "[" + strings.Join(self.patterns, " ") + "]"
 }

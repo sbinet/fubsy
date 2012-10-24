@@ -29,31 +29,31 @@ func TestRootNode_Equal(t *testing.T) {
 	}
 }
 
-func TestListNode_Equal(t *testing.T) {
-	node1 := ListNode{}
-	node2 := ListNode{}
+func TestFileListNode_Equal(t *testing.T) {
+	node1 := FileListNode{}
+	node2 := FileListNode{}
 	if !node1.Equal(node1) {
 		t.Error("list node not equal to itself")
 	}
 	if !node1.Equal(node2) {
 		t.Error("empty list nodes not equal")
 	}
-	node1.values = []string {"bop"}
+	node1.patterns = []string {"bop"}
 	if !node1.Equal(node1) {
 		t.Error("non-empty list node not equal to itself")
 	}
 	if node1.Equal(node2) {
 		t.Error("non-empty list node equal to empty list node")
 	}
-	node2.values = []string {"pop"}
+	node2.patterns = []string {"pop"}
 	if node1.Equal(node2) {
 		t.Error("list node equal to list node with different element")
 	}
-	node2.values[0] = "bop"
+	node2.patterns[0] = "bop"
 	if !node1.Equal(node2) {
 		t.Error("equivalent list nodes not equal")
 	}
-	node1.values = append(node1.values, "boo")
+	node1.patterns = append(node1.patterns, "boo")
 	if node1.Equal(node2) {
 		t.Error("list node equal to list node with different length")
 	}

@@ -5,26 +5,25 @@ import (
 )
 
 func TestScan_valid_1(t *testing.T) {
-	input := "]  [\"foo!bar\" # comment\n ]"
+	input := "xyz  [foo*bar\n ] # comment\n"
 	expect := []toktext{
-		{"nofile", 1, ']', "]"},
+		{"nofile", 1, NAME, "xyz"},
 		{"nofile", 1, '[', "["},
-		{"nofile", 1, QSTRING, "\"foo!bar\""},
+		{"nofile", 1, FILEPATTERN, "foo*bar"},
 		{"nofile", 2, ']', "]"},
 	}
 	assertScan(t, expect, "nofile", input)
 }
 
 func TestScan_valid_2(t *testing.T) {
-	input := "main{[\"foo\"][\"bar\"]} #ignore"
+	input := "main{\"foo\"[bar( )baz]} #ignore"
 	expect := []toktext{
 		{"a.txt", 1, NAME, "main"},
 		{"a.txt", 1, '{', "{"},
-		{"a.txt", 1, '[', "["},
 		{"a.txt", 1, QSTRING, "\"foo\""},
-		{"a.txt", 1, ']', "]"},
 		{"a.txt", 1, '[', "["},
-		{"a.txt", 1, QSTRING, "\"bar\""},
+		{"a.txt", 1, FILEPATTERN, "bar("},
+		{"a.txt", 1, FILEPATTERN, ")baz"},
 		{"a.txt", 1, ']', "]"},
 		{"a.txt", 1, '}', "}"},
 	}
@@ -76,8 +75,9 @@ func TestScan_inline_open(t *testing.T) {
 	// bad input: unclosed {{{ (should be a syntax error, not an
 	// infinite loop!) (hmmm: would be nice to report the trailing
 	// inline contents as a BADTOKEN; might give a better syntax error)
-	input := "] {{{bip\nbop!["
+	input := "[] {{{bip\nbop!["
 	expect := []toktext{
+		{"foo", 1, '[', "["},
 		{"foo", 1, ']', "]"},
 		{"foo", 1, L3BRACE, "{{{"},
 	}
@@ -89,10 +89,8 @@ func TestScan_inline_open(t *testing.T) {
 }
 
 func TestScan_invalid(t *testing.T) {
-	input := "]]\n!-\"whee]\" whizz&^%\n?bang"
+	input := "\n!-\"whee]\" whizz&^%\n?bang"
 	expect := []toktext{
-		{"fwob", 1, ']', "]"},
-		{"fwob", 1, ']', "]"},
 		{"fwob", 2, BADTOKEN, "!-"},
 		{"fwob", 2, QSTRING, "\"whee]\""},
 		{"fwob", 2, NAME, "whizz"},
