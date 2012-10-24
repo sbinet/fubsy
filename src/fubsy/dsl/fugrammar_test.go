@@ -154,6 +154,24 @@ func Test_fuParse_funccall_1(t *testing.T) {
 	assertASTEquals(t, &expect, _ast)
 }
 
+// expected AST for the next couple of test cases
+var _funccall_expect RootNode
+
+func init() {
+	_funccall_expect = RootNode{
+		elements: []ASTNode {
+			PhaseNode{
+				name: "frob",
+				statements: []ASTNode {
+					FunctionCallNode{
+						function: NameNode{"foo"},
+						args: []ExpressionNode {
+							StringNode{"bip"},
+							NameNode{"x"},
+					}},
+	}}}}
+}
+
 func Test_fuParse_funccall_2(t *testing.T) {
 	reset()
 	// parse:
@@ -178,22 +196,14 @@ func Test_fuParse_funccall_2(t *testing.T) {
 
 	result := fuParse(lexer)
 	assertParseSuccess(t, result)
-	expect := RootNode{
-		elements: []ASTNode {
-			PhaseNode{
-				name: "frob",
-				statements: []ASTNode {
-					FunctionCallNode{
-						function: NameNode{"foo"},
-						args: []ExpressionNode {
-							StringNode{"bip"},
-							NameNode{"x"},
-					}},
-	}}}}
-	assertASTEquals(t, &expect, _ast)
+	assertASTEquals(t, &_funccall_expect, _ast)
+}
 
-	// trailing comma after last arg: same result
-	lexer = NewLexer(toklist([]minitok{
+func Test_fuParse_funccall_3(t *testing.T) {
+	reset()
+
+	// trailing comma after last arg: same as above
+	lexer := NewLexer(toklist([]minitok{
 		{NAME, "frob"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -209,10 +219,9 @@ func Test_fuParse_funccall_2(t *testing.T) {
 		{EOL, ""},
 		{EOF, ""},
 	}))
-	reset()
-	result = fuParse(lexer)
+	result := fuParse(lexer)
 	assertParseSuccess(t, result)
-	assertASTEquals(t, &expect, _ast)
+	assertASTEquals(t, &_funccall_expect, _ast)
 }
 
 func Test_fuParse_filelist(t *testing.T) {
