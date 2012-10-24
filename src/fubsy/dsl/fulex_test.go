@@ -5,26 +5,40 @@ import (
 )
 
 func TestScan_valid_1(t *testing.T) {
-	input := "xyz  [foo*bar\n ] # comment\n"
+	input := "xyz  <foo*bar\n > # comment\n"
 	expect := []toktext{
 		{"nofile", 1, NAME, "xyz"},
-		{"nofile", 1, '[', "["},
+		{"nofile", 1, '<', "<"},
 		{"nofile", 1, FILEPATTERN, "foo*bar"},
-		{"nofile", 2, ']', "]"},
+		{"nofile", 2, '>', ">"},
 	}
 	assertScan(t, expect, "nofile", input)
 }
 
+func TestScan_filelist(t *testing.T) {
+	input := "bop\n { \n<**/*.[ch] [a-z]*.o\n>}"
+	expect := []toktext{
+		{"bop", 1, NAME, "bop"},
+		{"bop", 2, '{', "{"},
+		{"bop", 3, '<', "<"},
+		{"bop", 3, FILEPATTERN, "**/*.[ch]"},
+		{"bop", 3, FILEPATTERN, "[a-z]*.o"},
+		{"bop", 4, '>', ">"},
+		{"bop", 4, '}', "}"},
+	}
+	assertScan(t, expect, "bop", input)
+}
+
 func TestScan_valid_2(t *testing.T) {
-	input := "main{\"foo\"[bar( )baz]} #ignore"
+	input := "main{\"foo\"<bar( )baz>} #ignore"
 	expect := []toktext{
 		{"a.txt", 1, NAME, "main"},
 		{"a.txt", 1, '{', "{"},
 		{"a.txt", 1, QSTRING, "\"foo\""},
-		{"a.txt", 1, '[', "["},
+		{"a.txt", 1, '<', "<"},
 		{"a.txt", 1, FILEPATTERN, "bar("},
 		{"a.txt", 1, FILEPATTERN, ")baz"},
-		{"a.txt", 1, ']', "]"},
+		{"a.txt", 1, '>', ">"},
 		{"a.txt", 1, '}', "}"},
 	}
 	assertScan(t, expect, "a.txt", input)
@@ -75,10 +89,8 @@ func TestScan_inline_open(t *testing.T) {
 	// bad input: unclosed {{{ (should be a syntax error, not an
 	// infinite loop!) (hmmm: would be nice to report the trailing
 	// inline contents as a BADTOKEN; might give a better syntax error)
-	input := "[] {{{bip\nbop!["
+	input := " {{{bip\nbop!["
 	expect := []toktext{
-		{"foo", 1, '[', "["},
-		{"foo", 1, ']', "]"},
 		{"foo", 1, L3BRACE, "{{{"},
 	}
 	assertScan(t, expect, "foo", input)

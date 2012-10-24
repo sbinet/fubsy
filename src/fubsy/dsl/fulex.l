@@ -115,14 +115,14 @@ func (self *Scanner) scan() {
 
 	startfilelist := func() {
 		begin(SC_FILELIST)
-		tokfound('[')
+		tokfound('<')
 	}
 	filepattern := func() {
 		tokfound(FILEPATTERN)
 	}
 	stopfilelist := func() {
 		begin(SC_INITIAL)
-		tokfound(']')
+		tokfound('>')
 	}
 
 	self.lineno = 1
@@ -167,10 +167,10 @@ func (self *Scanner) scan() {
 <SC_INLINE>.*				inlinecontent()
 <SC_INLINE>\n				inlinecontent()
 
-\[							startfilelist()
-<SC_FILELIST>[^ \t\n\]]+	filepattern()
+\<							startfilelist()
+<SC_FILELIST>[^ \t\n\>]+	filepattern()
 <SC_FILELIST>[ \t\n]		// ignore
-<SC_FILELIST>\]				stopfilelist()
+<SC_FILELIST>\>				stopfilelist()
 
 .							badchar()
 

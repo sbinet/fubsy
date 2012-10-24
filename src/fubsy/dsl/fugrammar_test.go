@@ -202,9 +202,9 @@ func Test_fuParse_filelist(t *testing.T) {
 		{'{', "{"},
 		{NAME, "x"},
 		{'=', "="},
-		{'[', "["},
+		{'<', "<"},
 		{FILEPATTERN, "**/*.c"},
-		{']', "]"},
+		{'>', ">"},
 		{';', ";"},
 		{'}', "}"},
 		}))
@@ -234,7 +234,7 @@ func Test_fuParse_invalid(t *testing.T) {
 	reset()
 	tokens := toklist([]minitok{
 		{QSTRING, "\"ding\"" },
-		{'[', "["},
+		{'<', "<"},
 	})
 	tokens[0].lineno = 2		// ensure this makes it to the SyntaxError
 	lexer := NewLexer(tokens)

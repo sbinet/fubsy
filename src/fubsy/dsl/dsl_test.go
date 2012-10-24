@@ -15,7 +15,7 @@ func TestParse_valid_1(t *testing.T) {
 	defer cleanup()
 
 	// dead simple: a single top-level element
-	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n[meep];\n}\n")
+	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n<meep>;\n}\n")
 
 	expect := RootNode{elements: []ASTNode {
 			PhaseNode{name: "main", statements: []ASTNode {
@@ -57,9 +57,9 @@ func TestParse_invalid_1(t *testing.T) {
 	defer cleanup()
 
 	// invalid: no closing rbracket
-	fn := mkfile(tmpdir, "invalid_1.fubsy", "main{  [\n\"borf\"\n }")
+	fn := mkfile(tmpdir, "invalid_1.fubsy", "main{  \n\"borf\";\n")
 	_, err := Parse(fn)
-	expect := fn + ":3: syntax error (near })"
+	expect := fn + ":2: syntax error (near ;)"
 	testutils.AssertError(t, expect, err)
 }
 
@@ -91,10 +91,10 @@ func TestParse_everything(t *testing.T) {
 		"  a   =(\"foo\");\n" +
 		"  c=(d.e)  ();\n" +
 		"x.y.z;\n" +
-		"  [\n" +
+		"  <\n" +
 		"    lib1/*.c\n" +
 		"    lib2/**/*.c\n" +
-		"  ];\n" +
+		"  >;\n" +
 		"}\n",
 	)
 	ast, err := Parse(fn)

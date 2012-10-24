@@ -136,7 +136,7 @@ primaryexpr:
 |	filelist				{ $$ = $1}
 
 filelist:
-	'[' patternlist ']'
+	'<' patternlist '>'
 	{
 		$$ = FileListNode{patterns: $2}
 	}
