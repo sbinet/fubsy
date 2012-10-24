@@ -140,7 +140,12 @@ func TestScan_invalid(t *testing.T) {
 func assertScan(t *testing.T, expect []toktext, filename string, input string) {
 	scanner := NewScanner(filename, []byte(input))
 	scanner.scan()
-	assertTokens(t, expect, scanner.tokens)
+	lasttok := scanner.tokens[len(scanner.tokens)-1]
+	if lasttok.token != EOF {
+		t.Errorf("expected last token to be EOF, but got %d (%#v)",
+			lasttok.token, lasttok.text)
+	}
+	assertTokens(t, expect, scanner.tokens[0:len(scanner.tokens)-1])
 }
 
 func assertTokens(t *testing.T, expect []toktext, actual []toktext) {

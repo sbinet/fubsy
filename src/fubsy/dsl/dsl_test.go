@@ -59,7 +59,7 @@ func TestParse_invalid_1(t *testing.T) {
 	// invalid: no closing rbracket
 	fn := mkfile(tmpdir, "invalid_1.fubsy", "main{  \n\"borf\"\n")
 	_, err := Parse(fn)
-	expect := fn + ":2: syntax error (near EOL)"
+	expect := fn + ":3: syntax error (near EOF)"
 	testutils.AssertError(t, expect, err)
 }
 
@@ -84,7 +84,8 @@ func TestParse_everything(t *testing.T) {
 		"# start with a comment\n" +
 		"import foo\n" +
 		"import foo.bar.baz\n" +
-		"\n     # blank lines are OK!\n" +
+		"\n     " +
+		"# blank lines are OK!\n" +
 		"plugin funky {{{\n" +
 		"any ol' crap! \"bring it on,\n" +
 		"dude\" ...\n" +

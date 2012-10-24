@@ -45,6 +45,7 @@ func Test_fuParse_valid_phase(t *testing.T) {
 		{QSTRING, "\"bar\""},
 		{EOL, "\n"},
 		{'}', "}"},
+		{EOL, "\n"},
 	}))
 
 	result := fuParse(lexer)
@@ -69,6 +70,7 @@ func Test_fuParse_empty_phase(t *testing.T) {
 		{NAME, "blah"},
 		{'{', "{"},
 		{'}', "}"},
+		{EOL, "\n"},
 	}))
 
 	result := fuParse(lexer)
@@ -98,6 +100,7 @@ func Test_fuParse_expr_1(t *testing.T) {
 		{')', ")"},
 		{EOL, "\n"},
 		{'}', "}"},
+		{EOL, "\n"},
 	}))
 
 	result := fuParse(lexer)
@@ -127,6 +130,7 @@ func Test_fuParse_funccall_1(t *testing.T) {
 		{')', ")"},
 		{EOL, "\n"},
 		{'}', "}"},
+		{EOL, "\n"},
 	}))
 
 	result := fuParse(lexer)
@@ -163,6 +167,7 @@ func Test_fuParse_funccall_2(t *testing.T) {
 		{')', ")"},
 		{EOL, "\n"},
 		{'}', "}"},
+		{EOF, ""},
 	}))
 
 	result := fuParse(lexer)
@@ -195,6 +200,7 @@ func Test_fuParse_funccall_2(t *testing.T) {
 		{')', ")"},
 		{EOL, "\n"},
 		{'}', "}"},
+		{EOF, ""},
 	}))
 	reset()
 	result = fuParse(lexer)
@@ -216,6 +222,7 @@ func Test_fuParse_filelist(t *testing.T) {
 		{'>', ">"},
 		{EOL, "\n"},
 		{'}', "}"},
+		{EOF, ""},
 		}))
 
 	result := fuParse(lexer)
@@ -309,14 +316,23 @@ func assertParseFailure(t *testing.T, result int) {
 	assertNotNil(t, "_syntaxerror", _syntaxerror)
 }
 
-func assertSyntaxError(t *testing.T, lineno int, badtoken string) {
-	expect := &SyntaxError{
-		line: lineno,
-		message: "syntax error",
-		badtoken: badtoken,
-	}
-	if *expect != *_syntaxerror {
-		t.Errorf("expected syntax error:\n%#v\nbut got:\n%#v", expect, _syntaxerror)
+func assertSyntaxError(t *testing.T, lineno int, badtext string) {
+	actual := _syntaxerror
+	message := "syntax error"
+
+	if !(actual.badtoken.lineno == lineno &&
+		actual.badtoken.text == badtext &&
+		actual.message == message) {
+
+		expect := &SyntaxError{
+			badtoken: &toktext{
+				filename: _syntaxerror.badtoken.filename,
+				lineno: lineno,
+				text: badtext},
+			message: message}
+
+		t.Errorf("expected syntax error:\n%s\nbut got:\n%s",
+			expect, actual)
 	}
 }
 

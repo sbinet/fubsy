@@ -46,7 +46,7 @@ const BADTOKEN = -1
 %type <stringlist> patternlist
 
 %token <text> NAME QSTRING INLINE FILEPATTERN
-%token EOL IMPORT PLUGIN L3BRACE R3BRACE
+%token EOL EOF IMPORT PLUGIN L3BRACE R3BRACE
 
 %%
 
@@ -101,11 +101,11 @@ phase:
 	}
 
 block:
-	'{' eol statementlist '}' eolopt
+	'{' eol statementlist '}' eol
 	{
 		$$ = $3
 	}
-|	'{' '}' eolopt
+|	'{' '}' eol
 	{
 		$$ = []ASTNode {}
 	}
@@ -187,12 +187,14 @@ selection:
 		$$ = SelectionNode{container: $1, member: $3}
 	}
 
-// sequence of one or more newlines
+// mandatory end-of-line (or end-of-file)
 eol:
 	eol EOL
 |	EOL
+|	eol EOF
+|	EOF
 
-// sequence of zero or more newlines
+// optional end-of-line (zero or more)
 eolopt:
 	eol
 |
@@ -240,8 +242,6 @@ func (self *Lexer) Lex(lval *fuSymType) int {
 
 func (self *Lexer) Error(e string) {
 	_syntaxerror = &SyntaxError{
-		filename: _lasttok.filename,
-		line: _lasttok.lineno,
-		badtoken: _lasttok.text,
+		badtoken: _lasttok,
 		message: e}
 }

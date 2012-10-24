@@ -6,23 +6,24 @@ import (
 )
 
 type SyntaxError struct {
-	filename string
-	line int
+	badtoken *toktext
 	message string
-	badtoken string
 }
 
 func (self SyntaxError) Error() string {
-	badtoken := self.badtoken
-	if badtoken == "\n" {
-		badtoken = "EOL"
-	} else if badtoken == "'" {
-		badtoken = "\"'\""
-	} else if len(badtoken) == 1 {
-		badtoken = "'" + badtoken + "'"
+	badtok := self.badtoken.token
+	badtext := self.badtoken.text
+	if badtok == EOL {
+		badtext = "EOL"
+	} else if badtok == EOF {
+		badtext = "EOF"
+	} else if badtok == '\'' {
+		badtext = "\"'\""
+	} else if len(badtext) == 1 {
+		badtext = "'" + badtext + "'"
 	}
 	return fmt.Sprintf("%s:%d: %s (near %s)",
-		self.filename, self.line, self.message, badtoken)
+		self.badtoken.filename, self.badtoken.lineno, self.message, badtext)
 }
 
 func Parse(filename string) (*RootNode, error) {

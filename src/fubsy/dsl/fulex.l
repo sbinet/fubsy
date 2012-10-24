@@ -101,9 +101,9 @@ func (self *Scanner) scan() {
 	}
 	tokfound := func(token int) {
 		checkbad()
-		//fmt.Printf("token: %#v (prev=%#v, cur=%#v, pos=%d, lineno=%d)\n",
-		//	string(self.buf), string(self.prev), string(self.cur),
-		//	self.pos, self.lineno)
+		// fmt.Printf("token: %d %#v (prev=%#v, cur=%#v, pos=%d, lineno=%d)\n",
+		// 	token, string(self.buf), string(self.prev), string(self.cur),
+		// 	self.pos, self.lineno)
 		addtok(self.filename, self.lineno, token, self.buf)
 	}
 	badchar := func() {
@@ -193,5 +193,5 @@ func (self *Scanner) scan() {
 %%
 
 eof:
-	checkbad()
+	tokfound(EOF)
 }
