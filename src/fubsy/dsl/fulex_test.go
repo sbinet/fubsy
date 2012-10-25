@@ -147,6 +147,22 @@ func TestScan_inline_consecutive(t *testing.T) {
 	assertScan(t, expect, "con", input)
 }
 
+func TestScan_internal_newlines(t *testing.T) {
+	input := "hello\n(\"beep\"\n\"bop\"\n)\n foo"
+	expect := []toktext{
+		{"nl", 1, NAME, "hello"},
+		{"nl", 1, EOL, "\n"},
+		{"nl", 2, '(', "("},
+		{"nl", 2, QSTRING, "\"beep\""},
+		{"nl", 3, QSTRING, "\"bop\""},
+		{"nl", 4, ')', ")"},
+		{"nl", 4, EOL, "\n"},
+		{"nl", 5, NAME, "foo"},
+		{"nl", 5, EOL, ""},
+	}
+	assertScan(t, expect, "nl", input)
+}
+
 func TestScan_invalid(t *testing.T) {
 	input := "\n!-\"whee]\" whizz&^%\n?bang"
 	expect := []toktext{

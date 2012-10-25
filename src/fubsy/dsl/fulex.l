@@ -79,6 +79,9 @@ func (self *Scanner) scan() {
 	// current line contains only whitespace or comments (no tokens)
 	blank := true
 
+	// nesting level inside () (to allow newline in function call args)
+	depth := 0
+
 	begin := func(cond int) {
 		if cond < SC_INITIAL || cond >= maxsc {
 			panic(fmt.Sprintf("invalid start condition: %d", cond))
@@ -113,10 +116,11 @@ func (self *Scanner) scan() {
 	}
 	maybeeol := func() {
 		// Don't want the parser to worry about blank/whitespace/comment
-		// lines, so only report "significant" newlines -- ie. newlines
+		// lines, or about newlines inside (say) function args. Thus, only
+		// report "significant" newlines -- ie. newlines not inside parens,
 		// at the end of a line that contains at least one other token.
 		checkbad()
-		if !blank {
+		if !blank && depth == 0 {
 			// decrement lineno to compensate for lineno++ in nextchar()
 			addtok(self.filename, self.lineno-1, EOL, self.buf)
 		}
@@ -180,8 +184,8 @@ func (self *Scanner) scan() {
 [a-zA-Z_][a-zA-Z_0-9]*		tokfound(NAME)
 \{							tokfound('{')
 \}							tokfound('}')
-\(							tokfound('(')
-\)							tokfound(')')
+\(							depth++; tokfound('(')
+\)							depth--; tokfound(')')
 \.							tokfound('.')
 \,							tokfound(',')
 =							tokfound('=')

@@ -52,6 +52,38 @@ func TestParse_valid_sequence(t *testing.T) {
 	assertASTEquals(t, &expect, ast)
 }
 
+func TestParse_internal_newlines(t *testing.T) {
+	// newlines in a function call are invisible to the parser
+	tmpdir, cleanup := mktemp()
+	defer cleanup()
+
+	fn := mkfile(
+		tmpdir,
+		"newlines.fubsy",
+		"main {\n"+
+			"  x(\n"+
+			"  a.b\n"+
+			")\n"+
+			"}")
+	ast, err := Parse(fn)
+	testutils.AssertNoError(t, err)
+
+	expect := RootNode{
+		elements: []ASTNode {
+			PhaseNode{
+				name: "main",
+				statements: []ASTNode {
+					FunctionCallNode{
+						function: NameNode{"x"},
+						args: []ExpressionNode {
+							SelectionNode{
+								container: NameNode{"a"},
+								member: "b",
+				}}}},
+	}}}
+	assertASTEquals(t, &expect, ast)
+}
+
 func TestParse_invalid_1(t *testing.T) {
 	tmpdir, cleanup := mktemp()
 	defer cleanup()
