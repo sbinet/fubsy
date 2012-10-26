@@ -7,8 +7,7 @@ import (
 )
 
 func Test_fuParse_valid_imports(t *testing.T) {
-	reset()
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{IMPORT, "import"},
 		{NAME, "ding"},
 		{EOL, "\n"},
@@ -20,22 +19,17 @@ func Test_fuParse_valid_imports(t *testing.T) {
 		{NAME, "whoo"},
 		{EOL, "\n"},
 		{EOF, ""},
-	}))
-
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
-
+	}
 	expect := RootNode{
 		elements: []ASTNode {
 			ImportNode{plugin: []string {"ding"}},
 			ImportNode{plugin: []string {"dong", "ping", "whoo"}},
 		}}
-	assertASTEquals(t, &expect, _ast)
+	assertParses(t, &expect, tokens)
 }
 
 func Test_fuParse_valid_phase(t *testing.T) {
-	reset()
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{NAME, "main"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -48,11 +42,7 @@ func Test_fuParse_valid_phase(t *testing.T) {
 		{'}', "}"},
 		{EOL, "\n"},
 		{EOF, ""},
-	}))
-
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
-
+	}
 	expect := RootNode{
 		elements: []ASTNode {
 			PhaseNode{
@@ -63,36 +53,29 @@ func Test_fuParse_valid_phase(t *testing.T) {
 						target: "x",
 						expr: StringNode{"bar"},
 	}}}}}
-	assertASTEquals(t, &expect, _ast)
+	assertParses(t, &expect, tokens)
 }
 
 func Test_fuParse_empty_phase(t *testing.T) {
-	reset()
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{NAME, "blah"},
 		{'{', "{"},
 		{'}', "}"},
 		{EOL, "\n"},
 		{EOF, ""},
-	}))
-
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
-
+	}
 	expect := RootNode{
 		elements: []ASTNode {
 			PhaseNode{
 				name: "blah",
 				statements: []ASTNode {}},
-		},
-	}
-	assertASTEquals(t, &expect, _ast)
+	}}
+	assertParses(t, &expect, tokens)
 }
 
 func Test_fuParse_expr_1(t *testing.T) {
-	reset()
 	// parse "blorp { stuff = (foo); }"
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{NAME, "blorp"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -105,10 +88,7 @@ func Test_fuParse_expr_1(t *testing.T) {
 		{'}', "}"},
 		{EOL, ""},
 		{EOF, ""},
-	}))
-
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
+	}
 	expect := RootNode{
 		elements: []ASTNode {
 			PhaseNode{
@@ -117,15 +97,13 @@ func Test_fuParse_expr_1(t *testing.T) {
 					AssignmentNode{
 						target: "stuff",
 						expr: NameNode{"foo"},
-				}},
-	}}}
-	assertASTEquals(t, &expect, _ast)
+	}}}}}
+	assertParses(t, &expect, tokens)
 }
 
 func Test_fuParse_expr_2(t *testing.T) {
-	reset()
 	// parse "floo { a + b + c() }
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{NAME, "floo"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -140,12 +118,9 @@ func Test_fuParse_expr_2(t *testing.T) {
 		{'}', "}"},
 		{EOL, ""},
 		{EOF, ""},
-	}))
-
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
+	}
 	expect := RootNode{
-	elements: []ASTNode {
+		elements: []ASTNode {
 		PhaseNode{
 			name: "floo",
 			statements: []ASTNode {
@@ -155,13 +130,12 @@ func Test_fuParse_expr_2(t *testing.T) {
 						function: NameNode{"c"},
 						args: []ExpressionNode {},
 	}}}}}}
-	assertASTEquals(t, &expect, _ast)
+	assertParses(t, &expect, tokens)
 }
 
 func Test_fuParse_funccall_1(t *testing.T) {
-	reset()
 	// parse "frob { foo(); }"
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{NAME, "frob"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -172,10 +146,7 @@ func Test_fuParse_funccall_1(t *testing.T) {
 		{'}', "}"},
 		{EOL, "\n"},
 		{EOF, ""},
-	}))
-
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
+	}
 	expect := RootNode{
 		elements: []ASTNode {
 			PhaseNode{
@@ -187,7 +158,7 @@ func Test_fuParse_funccall_1(t *testing.T) {
 				},
 			},
 	}}
-	assertASTEquals(t, &expect, _ast)
+	assertParses(t, &expect, tokens)
 }
 
 // expected AST for the next couple of test cases
@@ -204,17 +175,15 @@ func init() {
 						args: []ExpressionNode {
 							StringNode{"bip"},
 							NameNode{"x"},
-					}},
-	}}}}
+	}}}}}}
 }
 
 func Test_fuParse_funccall_2(t *testing.T) {
-	reset()
 	// parse:
 	// frob {
 	//   foo("bip", x)
     // }
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{NAME, "frob"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -228,18 +197,13 @@ func Test_fuParse_funccall_2(t *testing.T) {
 		{'}', "}"},
 		{EOL, ""},
 		{EOF, ""},
-	}))
-
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
-	assertASTEquals(t, &_funccall_expect, _ast)
+	}
+	assertParses(t, &_funccall_expect, tokens)
 }
 
 func Test_fuParse_funccall_3(t *testing.T) {
-	reset()
-
 	// trailing comma after last arg: same as above
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{NAME, "frob"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -254,16 +218,13 @@ func Test_fuParse_funccall_3(t *testing.T) {
 		{'}', "}"},
 		{EOL, ""},
 		{EOF, ""},
-	}))
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
-	assertASTEquals(t, &_funccall_expect, _ast)
+	}
+	assertParses(t, &_funccall_expect, tokens)
 }
 
 func Test_fuParse_filelist(t *testing.T) {
-	reset()
 	// parse "main { x = [**/*.c]; }"
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{NAME, "main"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -276,15 +237,23 @@ func Test_fuParse_filelist(t *testing.T) {
 		{'}', "}"},
 		{EOL, ""},
 		{EOF, ""},
-		}))
-
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
+	}
+	expect := RootNode{
+		elements: []ASTNode {
+			PhaseNode{
+				name: "main",
+				statements: []ASTNode {
+					AssignmentNode{
+						target: "x",
+						expr: FileListNode{
+							patterns: []string {
+								"**/*.c",
+	}}}}}}}
+	assertParses(t, &expect, tokens)
 }
 
 func Test_fuParse_valid_inline(t *testing.T) {
-	reset()
-	lexer := NewLexer(toklist([]minitok{
+	tokens := []minitok{
 		{PLUGIN, "plugin"},
 		{NAME, "whatever"},
 		{L3BRACE, "{{{"},
@@ -292,13 +261,11 @@ func Test_fuParse_valid_inline(t *testing.T) {
 		{R3BRACE, "}}}"},
 		{EOL, "\n"},
 		{EOF, ""},
-	}))
-
-	result := fuParse(lexer)
-	assertParseSuccess(t, result)
-	expect := RootNode{elements: []ASTNode {
+	}
+	expect := RootNode{
+		elements: []ASTNode {
 			InlineNode{lang: "whatever", content: "beep!\"\nblam'"}}}
-	assertASTEquals(t, &expect, _ast)
+	assertParses(t, &expect, tokens)
 }
 
 func Test_fuParse_invalid(t *testing.T) {
@@ -353,13 +320,17 @@ func toklist(tokens []minitok) []toktext {
 	return result
 }
 
-func assertParseSuccess(t *testing.T, result int) {
+func assertParses(t *testing.T, expect *RootNode, tokens []minitok) {
+	reset()
+	lexer := NewLexer(toklist(tokens))
+	result := fuParse(lexer)
 	//assertNoError(t, _syntaxerror)
 	if _syntaxerror != nil {
 		t.Fatal(fmt.Sprintf("unexpected syntax error: %s", _syntaxerror))
 	}
 	assertTrue(t, result == 0, "fuParse() returned %d (expected 0)", result)
 	assertTrue(t, _ast != nil, "_ast is nil (expected non-nil)")
+	assertASTEquals(t, expect, _ast)
 }
 
 func assertParseFailure(t *testing.T, result int) {
