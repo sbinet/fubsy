@@ -25,6 +25,7 @@ const BADTOKEN = -1
 %type <node> element
 %type <node> import
 %type <stringlist> dottedname
+%type <node> global
 %type <node> inline
 %type <node> phase
 %type <nodelist> block
@@ -70,6 +71,7 @@ elementlist:
 
 element:
 	import
+|	global
 |	inline
 |	phase
 
@@ -88,6 +90,9 @@ dottedname:
 	{
 		$$ = []string {$1}
 	}
+
+global:
+	assignment
 
 inline:
 	PLUGIN NAME L3BRACE INLINE R3BRACE

@@ -73,6 +73,41 @@ func Test_fuParse_empty_phase(t *testing.T) {
 	assertParses(t, &expect, tokens)
 }
 
+func Test_fuParse_globals(t *testing.T) {
+	tokens := []minitok{
+		{NAME, "v1"},
+		{'=', "="},
+		{QSTRING, "\"blobby!\""},
+		{EOL, "\n"},
+		{NAME, "v2"},
+		{'=', "="},
+		{'<', "<"},
+		{FILEPATTERN, "*.h"},
+		{FILEPATTERN, "*.hxx"},
+		{'>', "<"},
+		{'+', "+"},
+		{'<', "<"},
+		{FILEPATTERN, "*.c"},
+		{'>', "<"},
+		{EOL, "\n"},
+		{EOF, ""},
+	}
+	expect := RootNode{
+	elements: []ASTNode {
+			AssignmentNode{
+				target: "v1",
+				expr: StringNode{"blobby!"},
+			},
+			AssignmentNode{
+				target: "v2",
+				expr: AddNode{
+					op1: FileListNode{patterns: []string {"*.h", "*.hxx"}},
+					op2: FileListNode{patterns: []string {"*.c"}},
+			}},
+	}}
+	assertParses(t, &expect, tokens)
+}
+
 func Test_fuParse_expr_1(t *testing.T) {
 	// parse "blorp { stuff = (foo); }"
 	tokens := []minitok{

@@ -122,6 +122,7 @@ func TestParse_everything(t *testing.T) {
 		"any ol' crap! \"bring it on,\n" +
 		"dude\" ...\n" +
 		"}}}\n" +
+		"SRC = <lib/*.c>\n" +
 		"main {\n" +
 		"  a   =(\"foo\") + b\n" +
 		"  c=(d.e)  ()\n" +
@@ -143,6 +144,8 @@ func TestParse_everything(t *testing.T) {
 		"    any ol' crap! \"bring it on,\n" +
 		"    dude\" ...\n" +
 		"  }}}\n" +
+		"  AssignmentNode[SRC]\n" +
+		"    FileListNode[lib/*.c]\n" +
 		"  PhaseNode[main] {\n" +
 		"    AssignmentNode[a]\n" +
 		"      AddNode\n" +
