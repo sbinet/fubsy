@@ -122,6 +122,42 @@ func Test_fuParse_expr_1(t *testing.T) {
 	assertASTEquals(t, &expect, _ast)
 }
 
+func Test_fuParse_expr_2(t *testing.T) {
+	reset()
+	// parse "floo { a + b + c() }
+	lexer := NewLexer(toklist([]minitok{
+		{NAME, "floo"},
+		{'{', "{"},
+		{EOL, "\n"},
+		{NAME, "a"},
+		{'+', "+"},
+		{NAME, "b"},
+		{'+', "+"},
+		{NAME, "c"},
+		{'(', "("},
+		{')', ")"},
+		{EOL, "\n"},
+		{'}', "}"},
+		{EOL, ""},
+		{EOF, ""},
+	}))
+
+	result := fuParse(lexer)
+	assertParseSuccess(t, result)
+	expect := RootNode{
+	elements: []ASTNode {
+		PhaseNode{
+			name: "floo",
+			statements: []ASTNode {
+				AddNode{
+					op1: AddNode{op1: NameNode{"a"}, op2: NameNode{"b"}},
+					op2: FunctionCallNode{
+						function: NameNode{"c"},
+						args: []ExpressionNode {},
+	}}}}}}
+	assertASTEquals(t, &expect, _ast)
+}
+
 func Test_fuParse_funccall_1(t *testing.T) {
 	reset()
 	// parse "frob { foo(); }"

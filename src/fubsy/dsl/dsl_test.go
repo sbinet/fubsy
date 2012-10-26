@@ -123,7 +123,7 @@ func TestParse_everything(t *testing.T) {
 		"dude\" ...\n" +
 		"}}}\n" +
 		"main {\n" +
-		"  a   =(\"foo\")\n" +
+		"  a   =(\"foo\") + b\n" +
 		"  c=(d.e)  ()\n" +
 		"x.y.z\n" +
 		"  <\n" +
@@ -145,7 +145,11 @@ func TestParse_everything(t *testing.T) {
 		"  }}}\n" +
 		"  PhaseNode[main] {\n" +
 		"    AssignmentNode[a]\n" +
-		"      StringNode[foo]\n" +
+		"      AddNode\n" +
+		"      op1:\n" +
+		"        StringNode[foo]\n" +
+		"      op2:\n" +
+		"        NameNode[b]\n" +
 		"    AssignmentNode[c]\n" +
 		"      FunctionCallNode[d.e] (0 args)\n" +
 		"    SelectionNode[x.y: z]\n" +

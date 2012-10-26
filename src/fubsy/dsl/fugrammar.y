@@ -38,6 +38,8 @@ const BADTOKEN = -1
 %type <node> statement
 %type <node> assignment
 %type <expr> expr
+%type <expr> addexpr
+%type <expr> postfixexpr
 %type <expr> primaryexpr
 %type <expr> functioncall
 %type <exprlist> arglist
@@ -136,6 +138,13 @@ assignment:
 	}
 
 expr:
+	addexpr
+
+addexpr:
+	postfixexpr				{ $$ = $1 }
+|	addexpr '+' postfixexpr	{ $$ = AddNode{op1: $1, op2: $3} }
+
+postfixexpr:
 	primaryexpr
 |	functioncall
 |	selection
@@ -163,15 +172,15 @@ patternlist:
 	}
 
 functioncall:
-	expr '(' ')'
+	postfixexpr '(' ')'
 	{
 		$$ = FunctionCallNode{function: $1, args: []ExpressionNode {}}
 	}
-|	expr '(' arglist ')'
+|	postfixexpr '(' arglist ')'
 	{
 		$$ = FunctionCallNode{function: $1, args: $3}
 	}
-|	expr '(' arglist ',' ')'
+|	postfixexpr '(' arglist ',' ')'
 	{
 		$$ = FunctionCallNode{function: $1, args: $3}
 	}
@@ -187,7 +196,7 @@ arglist:
 	}
 
 selection:
-	expr '.' NAME
+	postfixexpr '.' NAME
 	{
 		$$ = SelectionNode{container: $1, member: $3}
 	}

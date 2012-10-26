@@ -54,6 +54,12 @@ type AssignmentNode struct {
 	expr ASTNode
 }
 
+// OP1 + OP2 (string/list concatenation)
+type AddNode struct {
+	op1 ExpressionNode
+	op2 ExpressionNode
+}
+
 // FUNC(arg, arg, ...) (N.B. FUNC is really an expr, to allow
 // for code like "(a.b.c())(stuff))"
 type FunctionCallNode struct {
@@ -161,6 +167,25 @@ func (self AssignmentNode) Equal(other_ ASTNode) bool {
 		return self == other
 	}
 	return false
+}
+
+func (self AddNode) Dump(writer io.Writer, indent string) {
+	fmt.Fprintf(writer, "%sAddNode\n", indent)
+	fmt.Fprintf(writer, "%sop1:\n", indent)
+	self.op1.Dump(writer, indent + "  ")
+	fmt.Fprintf(writer, "%sop2:\n", indent)
+	self.op2.Dump(writer, indent + "  ")
+}
+
+func (self AddNode) Equal(other_ ASTNode) bool {
+	if other, ok := other_.(AddNode); ok {
+		return reflect.DeepEqual(self, other)
+	}
+	return false
+}
+
+func (self AddNode) String() string {
+	return fmt.Sprintf("%s + %s", self.op1, self.op2)
 }
 
 func (self FunctionCallNode) Dump(writer io.Writer, indent string) {
