@@ -11,11 +11,11 @@ const BADTOKEN = -1
 %}
 
 %union {
-	root RootNode
+	root ASTRoot
 	node ASTNode
 	nodelist []ASTNode
-	expr ExpressionNode
-	exprlist []ExpressionNode
+	expr ASTExpression
+	exprlist []ASTExpression
 	text string
 	stringlist []string
 }
@@ -50,12 +50,12 @@ const BADTOKEN = -1
 script:
 	elementlist EOF
 	{
-		$$ = RootNode{elements: $1}
+		$$ = ASTRoot{elements: $1}
 		fulex.(*Parser).ast = &$$
 	}
 |	EOF
 	{
-		$$ = RootNode{}
+		$$ = ASTRoot{}
 		fulex.(*Parser).ast = &$$
 	}
 
@@ -78,7 +78,7 @@ element:
 import:
 	IMPORT dottedname
 	{
-		$$ = ImportNode{plugin: $2}
+		$$ = ASTImport{plugin: $2}
 	}
 
 dottedname:
@@ -97,13 +97,13 @@ global:
 inline:
 	PLUGIN NAME L3BRACE INLINE R3BRACE
 	{
-		$$ = InlineNode{lang: $2, content: $4}
+		$$ = ASTInline{lang: $2, content: $4}
 	}
 
 phase:
 	NAME block
 	{
-		$$ = PhaseNode{name: $1, statements: $2}
+		$$ = ASTPhase{name: $1, statements: $2}
 	}
 
 block:
@@ -133,7 +133,7 @@ statement:
 assignment:
 	NAME '=' expr
 	{
-		$$ = AssignmentNode{target: $1, expr: $3}
+		$$ = ASTAssignment{target: $1, expr: $3}
 	}
 
 expr:
@@ -141,7 +141,7 @@ expr:
 
 addexpr:
 	postfixexpr				{ $$ = $1 }
-|	addexpr '+' postfixexpr	{ $$ = AddNode{op1: $1, op2: $3} }
+|	addexpr '+' postfixexpr	{ $$ = ASTAdd{op1: $1, op2: $3} }
 
 postfixexpr:
 	primaryexpr
@@ -150,14 +150,14 @@ postfixexpr:
 
 primaryexpr:
 	'(' expr ')'			{ $$ = $2 }
-|	NAME					{ $$ = NameNode{$1}}
-|	QSTRING					{ $$ = StringNode{$1}}
+|	NAME					{ $$ = ASTName{$1}}
+|	QSTRING					{ $$ = ASTString{$1}}
 |	filelist				{ $$ = $1}
 
 filelist:
 	'<' patternlist '>'
 	{
-		$$ = FileListNode{patterns: $2}
+		$$ = ASTFileList{patterns: $2}
 	}
 
 patternlist:
@@ -173,15 +173,15 @@ patternlist:
 functioncall:
 	postfixexpr '(' ')'
 	{
-		$$ = FunctionCallNode{function: $1, args: []ExpressionNode {}}
+		$$ = ASTFunctionCall{function: $1, args: []ASTExpression {}}
 	}
 |	postfixexpr '(' arglist ')'
 	{
-		$$ = FunctionCallNode{function: $1, args: $3}
+		$$ = ASTFunctionCall{function: $1, args: $3}
 	}
 |	postfixexpr '(' arglist ',' ')'
 	{
-		$$ = FunctionCallNode{function: $1, args: $3}
+		$$ = ASTFunctionCall{function: $1, args: $3}
 	}
 
 arglist:
@@ -191,13 +191,13 @@ arglist:
 	}
 |	expr
 	{
-		$$ = []ExpressionNode{$1}
+		$$ = []ASTExpression{$1}
 	}
 
 selection:
 	postfixexpr '.' NAME
 	{
-		$$ = SelectionNode{container: $1, member: $3}
+		$$ = ASTSelection{container: $1, member: $3}
 	}
 
 %%
@@ -216,7 +216,7 @@ type Parser struct {
 	next int
 
 	// results for caller to use
-	ast *RootNode
+	ast *ASTRoot
 	syntaxerror *SyntaxError
 }
 

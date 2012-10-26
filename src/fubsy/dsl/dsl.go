@@ -30,7 +30,7 @@ func (self SyntaxError) Error() string {
 		self.badtoken.filename, self.badtoken.lineno, self.message, badtext)
 }
 
-func Parse(filename string) (*RootNode, error) {
+func Parse(filename string) (*ASTRoot, error) {
 	infile, err := os.Open(filename)
 	if err != nil {
 		return nil, err

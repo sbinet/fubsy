@@ -17,9 +17,9 @@ func TestParse_valid_1(t *testing.T) {
 	// dead simple: a single top-level element
 	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n<meep>\n\n}")
 
-	expect := RootNode{elements: []ASTNode {
-			PhaseNode{name: "main", statements: []ASTNode {
-					FileListNode{patterns: []string {"meep"}}}}}}
+	expect := ASTRoot{elements: []ASTNode {
+			ASTPhase{name: "main", statements: []ASTNode {
+					ASTFileList{patterns: []string {"meep"}}}}}}
 	ast, err := Parse(fn)
 	testutils.AssertNoError(t, err)
 	assertASTEquals(t, &expect, ast)
@@ -39,15 +39,15 @@ func TestParse_valid_sequence(t *testing.T) {
 	ast, err := Parse(fn)
 	testutils.AssertNoError(t, err)
 
-	expect := RootNode{elements: []ASTNode {
-			PhaseNode{
+	expect := ASTRoot{elements: []ASTNode {
+			ASTPhase{
 				name: "main",
-				statements: []ASTNode {StringNode{"boo"}}},
-			InlineNode{
+				statements: []ASTNode {ASTString{"boo"}}},
+			ASTInline{
 				lang: "foo", content: "o'malley & friends\n"},
-			PhaseNode{
+			ASTPhase{
 				name: "blob",
-				statements: []ASTNode {StringNode{"meep"}}},
+				statements: []ASTNode {ASTString{"meep"}}},
 	}}
 	assertASTEquals(t, &expect, ast)
 }
@@ -68,16 +68,16 @@ func TestParse_internal_newlines(t *testing.T) {
 	ast, err := Parse(fn)
 	testutils.AssertNoError(t, err)
 
-	expect := RootNode{
+	expect := ASTRoot{
 		elements: []ASTNode {
-			PhaseNode{
+			ASTPhase{
 				name: "main",
 				statements: []ASTNode {
-					FunctionCallNode{
-						function: NameNode{"x"},
-						args: []ExpressionNode {
-							SelectionNode{
-								container: NameNode{"a"},
+					ASTFunctionCall{
+						function: ASTName{"x"},
+						args: []ASTExpression {
+							ASTSelection{
+								container: ASTName{"a"},
 								member: "b",
 				}}}},
 	}}}
@@ -137,26 +137,26 @@ func TestParse_everything(t *testing.T) {
 	testutils.AssertNoError(t, err)
 
 	expect :=
-		"RootNode {\n" +
-		"  ImportNode[foo]\n" +
-		"  ImportNode[foo.bar.baz]\n" +
-		"  InlineNode[funky] {{{\n" +
+		"ASTRoot {\n" +
+		"  ASTImport[foo]\n" +
+		"  ASTImport[foo.bar.baz]\n" +
+		"  ASTInline[funky] {{{\n" +
 		"    any ol' crap! \"bring it on,\n" +
 		"    dude\" ...\n" +
 		"  }}}\n" +
-		"  AssignmentNode[SRC]\n" +
-		"    FileListNode[lib/*.c]\n" +
-		"  PhaseNode[main] {\n" +
-		"    AssignmentNode[a]\n" +
-		"      AddNode\n" +
+		"  ASTAssignment[SRC]\n" +
+		"    ASTFileList[lib/*.c]\n" +
+		"  ASTPhase[main] {\n" +
+		"    ASTAssignment[a]\n" +
+		"      ASTAdd\n" +
 		"      op1:\n" +
-		"        StringNode[foo]\n" +
+		"        ASTString[foo]\n" +
 		"      op2:\n" +
-		"        NameNode[b]\n" +
-		"    AssignmentNode[c]\n" +
-		"      FunctionCallNode[d.e] (0 args)\n" +
-		"    SelectionNode[x.y: z]\n" +
-		"    FileListNode[lib1/*.c lib2/**/*.c]\n" +
+		"        ASTName[b]\n" +
+		"    ASTAssignment[c]\n" +
+		"      ASTFunctionCall[d.e] (0 args)\n" +
+		"    ASTSelection[x.y: z]\n" +
+		"    ASTFileList[lib1/*.c lib2/**/*.c]\n" +
 		"  }\n" +
 		"}\n"
 	var actual_ bytes.Buffer

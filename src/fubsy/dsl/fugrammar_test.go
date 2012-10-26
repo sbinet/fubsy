@@ -20,10 +20,10 @@ func Test_fuParse_valid_imports(t *testing.T) {
 		{EOL, "\n"},
 		{EOF, ""},
 	}
-	expect := RootNode{
+	expect := ASTRoot{
 		elements: []ASTNode {
-			ImportNode{plugin: []string {"ding"}},
-			ImportNode{plugin: []string {"dong", "ping", "whoo"}},
+			ASTImport{plugin: []string {"ding"}},
+			ASTImport{plugin: []string {"dong", "ping", "whoo"}},
 		}}
 	assertParses(t, &expect, tokens)
 }
@@ -43,15 +43,15 @@ func Test_fuParse_valid_phase(t *testing.T) {
 		{EOL, "\n"},
 		{EOF, ""},
 	}
-	expect := RootNode{
+	expect := ASTRoot{
 		elements: []ASTNode {
-			PhaseNode{
+			ASTPhase{
 			name: "main",
 			statements: []ASTNode {
-					StringNode{"foo"},
-					AssignmentNode{
+					ASTString{"foo"},
+					ASTAssignment{
 						target: "x",
-						expr: StringNode{"bar"},
+						expr: ASTString{"bar"},
 	}}}}}
 	assertParses(t, &expect, tokens)
 }
@@ -64,9 +64,9 @@ func Test_fuParse_empty_phase(t *testing.T) {
 		{EOL, "\n"},
 		{EOF, ""},
 	}
-	expect := RootNode{
+	expect := ASTRoot{
 		elements: []ASTNode {
-			PhaseNode{
+			ASTPhase{
 				name: "blah",
 				statements: []ASTNode {}},
 	}}
@@ -92,17 +92,17 @@ func Test_fuParse_globals(t *testing.T) {
 		{EOL, "\n"},
 		{EOF, ""},
 	}
-	expect := RootNode{
+	expect := ASTRoot{
 	elements: []ASTNode {
-			AssignmentNode{
+			ASTAssignment{
 				target: "v1",
-				expr: StringNode{"blobby!"},
+				expr: ASTString{"blobby!"},
 			},
-			AssignmentNode{
+			ASTAssignment{
 				target: "v2",
-				expr: AddNode{
-					op1: FileListNode{patterns: []string {"*.h", "*.hxx"}},
-					op2: FileListNode{patterns: []string {"*.c"}},
+				expr: ASTAdd{
+					op1: ASTFileList{patterns: []string {"*.h", "*.hxx"}},
+					op2: ASTFileList{patterns: []string {"*.c"}},
 			}},
 	}}
 	assertParses(t, &expect, tokens)
@@ -124,14 +124,14 @@ func Test_fuParse_expr_1(t *testing.T) {
 		{EOL, ""},
 		{EOF, ""},
 	}
-	expect := RootNode{
+	expect := ASTRoot{
 		elements: []ASTNode {
-			PhaseNode{
+			ASTPhase{
 				name: "blorp",
 				statements: []ASTNode {
-					AssignmentNode{
+					ASTAssignment{
 						target: "stuff",
-						expr: NameNode{"foo"},
+						expr: ASTName{"foo"},
 	}}}}}
 	assertParses(t, &expect, tokens)
 }
@@ -154,16 +154,16 @@ func Test_fuParse_expr_2(t *testing.T) {
 		{EOL, ""},
 		{EOF, ""},
 	}
-	expect := RootNode{
+	expect := ASTRoot{
 		elements: []ASTNode {
-		PhaseNode{
+		ASTPhase{
 			name: "floo",
 			statements: []ASTNode {
-				AddNode{
-					op1: AddNode{op1: NameNode{"a"}, op2: NameNode{"b"}},
-					op2: FunctionCallNode{
-						function: NameNode{"c"},
-						args: []ExpressionNode {},
+				ASTAdd{
+					op1: ASTAdd{op1: ASTName{"a"}, op2: ASTName{"b"}},
+					op2: ASTFunctionCall{
+						function: ASTName{"c"},
+						args: []ASTExpression {},
 	}}}}}}
 	assertParses(t, &expect, tokens)
 }
@@ -182,14 +182,14 @@ func Test_fuParse_funccall_1(t *testing.T) {
 		{EOL, "\n"},
 		{EOF, ""},
 	}
-	expect := RootNode{
+	expect := ASTRoot{
 		elements: []ASTNode {
-			PhaseNode{
+			ASTPhase{
 				name: "frob",
 				statements: []ASTNode {
-					FunctionCallNode{
-						function: NameNode{"foo"},
-						args: []ExpressionNode {}},
+					ASTFunctionCall{
+						function: ASTName{"foo"},
+						args: []ASTExpression {}},
 				},
 			},
 	}}
@@ -197,19 +197,19 @@ func Test_fuParse_funccall_1(t *testing.T) {
 }
 
 // expected AST for the next couple of test cases
-var _funccall_expect RootNode
+var _funccall_expect ASTRoot
 
 func init() {
-	_funccall_expect = RootNode{
+	_funccall_expect = ASTRoot{
 		elements: []ASTNode {
-			PhaseNode{
+			ASTPhase{
 				name: "frob",
 				statements: []ASTNode {
-					FunctionCallNode{
-						function: NameNode{"foo"},
-						args: []ExpressionNode {
-							StringNode{"bip"},
-							NameNode{"x"},
+					ASTFunctionCall{
+						function: ASTName{"foo"},
+						args: []ASTExpression {
+							ASTString{"bip"},
+							ASTName{"x"},
 	}}}}}}
 }
 
@@ -273,14 +273,14 @@ func Test_fuParse_filelist(t *testing.T) {
 		{EOL, ""},
 		{EOF, ""},
 	}
-	expect := RootNode{
+	expect := ASTRoot{
 		elements: []ASTNode {
-			PhaseNode{
+			ASTPhase{
 				name: "main",
 				statements: []ASTNode {
-					AssignmentNode{
+					ASTAssignment{
 						target: "x",
-						expr: FileListNode{
+						expr: ASTFileList{
 							patterns: []string {
 								"**/*.c",
 	}}}}}}}
@@ -297,9 +297,9 @@ func Test_fuParse_valid_inline(t *testing.T) {
 		{EOL, "\n"},
 		{EOF, ""},
 	}
-	expect := RootNode{
+	expect := ASTRoot{
 		elements: []ASTNode {
-			InlineNode{lang: "whatever", content: "beep!\"\nblam'"}}}
+			ASTInline{lang: "whatever", content: "beep!\"\nblam'"}}}
 	assertParses(t, &expect, tokens)
 }
 
@@ -352,7 +352,7 @@ func toklist(tokens []minitok) []toktext {
 	return result
 }
 
-func assertParses(t *testing.T, expect *RootNode, tokens []minitok) {
+func assertParses(t *testing.T, expect *ASTRoot, tokens []minitok) {
 	reset()
 	parser := NewParser(toklist(tokens))
 	result := fuParse(parser)
@@ -395,7 +395,7 @@ func assertSyntaxError(t *testing.T, lineno int, badtext string, parser *Parser)
 	}
 }
 
-func assertASTEquals(t *testing.T, expect *RootNode, actual *RootNode) {
+func assertASTEquals(t *testing.T, expect *ASTRoot, actual *ASTRoot) {
 	if ! expect.Equal(*actual) {
 		expectbuf := new(bytes.Buffer)
 		actualbuf := new(bytes.Buffer)

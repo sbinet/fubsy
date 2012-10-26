@@ -5,33 +5,33 @@ import (
 	"bytes"
 )
 
-func TestRootNode_Equal(t *testing.T) {
-	node1 := RootNode{}
-	node2 := RootNode{}
+func Test_ASTRoot_Equal(t *testing.T) {
+	node1 := ASTRoot{}
+	node2 := ASTRoot{}
 	if !node1.Equal(node1) {
 		t.Error("root node not equal to itself")
 	}
 	if !node1.Equal(node2) {
 		t.Error("empty root nodes not equal")
 	}
-	node1.elements = []ASTNode {StringNode{}}
+	node1.elements = []ASTNode {ASTString{}}
 	if node1.Equal(node2) {
 		t.Error("non-empty root node equals empty root node")
 	}
-	node2.elements = []ASTNode {StringNode{}}
+	node2.elements = []ASTNode {ASTString{}}
 	if !node1.Equal(node2) {
 		t.Error("root nodes with one child each not equal")
 	}
 
-	other := StringNode{}
+	other := ASTString{}
 	if node1.Equal(other) {
 		t.Error("nodes of different type are equal")
 	}
 }
 
-func TestFileListNode_Equal(t *testing.T) {
-	node1 := FileListNode{}
-	node2 := FileListNode{}
+func Test_ASTFileList_Equal(t *testing.T) {
+	node1 := ASTFileList{}
+	node2 := ASTFileList{}
 	if !node1.Equal(node1) {
 		t.Error("list node not equal to itself")
 	}
@@ -59,59 +59,59 @@ func TestFileListNode_Equal(t *testing.T) {
 	}
 }
 
-func TestInlineNode_Equal(t *testing.T) {
-	node1 := InlineNode{}
-	node2 := InlineNode{}
+func Test_ASTInline_Equal(t *testing.T) {
+	node1 := ASTInline{}
+	node2 := ASTInline{}
 	if !node1.Equal(node1) {
-		t.Error("InlineNode not equal to itself")
+		t.Error("ASTInline not equal to itself")
 	}
 	if !node1.Equal(node2) {
-		t.Error("empty InlineNodes not equal")
+		t.Error("empty ASTInlines not equal")
 	}
 	node1.lang = "foo"
 	node2.lang = "bar"
 	if node1.Equal(node2) {
-		t.Error("InlineNodes equal despite different lang")
+		t.Error("ASTInlines equal despite different lang")
 	}
 	node2.lang = "foo"
 	if !node1.Equal(node2) {
-		t.Error("InlineNodes not equal")
+		t.Error("ASTInlines not equal")
 	}
 	node1.content = "hello\nworld\n"
 	node2.content = "hello\nworld"
 	if node1.Equal(node2) {
-		t.Error("InlineNodes equal despite different content")
+		t.Error("ASTInlines equal despite different content")
 	}
 	node2.content += "\n"
 	if !node1.Equal(node2) {
-		t.Error("InlineNodes not equal")
+		t.Error("ASTInlines not equal")
 	}
 }
 
-func TestInlineNode_Dump(t *testing.T) {
-	node := InlineNode{lang: "foo"}
-	assertASTDump(t, "InlineNode[foo] {{{}}}\n", node)
+func Test_ASTInline_Dump(t *testing.T) {
+	node := ASTInline{lang: "foo"}
+	assertASTDump(t, "ASTInline[foo] {{{}}}\n", node)
 
 	node.content = "foobar"
-	assertASTDump(t, "InlineNode[foo] {{{foobar}}}\n", node)
+	assertASTDump(t, "ASTInline[foo] {{{foobar}}}\n", node)
 
 	node.content = "foobar\n"
-	assertASTDump(t, "InlineNode[foo] {{{foobar\n}}}\n", node)
+	assertASTDump(t, "ASTInline[foo] {{{foobar\n}}}\n", node)
 
 	node.content = "hello\nworld"
-	assertASTDump(t, "InlineNode[foo] {{{hello\n  world}}}\n", node)
+	assertASTDump(t, "ASTInline[foo] {{{hello\n  world}}}\n", node)
 
 	node.content = "\nhello\nworld"
-	assertASTDump(t, "InlineNode[foo] {{{\n  hello\n  world}}}\n", node)
+	assertASTDump(t, "ASTInline[foo] {{{\n  hello\n  world}}}\n", node)
 
 	node.content = "\nhello\nworld\n"
-	assertASTDump(t, "InlineNode[foo] {{{\n  hello\n  world\n}}}\n", node)
+	assertASTDump(t, "ASTInline[foo] {{{\n  hello\n  world\n}}}\n", node)
 
 	node.content = "hello\n  world"
-	assertASTDump(t, "InlineNode[foo] {{{hello\n    world}}}\n", node)
+	assertASTDump(t, "ASTInline[foo] {{{hello\n    world}}}\n", node)
 
 	node.content = "hello\n  world\n"
-	assertASTDump(t, "InlineNode[foo] {{{hello\n    world\n}}}\n", node)
+	assertASTDump(t, "ASTInline[foo] {{{hello\n    world\n}}}\n", node)
 
 }
 
