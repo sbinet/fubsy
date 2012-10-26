@@ -53,11 +53,11 @@ func Parse(filename string) (*RootNode, error) {
 	}
 */
 
-	lexer := NewLexer(scanner.tokens)
+	parser := NewParser(scanner.tokens)
 	err = nil
-	fuParse(lexer)
-	if lexer.syntaxerror != nil {
-		err = lexer.syntaxerror
+	fuParse(parser)
+	if parser.syntaxerror != nil {
+		err = parser.syntaxerror
 	}
-	return lexer.ast, err
+	return parser.ast, err
 }

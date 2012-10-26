@@ -50,12 +50,12 @@ script:
 	elementlist EOF
 	{
 		$$ = RootNode{elements: $1}
-		fulex.(*Lexer).ast = &$$
+		fulex.(*Parser).ast = &$$
 	}
 |	EOF
 	{
 		$$ = RootNode{}
-		fulex.(*Lexer).ast = &$$
+		fulex.(*Parser).ast = &$$
 	}
 
 elementlist:
@@ -205,12 +205,8 @@ type toktext struct {
 	text string
 }
 
-// This isn't really the lexer; it's just a list of tokens provided by
-// the real lexer (a Scanner object from fulex.l). But it implements
-// the fuLexer inteface specified by the generated parser, so stick
-// with that terminology.
-type Lexer struct {
-	// internal state
+type Parser struct {
+	// internal state (fed to parser by Lex() method)
 	tokens []toktext
 	next int
 
@@ -219,11 +215,11 @@ type Lexer struct {
 	syntaxerror *SyntaxError
 }
 
-func NewLexer(tokens []toktext) *Lexer {
-	return &Lexer{tokens: tokens}
+func NewParser(tokens []toktext) *Parser {
+	return &Parser{tokens: tokens}
 }
 
-func (self *Lexer) Lex(lval *fuSymType) int {
+func (self *Parser) Lex(lval *fuSymType) int {
 	if self.next >= len(self.tokens) {
 		return 0				// eof
 	}
@@ -240,7 +236,7 @@ func (self *Lexer) Lex(lval *fuSymType) int {
 	return toktext.token
 }
 
-func (self *Lexer) Error(e string) {
+func (self *Parser) Error(e string) {
 	 self.syntaxerror = &SyntaxError{
 		badtoken: &self.tokens[self.next-1],
 		message: e}
