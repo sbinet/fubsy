@@ -278,8 +278,8 @@ func Test_fuParse_invalid(t *testing.T) {
 	tokens[0].lineno = 2		// ensure this makes it to the SyntaxError
 	lexer := NewLexer(tokens)
 	result := fuParse(lexer)
-	assertParseFailure(t, result)
-	assertSyntaxError(t, 2, "\"ding\"")
+	assertParseFailure(t, result, lexer)
+	assertSyntaxError(t, 2, "\"ding\"", lexer)
 }
 
 func Test_fuParse_badtoken(t *testing.T) {
@@ -295,15 +295,12 @@ func Test_fuParse_badtoken(t *testing.T) {
 	})
 	lexer := NewLexer(tokens)
 	result := fuParse(lexer)
-	assertParseFailure(t, result)
-	assertSyntaxError(t, 0, "!#*$")
+	assertParseFailure(t, result, lexer)
+	assertSyntaxError(t, 0, "!#*$", lexer)
 }
 
 func reset() {
 	// restore default parser state
-	_lasttok = nil
-	_ast = nil
-	_syntaxerror = nil
 }
 
 // useful for constructing test data
@@ -324,27 +321,27 @@ func assertParses(t *testing.T, expect *RootNode, tokens []minitok) {
 	reset()
 	lexer := NewLexer(toklist(tokens))
 	result := fuParse(lexer)
-	//assertNoError(t, _syntaxerror)
-	if _syntaxerror != nil {
-		t.Fatal(fmt.Sprintf("unexpected syntax error: %s", _syntaxerror))
+	//assertNoError(t, lexer.syntaxerror)
+	if lexer.syntaxerror != nil {
+		t.Fatal(fmt.Sprintf("unexpected syntax error: %s", lexer.syntaxerror))
 	}
 	assertTrue(t, result == 0, "fuParse() returned %d (expected 0)", result)
-	assertTrue(t, _ast != nil, "_ast is nil (expected non-nil)")
-	assertASTEquals(t, expect, _ast)
+	assertTrue(t, lexer.ast != nil, "lexer.ast is nil (expected non-nil)")
+	assertASTEquals(t, expect, lexer.ast)
 }
 
-func assertParseFailure(t *testing.T, result int) {
+func assertParseFailure(t *testing.T, result int, lexer *Lexer) {
 	if result != 1 {
 		t.Errorf("expected fuParse() to return 1, not %d", result)
 	}
-	if _ast != nil {
-		t.Errorf("expected nil _ast, but it's: %v", _ast)
+	if lexer.ast != nil {
+		t.Errorf("expected nil lexer.ast, but it's: %v", lexer.ast)
 	}
-	assertNotNil(t, "_syntaxerror", _syntaxerror)
+	assertNotNil(t, "lexer.syntaxerror", lexer.syntaxerror)
 }
 
-func assertSyntaxError(t *testing.T, lineno int, badtext string) {
-	actual := _syntaxerror
+func assertSyntaxError(t *testing.T, lineno int, badtext string, lexer *Lexer) {
+	actual := lexer.syntaxerror
 	message := "syntax error"
 
 	if !(actual.badtoken.lineno == lineno &&
@@ -353,7 +350,7 @@ func assertSyntaxError(t *testing.T, lineno int, badtext string) {
 
 		expect := &SyntaxError{
 			badtoken: &toktext{
-				filename: _syntaxerror.badtoken.filename,
+				filename: lexer.syntaxerror.badtoken.filename,
 				lineno: lineno,
 				text: badtext},
 			message: message}

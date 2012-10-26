@@ -7,12 +7,6 @@ import (
 	"fmt"
 )
 
-// Global variables appear to be the only way to get information out
-// of the parser.
-var _lasttok *toktext
-var _ast *RootNode
-var _syntaxerror *SyntaxError
-
 const BADTOKEN = -1
 %}
 
@@ -56,12 +50,12 @@ script:
 	elementlist EOF
 	{
 		$$ = RootNode{elements: $1}
-		_ast = &$$
+		fulex.(*Lexer).ast = &$$
 	}
 |	EOF
 	{
 		$$ = RootNode{}
-		_ast = &$$
+		fulex.(*Lexer).ast = &$$
 	}
 
 elementlist:
@@ -216,8 +210,13 @@ type toktext struct {
 // the fuLexer inteface specified by the generated parser, so stick
 // with that terminology.
 type Lexer struct {
+	// internal state
 	tokens []toktext
 	next int
+
+	// results for caller to use
+	ast *RootNode
+	syntaxerror *SyntaxError
 }
 
 func NewLexer(tokens []toktext) *Lexer {
@@ -229,7 +228,7 @@ func (self *Lexer) Lex(lval *fuSymType) int {
 		return 0				// eof
 	}
 	toktext := self.tokens[self.next]
-	self.next += 1
+	self.next++
 	switch toktext.token {
 	case QSTRING:
 		// strip the quotes: they're preserved by the tokenizer,
@@ -238,12 +237,11 @@ func (self *Lexer) Lex(lval *fuSymType) int {
 	case INLINE, NAME, FILEPATTERN:
 		lval.text = toktext.text
 	}
-	_lasttok = &toktext
 	return toktext.token
 }
 
 func (self *Lexer) Error(e string) {
-	_syntaxerror = &SyntaxError{
-		badtoken: _lasttok,
+	 self.syntaxerror = &SyntaxError{
+		badtoken: &self.tokens[self.next-1],
 		message: e}
 }

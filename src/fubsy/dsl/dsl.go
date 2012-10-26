@@ -56,8 +56,8 @@ func Parse(filename string) (*RootNode, error) {
 	lexer := NewLexer(scanner.tokens)
 	err = nil
 	fuParse(lexer)
-	if _syntaxerror != nil {
-		err = _syntaxerror
+	if lexer.syntaxerror != nil {
+		err = lexer.syntaxerror
 	}
-	return _ast, err
+	return lexer.ast, err
 }
