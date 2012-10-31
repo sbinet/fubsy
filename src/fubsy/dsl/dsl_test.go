@@ -107,12 +107,12 @@ func TestParse_invalid_2(t *testing.T) {
 	reset()
 }
 
-// this one tries to exercise every token type and grammar rule
-func TestParse_everything(t *testing.T) {
+// this one tries to exercise many token types and grammar rules
+func TestParse_omnibus_1(t *testing.T) {
 	tmpdir, cleanup := mktemp()
 	defer cleanup()
 
-	fn := mkfile(tmpdir, "everything.fubsy",
+	fn := mkfile(tmpdir, "omnibus_1.fubsy",
 		"# start with a comment\n" +
 		"import foo\n" +
 		"import foo.bar.baz\n" +
@@ -131,8 +131,7 @@ func TestParse_everything(t *testing.T) {
 		"    lib1/*.c\n" +
 		"    lib2/**/*.c\n" +
 		"  >\n" +
-		"}\n",
-	)
+		"}\n")
 	ast, err := Parse(fn)
 	testutils.AssertNoError(t, err)
 
@@ -157,6 +156,61 @@ func TestParse_everything(t *testing.T) {
 		"      ASTFunctionCall[d.e] (0 args)\n" +
 		"    ASTSelection[x.y: z]\n" +
 		"    ASTFileList[lib1/*.c lib2/**/*.c]\n" +
+		"  }\n" +
+		"}\n"
+	var actual_ bytes.Buffer
+	ast.Dump(&actual_, "")
+	actual := actual_.String()
+	if expect != actual {
+		t.Errorf("expected AST:\n%s\nbut got:\n%s", expect, actual)
+	}
+}
+
+func TestParse_omnibus_2(t *testing.T) {
+	tmpdir, cleanup := mktemp()
+	defer cleanup()
+
+	fn := mkfile(tmpdir, "omnibus_2.fubsy",
+		"\n" +
+		"main {\n" +
+		"  headers = <*.h>\n" +
+		"\n" +
+		"  a + b : <*.c> + headers {\n" +
+		"    x = a\n" +
+		"    \"cc $x\"\n" +
+		"    f(a, b)\n" +
+		"  }\n" +
+		"}\n" +
+		"")
+	ast, err := Parse(fn)
+	testutils.AssertNoError(t, err)
+
+	expect :=
+		"ASTRoot {\n" +
+		"  ASTPhase[main] {\n" +
+		"    ASTAssignment[headers]\n" +
+		"      ASTFileList[*.h]\n" +
+		"    ASTBuildRule {\n" +
+		"    targets:\n" +
+		"      ASTAdd\n" +
+		"      op1:\n" +
+		"        ASTName[a]\n" +
+		"      op2:\n" +
+		"        ASTName[b]\n" +
+		"    sources:\n" +
+		"      ASTAdd\n" +
+		"      op1:\n" +
+		"        ASTFileList[*.c]\n" +
+		"      op2:\n" +
+		"        ASTName[headers]\n" +
+		"    actions:\n" +
+		"      ASTAssignment[x]\n" +
+		"        ASTName[a]\n" +
+		"      ASTString[cc $x]\n" +
+		"      ASTFunctionCall[f] (2 args)\n" +
+		"        ASTName[a]\n" +
+		"        ASTName[b]\n" +
+		"    }\n" +
 		"  }\n" +
 		"}\n"
 	var actual_ bytes.Buffer

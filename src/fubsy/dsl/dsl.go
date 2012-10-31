@@ -30,6 +30,16 @@ func (self SyntaxError) Error() string {
 		self.badtoken.filename, self.badtoken.lineno, self.message, badtext)
 }
 
+type SemanticError struct {
+	node ASTNode
+	message string
+}
+
+func (self SemanticError) Error() string {
+	// filename? line number(s)?
+	return self.message
+}
+
 func Parse(filename string) (*ASTRoot, error) {
 	infile, err := os.Open(filename)
 	if err != nil {

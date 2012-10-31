@@ -54,6 +54,13 @@ type ASTAssignment struct {
 	expr ASTNode
 }
 
+// TARGETS : SOURCES { ACTIONS }
+type ASTBuildRule struct {
+	targets ASTExpression
+	sources ASTExpression
+	actions []ASTNode
+}
+
 // OP1 + OP2 (string/list concatenation)
 type ASTAdd struct {
 	op1 ASTExpression
@@ -165,6 +172,26 @@ func (self ASTAssignment) Dump(writer io.Writer, indent string) {
 func (self ASTAssignment) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTAssignment); ok {
 		return self == other
+	}
+	return false
+}
+
+func (self ASTBuildRule) Dump(writer io.Writer, indent string) {
+	fmt.Fprintf(writer, "%sASTBuildRule {\n", indent)
+	fmt.Fprintf(writer, "%stargets:\n", indent)
+	self.targets.Dump(writer, indent + "  ")
+	fmt.Fprintf(writer, "%ssources:\n", indent)
+	self.sources.Dump(writer, indent + "  ")
+	fmt.Fprintf(writer, "%sactions:\n", indent)
+	for _, node := range self.actions {
+		node.Dump(writer, indent + "  ")
+	}
+	fmt.Fprintf(writer, "%s}\n", indent)
+}
+
+func (self ASTBuildRule) Equal(other_ ASTNode) bool {
+	if other, ok := other_.(ASTBuildRule); ok {
+		return reflect.DeepEqual(self, other)
 	}
 	return false
 }
