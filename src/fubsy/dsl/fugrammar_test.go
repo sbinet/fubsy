@@ -380,54 +380,6 @@ func Test_fuParse_badtoken(t *testing.T) {
 	assertSyntaxError(t, 0, "!#*$", parser)
 }
 
-func Test_checkActions_ok(t *testing.T) {
-	nodes := []ASTNode {
-		ASTString{"foo"},
-		ASTFunctionCall{function: ASTName{"foo"}},
-		ASTAssignment{target: "x", expr: ASTFunctionCall{}},
-		ASTFunctionCall{
-			function: ASTName{"blah"},
-			args: []ASTExpression {ASTString{"meep"}, ASTString{"beep"}}},
-	}
-	actual := checkActions(nodes)
-	if len(actual) > 0 {
-		t.Errorf("expected no errors, but got %v", actual)
-	}
-}
-
-func Test_checkActions_bad(t *testing.T) {
-	nodes := []ASTNode {
-		ASTString{"foo bar"},			  // good
-		ASTFileList{[]string {"*.java"}}, // bad
-		ASTFunctionCall{},				  // good
-		ASTBuildRule{					  // bad
-			targets: ASTString{"t"},
-			sources: ASTString{"s"},
-			actions: []ASTNode {},
-		},
-		// hmmm: lots of expressions evaluate to a string -- why can't
-		// I say cmd = "cc -o foo foo.c" outside a build rule, and then
-		// reference cmd inside the build rule?
-		ASTName{"blah"},		          // bad (currently)
-	}
-	expect := []SemanticError {
-		SemanticError{node: nodes[1]},
-		SemanticError{node: nodes[3]},
-		SemanticError{node: nodes[4]},
-	}
-	actual := checkActions(nodes)
-	assertTrue(t, len(actual) == len(expect),
-		"expected %d errors, but got %d: %v",
-		len(expect), len(actual), actual)
-	for i, err := range expect {
-		enode := err.node
-		anode := actual[i].(SemanticError).node
-		assertTrue(t, anode.Equal(enode),
-			"bad node %d: expected %v, but got %v",
-			i, enode, anode)
-	}
-}
-
 func reset() {
 	// restore default parser state
 }

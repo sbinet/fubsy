@@ -30,44 +30,23 @@ func (self SyntaxError) Error() string {
 		self.badtoken.filename, self.badtoken.lineno, self.message, badtext)
 }
 
-type SemanticError struct {
-	node ASTNode
-	message string
-}
-
-func (self SemanticError) Error() string {
-	// filename? line number(s)?
-	return self.message
-}
-
-func Parse(filename string) (*ASTRoot, error) {
+func Parse(filename string) (*ASTRoot, []error) {
 	infile, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		return nil, []error {err}
 	}
 	defer infile.Close()
 	scanner, err := NewFileScanner(filename, infile)
 	if err != nil {
-		return nil, err
+		return nil, []error {err}
 	}
 	scanner.scan()
-/*
-	fmt.Printf("scanner found %d tokens:\n", len(scanner.tokens))
-	for i, toktext := range scanner.tokens {
-		if toktext.token == BADTOKEN {
-			fmt.Fprintf(os.Stderr, "%s, line %d: invalid input: %s (ignored)\n",
-				toktext.filename, toktext.lineno, toktext.text)
-		} else {
-			fmt.Printf("[%d] %#v\n", i, toktext)
-		}
-	}
-*/
 
 	parser := NewParser(scanner.tokens)
-	err = nil
 	fuParse(parser)
 	if parser.syntaxerror != nil {
-		err = parser.syntaxerror
+		return parser.ast, []error {parser.syntaxerror}
 	}
-	return parser.ast, err
+	errors := checkAST(parser.ast)
+	return parser.ast, errors
 }

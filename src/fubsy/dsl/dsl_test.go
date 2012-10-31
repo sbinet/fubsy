@@ -21,7 +21,7 @@ func TestParse_valid_1(t *testing.T) {
 			ASTPhase{name: "main", statements: []ASTNode {
 					ASTFileList{patterns: []string {"meep"}}}}}}
 	ast, err := Parse(fn)
-	testutils.AssertNoError(t, err)
+	testutils.AssertNoErrors(t, err)
 	assertASTEquals(t, &expect, ast)
 }
 
@@ -37,7 +37,7 @@ func TestParse_valid_sequence(t *testing.T) {
 		"plugin foo {{{o'malley & friends\n}}}\n" +
 		"blob {\n \"meep\"\n }")
 	ast, err := Parse(fn)
-	testutils.AssertNoError(t, err)
+	testutils.AssertNoErrors(t, err)
 
 	expect := ASTRoot{elements: []ASTNode {
 			ASTPhase{
@@ -66,7 +66,7 @@ func TestParse_internal_newlines(t *testing.T) {
 			")\n"+
 			"}")
 	ast, err := Parse(fn)
-	testutils.AssertNoError(t, err)
+	testutils.AssertNoErrors(t, err)
 
 	expect := ASTRoot{
 		elements: []ASTNode {
@@ -92,7 +92,7 @@ func TestParse_invalid_1(t *testing.T) {
 	fn := mkfile(tmpdir, "invalid_1.fubsy", "main{  \n\"borf\"\n")
 	_, err := Parse(fn)
 	expect := fn + ":3: syntax error (near EOF)"
-	testutils.AssertError(t, expect, err)
+	assertOneError(t, expect, err)
 }
 
 func TestParse_invalid_2(t *testing.T) {
@@ -103,8 +103,17 @@ func TestParse_invalid_2(t *testing.T) {
 	fn := mkfile(tmpdir, "invalid_2.fubsy", "main{\n *&! \"whizz\"\n}")
 	_, err := Parse(fn)
 	expect := fn + ":2: syntax error (near *&!)"
-	testutils.AssertError(t, expect, err)
+	assertOneError(t, expect, err)
 	reset()
+}
+
+func assertOneError(t *testing.T, expect string, actual []error) {
+	if len(actual) < 1 {
+		t.Error("expected at least one error")
+	} else if actual[0].Error() != expect {
+		t.Errorf("expected error message\n%s\nbut got\n%s",
+			expect, actual[0].Error())
+	}
 }
 
 // this one tries to exercise many token types and grammar rules
@@ -133,7 +142,7 @@ func TestParse_omnibus_1(t *testing.T) {
 		"  >\n" +
 		"}\n")
 	ast, err := Parse(fn)
-	testutils.AssertNoError(t, err)
+	testutils.AssertNoErrors(t, err)
 
 	expect :=
 		"ASTRoot {\n" +
@@ -183,7 +192,7 @@ func TestParse_omnibus_2(t *testing.T) {
 		"}\n" +
 		"")
 	ast, err := Parse(fn)
-	testutils.AssertNoError(t, err)
+	testutils.AssertNoErrors(t, err)
 
 	expect :=
 		"ASTRoot {\n" +

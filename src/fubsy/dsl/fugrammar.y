@@ -141,7 +141,8 @@ assignment:
 buildrule:
 	expr ':' expr block
 	{
-		checkActions($4)
+		// some actions could be invalid: we check those in check.go
+		// after parsing is done
 		$$ = ASTBuildRule{targets: $1, sources: $3, actions: $4}
 	}
 
@@ -254,23 +255,4 @@ func (self *Parser) Error(e string) {
 	 self.syntaxerror = &SyntaxError{
 		badtoken: &self.tokens[self.next-1],
 		message: e}
-}
-
-// Check if all of the statements in nodes are valid actions for a
-// build rule: either a bare string (shell command), a function call,
-// or a variable assignment. Return a slice of error objects, one for
-// each invalid action.
-func checkActions(nodes []ASTNode) []error {
-	var errors []error
-	for _, node := range nodes {
-		_, ok1 := node.(ASTString)
-		_, ok2 := node.(ASTFunctionCall)
-		_, ok3 := node.(ASTAssignment)
-		if !(ok1 || ok2 || ok3) {
-			errors = append(errors, SemanticError{
-				node: node,
-				message: "invalid build action: must be either bare string, function call, or variable assignment"})
-		}
-	}
-	return errors
 }

@@ -11,12 +11,14 @@ func main() {
 		os.Exit(2)
 	}
 	script := os.Args[1]
-	ast, err := dsl.Parse(script)
-	if ast == nil && err == nil {
-		panic("ast == nil && err == nil")
+	ast, errors := dsl.Parse(script)
+	if ast == nil && len(errors) == 0 {
+		panic("ast == nil && len(errors) == 0")
 	}
-	if err != nil {
-	 	fmt.Fprintln(os.Stderr, "parse error:", err)
+	if len(errors) > 0 {
+		for _, err := range errors {
+	 		fmt.Fprintln(os.Stderr, "parse error:", err)
+		}
 	 	os.Exit(1)
 	}
 	if ast != nil {
