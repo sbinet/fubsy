@@ -30,15 +30,22 @@ func newlocation(fileinfo *fileinfo) location {
 }
 
 func (self location) String() string {
-	chunks := make([]string, 0, 2)
-	if self.fileinfo.filename != "" {
-		chunks = append(chunks, self.fileinfo.filename)
+	fn := self.fileinfo.filename
+	if fn == "" {
+		fn = "(unknown)"
 	}
-	sline, _ := self.linerange()
+	chunks := []string {fn}
+	sline, eline := self.linerange()
 	if sline > 0 {
-		chunks = append(chunks, strconv.Itoa(sline))
+		var lines string
+		if sline == eline {
+			lines = strconv.Itoa(sline)
+		} else {
+			lines = fmt.Sprintf("%d-%d", sline, eline)
+		}
+		chunks = append(chunks, lines)
 	}
-	return strings.Join(chunks, ":")
+	return strings.Join(chunks, ":") + ": "
 }
 
 func (self location) linerange() (startline int, endline int) {
