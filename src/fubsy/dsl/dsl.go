@@ -26,8 +26,8 @@ func (self SyntaxError) Error() string {
 	} else if len(badtext) == 1 {
 		badtext = "'" + badtext + "'"
 	}
-	return fmt.Sprintf("%s:%d: %s (near %s)",
-		self.badtoken.filename, self.badtoken.lineno, self.message, badtext)
+	return fmt.Sprintf("%s: %s (near %s)",
+		self.badtoken.location, self.message, badtext)
 }
 
 func Parse(filename string) (*ASTRoot, []error) {

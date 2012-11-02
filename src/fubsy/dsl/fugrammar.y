@@ -214,8 +214,7 @@ selection:
 
 // a token together with its location, text, etc.
 type toktext struct {
-	filename string
-	lineno int
+	location location
 	token int
 	text string
 }

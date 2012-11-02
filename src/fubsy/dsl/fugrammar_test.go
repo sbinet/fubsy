@@ -356,11 +356,11 @@ func Test_fuParse_invalid(t *testing.T) {
 		{'<', "<"},
 		{EOF, ""},
 	})
-	tokens[0].lineno = 2		// ensure this makes it to the SyntaxError
+	//tokens[0].lineno = 2		// ensure this makes it to the SyntaxError
 	parser := NewParser(tokens)
 	result := fuParse(parser)
 	assertParseFailure(t, result, parser)
-	assertSyntaxError(t, 2, "\"ding\"", parser)
+	assertSyntaxError(t, "\"ding\"", parser)
 }
 
 func Test_fuParse_badtoken(t *testing.T) {
@@ -377,7 +377,7 @@ func Test_fuParse_badtoken(t *testing.T) {
 	parser := NewParser(tokens)
 	result := fuParse(parser)
 	assertParseFailure(t, result, parser)
-	assertSyntaxError(t, 0, "!#*$", parser)
+	assertSyntaxError(t, "!#*$", parser)
 }
 
 func reset() {
@@ -421,19 +421,13 @@ func assertParseFailure(t *testing.T, result int, parser *Parser) {
 	assertNotNil(t, "parser.syntaxerror", parser.syntaxerror)
 }
 
-func assertSyntaxError(t *testing.T, lineno int, badtext string, parser *Parser) {
+func assertSyntaxError(t *testing.T, badtext string, parser *Parser) {
 	actual := parser.syntaxerror
 	message := "syntax error"
 
-	if !(actual.badtoken.lineno == lineno &&
-		actual.badtoken.text == badtext &&
-		actual.message == message) {
-
+	if !(actual.badtoken.text == badtext && actual.message == message) {
 		expect := &SyntaxError{
-			badtoken: &toktext{
-				filename: parser.syntaxerror.badtoken.filename,
-				lineno: lineno,
-				text: badtext},
+			badtoken: &toktext{text: badtext},
 			message: message}
 
 		t.Errorf("expected syntax error:\n%s\nbut got:\n%s",

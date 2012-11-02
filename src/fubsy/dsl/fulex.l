@@ -12,16 +12,22 @@ import (
 type Scanner struct {
 	filename string
 	input []byte
-	pos int
-	lineno int
+
+	pos int						// current offset into input
+	startpos int				// start of current token
+	eof bool
+
+	// filename and line offset table *shared by all tokens and AST
+	// nodes* parsed from this file
+	fileinfo *fileinfo
 
 	// argh: all of these bytes should probably be runes
 	prev byte
 	cur byte
 	buf []byte
 
-	badlineno int                       // start of current badtext
-	badtext []byte                      // sequence of bad chars
+	badstart int				// start of current badtext (offset into input)
+	badtext []byte				// sequence of bad chars
 
 	tokens []toktext
 }
@@ -39,22 +45,27 @@ func NewFileScanner(filename string, reader io.Reader) (*Scanner, error) {
 }
 
 func (self *Scanner) nextchar() {
+	if self.eof {
+		return
+	}
 	if self.cur > 0 {
 		self.buf = append(self.buf, self.cur)
 	}
 	if self.cur == '\n' {
-		// increment lineno after consuming the newline (self.cur will
-		// be replaced by the next char momentarily), but before we
-		// produce the EOL token (see maybeeol() for compensation)
-		self.lineno++
+		// self.pos already points to the start of the next line
+		// fmt.Printf("nextchar: newline at pos %d, append %d to lineoffsets\n",
+		// 	self.pos-1, self.pos)
+		self.fileinfo.lineoffsets = append(self.fileinfo.lineoffsets, self.pos)
 	}
 	if self.pos >= len(self.input) {
-		//fmt.Printf("nextchar: at eof (post=%d, lineno=%d)\n",
-		//	self.pos, self.lineno)
+		// fmt.Printf("nextchar: at eof (pos=%d)\n", self.pos)
 		self.cur = 0				// not a very good eof marker!
+		self.fileinfo.lineoffsets = append(self.fileinfo.lineoffsets, self.pos)
+		self.pos++
+		self.eof = true
 	} else {
-		//fmt.Printf("nextchar: pos=%d, lineno=%d: advancing from %#v to %#v\n",
-		//	self.pos, self.lineno, string(self.cur), string(self.input[self.pos]))
+		// fmt.Printf("nextchar: pos=%d: advancing from %#v to %#v\n",
+		// 	self.pos, string(self.cur), string(self.input[self.pos]))
 		self.prev = self.cur
 		self.cur = self.input[self.pos]
 		self.pos++
@@ -62,7 +73,7 @@ func (self *Scanner) nextchar() {
 }
 
 func (self *Scanner) scan() {
-	//fmt.Printf("scan: input=>%s<\n", self.input)
+	// fmt.Printf("scan: input=>%#v<\n", string(self.input))
 
 	// start conditions (lexical modes)
 	const (
@@ -72,9 +83,11 @@ func (self *Scanner) scan() {
 		maxsc
 	)
 
+	self.fileinfo = &fileinfo{self.filename, []int {0}}
+
 	condition := SC_INITIAL
 	var inline []byte
-	var inlinestart int
+	//var inlinestart int
 
 	// current line contains only whitespace or comments (no tokens)
 	blank := true
@@ -88,31 +101,40 @@ func (self *Scanner) scan() {
 		}
 		condition = cond
 	}
-	addtok := func(filename string, lineno int, token int, text []byte) {
-		tt := toktext{filename, lineno, token, string(text)}
+	addtok := func(filename string, startpos *int, token int, text []byte) {
+		location := newlocation(self.fileinfo)
+		location.start = *startpos
+		location.end = self.pos - 1
+		tt := toktext{location, token, string(text)}
+		// fmt.Printf("token: %d %#v @ [%d:%d] (prev=%#v, cur=%#v, pos=%d)\n",
+		// 	token, string(text), location.start, location.end,
+		// 	string(self.prev), string(self.cur), self.pos)
 		self.tokens = append(self.tokens, tt)
 		blank = false
+		*startpos = self.pos - 1
+		self.badstart = self.pos - 1
 	}
 	checkbad := func() {
 		if len(self.badtext) > 0 {
-			//fmt.Printf("line %d: invalid token: %s\n", self.badlineno, self.badtext)
-			addtok(self.filename, self.badlineno, BADTOKEN, self.badtext)
+			// fmt.Printf("invalid token: %#v (startpos=%d, pos=%d)\n",
+			// 	self.badtext, self.startpos, self.pos)
+			addtok(self.filename, &self.badstart, BADTOKEN, self.badtext)
+			self.tokens[len(self.tokens)-1].location.end = self.startpos
 			self.badtext = self.badtext[:0]
 		}
 	}
+	skip := func() {
+		self.startpos = self.pos - 1
+		self.badstart = self.startpos
+	}
 	tokfound := func(token int) {
 		checkbad()
-		// fmt.Printf("token: %d %#v (prev=%#v, cur=%#v, pos=%d, lineno=%d)\n",
-		// 	token, string(self.buf), string(self.prev), string(self.cur),
-		// 	self.pos, self.lineno)
-		addtok(self.filename, self.lineno, token, self.buf)
+		addtok(self.filename, &self.startpos, token, self.buf)
 	}
 	badchar := func() {
 		//fmt.Printf("badchar: >%c<\n", self.buf[0])
-		// setting badlineno on every badchar is valid as long
-		// as badtext does not span lines
-		self.badlineno = self.lineno
 		self.badtext = append(self.badtext, self.buf[0])
+		self.startpos++
 	}
 	maybeeol := func() {
 		// Don't want the parser to worry about blank/whitespace/comment
@@ -121,20 +143,33 @@ func (self *Scanner) scan() {
 		// at the end of a line that contains at least one other token.
 		checkbad()
 		if !blank && depth == 0 {
-			// decrement lineno to compensate for lineno++ in nextchar()
-			addtok(self.filename, self.lineno-1, EOL, self.buf)
+			addtok(self.filename, &self.startpos, EOL, self.buf)
 		}
 		blank = true
+		self.startpos = self.pos - 1
+		self.badstart = self.startpos
 	}
 
 	startinline := func() {
 		begin(SC_INLINE)
-		inlinestart = self.lineno
+		//inlinestart = self.pos
 		tokfound(L3BRACE)
 	}
-	stopinline := func() {
-		addtok(self.filename, inlinestart, INLINE, inline)
+	finishinline := func() {
+		addtok(self.filename, &self.startpos, INLINE, inline)
 		inline = inline[:0]
+	}
+	stopinline := func() {
+		finishinline()
+
+		// because we don't emit the INLINE token until we have seen
+		// the closing "}}}", the token's location.end points to
+		// the end of "}}}"
+		self.tokens[len(self.tokens)-1].location.end -= 3
+
+		// addtok() helpfully messes up self.startpos (similar reason)
+		self.startpos -= 3
+
 		begin(SC_INITIAL)
 		tokfound(R3BRACE)
 	}
@@ -151,10 +186,10 @@ func (self *Scanner) scan() {
 	}
 	stopfilelist := func() {
 		begin(SC_INITIAL)
+		self.startpos = self.pos - 2
 		tokfound('>')
 	}
 
-	self.lineno = 1
 	self.nextchar()
 
 %}
@@ -174,9 +209,9 @@ func (self *Scanner) scan() {
  self.buf = self.buf[:0]
 
 <*>\0						goto eof
-[ \t]+						checkbad()
+[ \t]+						checkbad(); skip()
 \n							maybeeol()
-\#.*						checkbad()
+\#.*						checkbad(); skip()
 
 "import"					tokfound(IMPORT)
 "plugin"					tokfound(PLUGIN)
@@ -200,7 +235,7 @@ func (self *Scanner) scan() {
 
 \<							startfilelist()
 <SC_FILELIST>[^ \t\n\>]+	filepattern()
-<SC_FILELIST>[ \t\n]		// ignore
+<SC_FILELIST>[ \t\n]		skip()
 <SC_FILELIST>\>				stopfilelist()
 
 .							badchar()
@@ -208,6 +243,10 @@ func (self *Scanner) scan() {
 %%
 
 eof:
+	if condition == SC_INLINE {
+		finishinline()
+	}
+
 	if self.tokens[len(self.tokens)-1].token != EOL {
 		// synthetic EOL so the parser only has to worry about EOL as a
 		// statement terminator (not EOF too)
