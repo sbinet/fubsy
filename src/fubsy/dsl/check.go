@@ -15,12 +15,12 @@ func (self SemanticError) Error() string {
 func checkAST(ast *ASTRoot) []error {
 	// ugh: need generic AST walker?
 	errors := make([]error, 0)
-	for _, elem_ := range ast.elements {
+	for _, elem_ := range ast.children {
 		if elem, ok := elem_.(ASTPhase); ok {
-			for _, stmt_ := range elem.statements {
+			for _, stmt_ := range elem.children {
 				if stmt, ok := stmt_.(ASTBuildRule); ok {
-					actions, brerrors := checkActions(stmt.actions)
-					stmt.actions = actions
+					actions, brerrors := checkActions(stmt.children)
+					stmt.children = actions
 					errors = append(errors, brerrors...)
 				}
 			}

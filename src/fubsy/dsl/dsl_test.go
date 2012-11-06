@@ -17,8 +17,8 @@ func TestParse_valid_1(t *testing.T) {
 	// dead simple: a single top-level element
 	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n<meep>\n\n}")
 
-	expect := ASTRoot{elements: []ASTNode {
-			ASTPhase{name: "main", statements: []ASTNode {
+	expect := ASTRoot{children: []ASTNode {
+			ASTPhase{name: "main", children: []ASTNode {
 					ASTFileList{patterns: []string {"meep"}}}}}}
 	ast, err := Parse(fn)
 	testutils.AssertNoErrors(t, err)
@@ -29,7 +29,7 @@ func TestParse_valid_sequence(t *testing.T) {
 	tmpdir, cleanup := mktemp()
 	defer cleanup()
 
-	// sequence of top-level elements
+	// sequence of top-level children
 	fn := mkfile(
 		tmpdir,
 		"valid_2.fubsy",
@@ -39,15 +39,15 @@ func TestParse_valid_sequence(t *testing.T) {
 	ast, err := Parse(fn)
 	testutils.AssertNoErrors(t, err)
 
-	expect := ASTRoot{elements: []ASTNode {
+	expect := ASTRoot{children: []ASTNode {
 			ASTPhase{
 				name: "main",
-				statements: []ASTNode {ASTString{value: "boo"}}},
+				children: []ASTNode {ASTString{value: "boo"}}},
 			ASTInline{
 				lang: "foo", content: "o'malley & friends\n"},
 			ASTPhase{
 				name: "blob",
-				statements: []ASTNode {ASTString{value: "meep"}}},
+				children: []ASTNode {ASTString{value: "meep"}}},
 	}}
 	assertASTEquals(t, &expect, ast)
 }
@@ -71,10 +71,10 @@ func TestParse_internal_newlines(t *testing.T) {
 	testutils.AssertNoErrors(t, err)
 
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTPhase{
 				name: "main",
-				statements: []ASTNode {
+				children: []ASTNode {
 					ASTFunctionCall{
 						function: ASTName{name: "x"},
 						args: []ASTExpression {

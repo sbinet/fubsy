@@ -30,7 +30,7 @@ func Test_checkActions_bad(t *testing.T) {
 		ASTBuildRule{					  // bad
 			targets: ASTString{value: "target"},
 			sources: ASTString{value: "source"},
-			actions: []ASTNode {},
+			children: []ASTNode {},
 		},
 		// hmmm: lots of expressions evaluate to a string -- why can't
 		// I say cmd = "cc -o foo foo.c" outside a build rule, and then

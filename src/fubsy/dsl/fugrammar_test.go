@@ -21,7 +21,7 @@ func Test_fuParse_valid_imports(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTImport{plugin: []string {"ding"}},
 			ASTImport{plugin: []string {"dong", "ping", "whoo"}},
 		}}
@@ -44,10 +44,10 @@ func Test_fuParse_valid_phase(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTPhase{
 			name: "main",
-			statements: []ASTNode {
+			children: []ASTNode {
 					ASTString{value: "foo"},
 					ASTAssignment{
 						target: "x",
@@ -65,10 +65,10 @@ func Test_fuParse_empty_phase(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTPhase{
 				name: "blah",
-				statements: []ASTNode {}},
+				children: []ASTNode {}},
 	}}
 	assertParses(t, &expect, tokens)
 }
@@ -93,7 +93,7 @@ func Test_fuParse_globals(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-	elements: []ASTNode {
+	children: []ASTNode {
 			ASTAssignment{
 				target: "v1",
 				expr: ASTString{value: "blobby!"},
@@ -125,10 +125,10 @@ func Test_fuParse_expr_1(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTPhase{
 				name: "blorp",
-				statements: []ASTNode {
+				children: []ASTNode {
 					ASTAssignment{
 						target: "stuff",
 						expr: ASTName{name: "foo"},
@@ -155,10 +155,10 @@ func Test_fuParse_expr_2(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 		ASTPhase{
 			name: "floo",
-			statements: []ASTNode {
+			children: []ASTNode {
 				ASTAdd{
 					op1: ASTAdd{
 						op1: ASTName{name: "a"},
@@ -185,10 +185,10 @@ func Test_fuParse_funccall_1(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTPhase{
 				name: "frob",
-				statements: []ASTNode {
+				children: []ASTNode {
 					ASTFunctionCall{
 						function: ASTName{name: "foo"},
 						args: []ASTExpression {}},
@@ -203,10 +203,10 @@ var _funccall_expect ASTRoot
 
 func init() {
 	_funccall_expect = ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTPhase{
 				name: "frob",
-				statements: []ASTNode {
+				children: []ASTNode {
 					ASTFunctionCall{
 						function: ASTName{name: "foo"},
 						args: []ASTExpression {
@@ -276,10 +276,10 @@ func Test_fuParse_filelist(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTPhase{
 				name: "main",
-				statements: []ASTNode {
+				children: []ASTNode {
 					ASTAssignment{
 						target: "x",
 						expr: ASTFileList{
@@ -319,14 +319,14 @@ func Test_fuParse_buildrule_1(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTPhase{
 				name: "main",
-				statements: []ASTNode {
+				children: []ASTNode {
 					ASTBuildRule{
 						targets: ASTName{name: "a"},
 						sources: ASTString{value: "x"},
-						actions: []ASTNode {
+						children: []ASTNode {
 							ASTString{value: "foo bar"},
 							ASTFunctionCall{
 								function: ASTName{name: "bip"},
@@ -346,7 +346,7 @@ func Test_fuParse_valid_inline(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := ASTRoot{
-		elements: []ASTNode {
+		children: []ASTNode {
 			ASTInline{lang: "whatever", content: "beep!\"\nblam'"}}}
 	assertParses(t, &expect, tokens)
 }
@@ -416,8 +416,8 @@ func Test_fuParse_ast_locations(t *testing.T) {
 	}
 
 	root := parser.ast
-	phase := root.elements[0].(ASTPhase)
-	assign := phase.statements[0].(ASTAssignment)
+	phase := root.children[0].(ASTPhase)
+	assign := phase.children[0].(ASTAssignment)
 	rhs := assign.expr.(ASTFunctionCall)
 	name := rhs.function.(ASTName)
 	assertLocation(name, 12, 15)

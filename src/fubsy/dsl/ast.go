@@ -63,9 +63,12 @@ func (self astbase) mergeLocations(other Locatable) location {
 	return self.merge(other.Location())
 }
 
+// AST nodes with variable number of children
+type children []ASTNode
+
 type ASTRoot struct {
 	astbase
-	elements []ASTNode
+	children
 }
 
 // import a single plugin, e.g. "import NAME"
@@ -85,7 +88,7 @@ type ASTInline struct {
 type ASTPhase struct {
 	astbase
 	name string
-	statements []ASTNode
+	children
 }
 
 // NAME = EXPR (global or local)
@@ -100,7 +103,7 @@ type ASTBuildRule struct {
 	astbase
 	targets ASTExpression
 	sources ASTExpression
-	actions []ASTNode
+	children
 }
 
 // OP1 + OP2 (string/list concatenation)
@@ -143,27 +146,33 @@ type ASTFileList struct {
 	patterns []string
 }
 
-func NewASTRoot(elements []ASTNode) ASTRoot {
-	//location := elements[0].Location().merge(elements[len(elements)-1].Location())
-	location := elements[0].mergeLocations(elements[len(elements)-1])
-	result := ASTRoot{elements: elements}
+func (self children) Dump(writer io.Writer, indent string) {
+	indent += "  "
+	for _, child := range self {
+		child.Dump(writer, indent)
+	}
+}
+
+func (self children) Equal(other children) bool {
+	return listsEqual(self, other)
+}
+
+func NewASTRoot(children []ASTNode) ASTRoot {
+	location := children[0].mergeLocations(children[len(children)-1])
+	result := ASTRoot{children: children}
 	result.astbase.location = location
 	return result
 }
 
 func (self ASTRoot) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer, indent + "ASTRoot {")
-	if self.elements != nil {
-		for _, child := range self.elements {
-			child.Dump(writer, indent + "  ")
-		}
-	}
+	self.children.Dump(writer, indent)
 	fmt.Fprintln(writer, indent + "}")
 }
 
 func (self ASTRoot) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTRoot); ok {
-		return listsEqual(self.elements, other.elements)
+		return self.children.Equal(other.children)
 	}
 	return false
 }
@@ -221,31 +230,29 @@ func (self ASTInline) Equal(other_ ASTNode) bool {
 	return false
 }
 
-func NewASTPhase(name Token, statements []ASTNode) ASTPhase {
+func NewASTPhase(name Token, children []ASTNode) ASTPhase {
 	var location location
 	// XXX ignores location of closing "}"
-	if len(statements) > 0 {
-		location = name.Location().merge(statements[len(statements)-1].Location())
+	if len(children) > 0 {
+		location = name.Location().merge(children[len(children)-1].Location())
 	} else {
 		location = name.Location()
 	}
-	result := ASTPhase{name: name.Text(), statements: statements}
+	result := ASTPhase{name: name.Text(), children: children}
 	result.astbase.location = location
 	return result
 }
 
 func (self ASTPhase) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTPhase[%s] {\n", indent, self.name)
-	for _, node := range self.statements {
-		node.Dump(writer, indent + "  ")
-	}
+	self.children.Dump(writer, indent)
 	fmt.Fprintln(writer, indent + "}")
 }
 
 func (self ASTPhase) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTPhase); ok {
 		return self.name == other.name &&
-			listsEqual(self.statements, other.statements)
+			self.children.Equal(other.children)
 	}
 	return false
 }
@@ -273,10 +280,10 @@ func (self ASTAssignment) Equal(other_ ASTNode) bool {
 func NewASTBuildRule(
 	targets ASTExpression,
 	sources ASTExpression,
-	actions []ASTNode) ASTBuildRule {
+	children []ASTNode) ASTBuildRule {
 	// XXX ignoring location of closing "}"
-	location := targets.mergeLocations(actions[len(actions)-1])
-	result := ASTBuildRule{targets: targets, sources: sources, actions: actions}
+	location := targets.mergeLocations(children[len(children)-1])
+	result := ASTBuildRule{targets: targets, sources: sources, children: children}
 	result.astbase.location = location
 	return result
 }
@@ -288,9 +295,7 @@ func (self ASTBuildRule) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%ssources:\n", indent)
 	self.sources.Dump(writer, indent + "  ")
 	fmt.Fprintf(writer, "%sactions:\n", indent)
-	for _, node := range self.actions {
-		node.Dump(writer, indent + "  ")
-	}
+	self.children.Dump(writer, indent)
 	fmt.Fprintf(writer, "%s}\n", indent)
 }
 
@@ -298,7 +303,7 @@ func (self ASTBuildRule) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTBuildRule); ok {
 		return self.targets.Equal(other.targets) &&
 			self.sources.Equal(other.sources) &&
-			listsEqual(self.actions, other.actions)
+			self.children.Equal(other.children)
 	}
 	return false
 }

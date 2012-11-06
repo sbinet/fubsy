@@ -14,11 +14,11 @@ func Test_ASTRoot_Equal(t *testing.T) {
 	if !node1.Equal(node2) {
 		t.Error("empty root nodes not equal")
 	}
-	node1.elements = []ASTNode {ASTString{}}
+	node1.children = []ASTNode {ASTString{}}
 	if node1.Equal(node2) {
 		t.Error("non-empty root node equals empty root node")
 	}
-	node2.elements = []ASTNode {ASTString{}}
+	node2.children = []ASTNode {ASTString{}}
 	if !node1.Equal(node2) {
 		t.Error("root nodes with one child each not equal")
 	}
