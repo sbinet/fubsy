@@ -16,6 +16,8 @@ type AST interface {
 // interface for any particular node in the AST (root, internal,
 // leaves, whatever)
 type ASTNode interface {
+	Locatable
+
 	Dump(writer io.Writer, indent string)
 
 	// Compare the important structural/semantic/syntactic elements
@@ -26,9 +28,6 @@ type ASTNode interface {
 	// nodes that both mean "foo = bar()" are the same wherever they
 	// originated.
 	Equal(other ASTNode) bool
-
-	Location() location
-	mergeLocations(other Locatable) location
 }
 
 // implemented by all AST nodes produced by a grammar rule 'expr : ...',
@@ -59,8 +58,8 @@ func (self astbase) Location() location {
 	return self.location
 }
 
-func (self astbase) mergeLocations(other Locatable) location {
-	return self.merge(other.Location())
+func mergeLocations(loc1 Locatable, loc2 Locatable) location {
+	return loc1.Location().merge(loc2.Location())
 }
 
 // AST nodes with variable number of children
@@ -166,10 +165,10 @@ func (self children) Equal(other children) bool {
 }
 
 func NewASTRoot(children []ASTNode) ASTRoot {
-	location := children[0].mergeLocations(children[len(children)-1])
-	result := ASTRoot{children: children}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(children[0], children[len(children)-1])
+	return ASTRoot{
+		astbase: astbase{location},
+		children: children}
 }
 
 func (self ASTRoot) Dump(writer io.Writer, indent string) {
@@ -190,11 +189,11 @@ func (self ASTRoot) ListPlugins() []string {
 }
 
 func NewASTImport(keyword Locatable, names []Token) ASTImport {
-	location := keyword.Location().merge(names[len(names)-1].Location())
+	location := mergeLocations(keyword, names[len(names)-1])
 	plugin := extractText(names)
-	result := ASTImport{plugin: plugin}
-	result.astbase.location = location
-	return result
+	return ASTImport{
+		astbase: astbase{location},
+		plugin: plugin}
 }
 
 func (self ASTImport) Dump(writer io.Writer, indent string) {
@@ -209,10 +208,11 @@ func (self ASTImport) Equal(other_ ASTNode) bool {
 }
 
 func NewASTInline(keyword Locatable, lang Token, content Token) ASTInline {
-	location := keyword.Location().merge(content.Location())
-	result := ASTInline{lang: lang.Text(), content: content.Text()}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(keyword, content)
+	return ASTInline{
+		astbase: astbase{location},
+		lang: lang.Text(),
+		content: content.Text()}
 }
 
 func (self ASTInline) Dump(writer io.Writer, indent string) {
@@ -239,10 +239,11 @@ func (self ASTInline) Equal(other_ ASTNode) bool {
 }
 
 func NewASTPhase(name Token, block ASTBlock) ASTPhase {
-	location := name.Location().merge(block.Location())
-	result := ASTPhase{name: name.Text(), children: block.children}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(name, block)
+	return ASTPhase{
+		astbase: astbase{location},
+		name: name.Text(),
+		children: block.children}
 }
 
 func (self ASTPhase) Dump(writer io.Writer, indent string) {
@@ -260,10 +261,10 @@ func (self ASTPhase) Equal(other_ ASTNode) bool {
 }
 
 func NewASTBlock(opener Token, children []ASTNode, closer Token) ASTBlock {
-	location := opener.Location().merge(closer.Location())
-	result := ASTBlock{children: children}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(opener, closer)
+	return ASTBlock{
+		astbase: astbase{location},
+		children: children}
 }
 
 func (self ASTBlock) Dump(writer io.Writer, indent string) {
@@ -275,10 +276,11 @@ func (self ASTBlock) Equal(other ASTNode) bool {
 }
 
 func NewASTAssignment(target Token, expr ASTExpression) ASTAssignment {
-	location := target.Location().merge(expr.Location())
-	result := ASTAssignment{target: target.Text(), expr: expr}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(target, expr)
+	return ASTAssignment{
+		astbase: astbase{location},
+		target: target.Text(),
+		expr: expr}
 }
 
 func (self ASTAssignment) Dump(writer io.Writer, indent string) {
@@ -298,10 +300,12 @@ func NewASTBuildRule(
 	targets ASTExpression,
 	sources ASTExpression,
 	block ASTBlock) ASTBuildRule {
-	location := targets.mergeLocations(block)
-	result := ASTBuildRule{targets: targets, sources: sources, children: block.children}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(targets, block)
+	return ASTBuildRule{
+		astbase: astbase{location},
+		targets: targets,
+		sources: sources,
+		children: block.children}
 }
 
 func (self ASTBuildRule) Dump(writer io.Writer, indent string) {
@@ -325,10 +329,11 @@ func (self ASTBuildRule) Equal(other_ ASTNode) bool {
 }
 
 func NewASTAdd(op1 ASTExpression, op2 ASTExpression) ASTAdd {
-	location := op1.mergeLocations(op2)
-	result := ASTAdd{op1: op1, op2: op2}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(op1, op2)
+	return ASTAdd{
+		astbase: astbase{location},
+		op1: op1,
+		op2: op2}
 }
 
 func (self ASTAdd) Dump(writer io.Writer, indent string) {
@@ -354,10 +359,11 @@ func NewASTFunctionCall(
 	function ASTExpression,
 	args []ASTExpression,
 	closer Locatable) ASTFunctionCall {
-	location := function.Location().merge(closer.Location())
-	result := ASTFunctionCall{function: function, args: args}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(function, closer)
+	return ASTFunctionCall{
+		astbase: astbase{location},
+		function: function,
+		args: args}
 }
 
 func (self ASTFunctionCall) Dump(writer io.Writer, indent string) {
@@ -386,10 +392,11 @@ func (self ASTFunctionCall) String() string {
 }
 
 func NewASTSelection(container ASTExpression, member Token) ASTSelection {
-	location := container.mergeLocations(member)
-	result := ASTSelection{container: container, member: member.Text()}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(container, member)
+	return ASTSelection{
+		astbase: astbase{location},
+		container: container,
+		member: member.Text()}
 }
 
 func (self ASTSelection) Dump(writer io.Writer, indent string) {
@@ -410,9 +417,9 @@ func (self ASTSelection) String() string {
 }
 
 func NewASTName(tok Token) ASTName {
-	result := ASTName{name: tok.Text()}
-	result.astbase.location = tok.Location()
-	return result
+	return ASTName{
+		astbase: astbase{tok.Location()},
+		name: tok.Text()}
 }
 
 func (self ASTName) Dump(writer io.Writer, indent string) {
@@ -436,9 +443,9 @@ func NewASTString(value Token) ASTString {
 	// encompasses the quotes!)
 	text := value.Text()
 	text = text[1:len(text)-1]
-	result := ASTString{value: text}
-	result.astbase.location = value.Location()
-	return result
+	return ASTString{
+		astbase: astbase{value.Location()},
+		value: text}
 }
 
 func (self ASTString) Dump(writer io.Writer, indent string) {
@@ -462,10 +469,10 @@ func NewASTFileList(
 	opener Token,
 	patterns []Token,
 	closer Token) ASTFileList {
-	location := opener.Location().merge(closer.Location())
-	result := ASTFileList{patterns: extractText(patterns)}
-	result.astbase.location = location
-	return result
+	location := mergeLocations(opener, closer)
+	return ASTFileList{
+		astbase: astbase{location},
+		patterns: extractText(patterns)}
 }
 
 func (self ASTFileList) Dump(writer io.Writer, indent string) {
