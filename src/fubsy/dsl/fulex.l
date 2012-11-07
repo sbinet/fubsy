@@ -29,7 +29,7 @@ type Scanner struct {
 	badstart int				// start of current badtext (offset into input)
 	badtext []byte				// sequence of bad chars
 
-	tokens []toktext
+	tokens []token
 }
 
 func NewScanner(filename string, input []byte) *Scanner {
@@ -101,13 +101,13 @@ func (self *Scanner) scan() {
 		}
 		condition = cond
 	}
-	addtok := func(filename string, startpos *int, token int, text []byte) {
+	addtok := func(filename string, startpos *int, tokid int, text []byte) {
 		location := newlocation(self.fileinfo)
 		location.start = *startpos
 		location.end = self.pos - 1
-		tt := toktext{location, token, string(text)}
+		tt := token{location, tokid, string(text)}
 		// fmt.Printf("token: %d %#v @ [%d:%d] (prev=%#v, cur=%#v, pos=%d)\n",
-		// 	token, string(text), location.start, location.end,
+		// 	tokid, string(text), location.start, location.end,
 		// 	string(self.prev), string(self.cur), self.pos)
 		self.tokens = append(self.tokens, tt)
 		blank = false
@@ -247,7 +247,7 @@ eof:
 		finishinline()
 	}
 
-	if self.tokens[len(self.tokens)-1].token != EOL {
+	if self.tokens[len(self.tokens)-1].id != EOL {
 		// synthetic EOL so the parser only has to worry about EOL as a
 		// statement terminator (not EOF too)
 		tokfound(EOL)

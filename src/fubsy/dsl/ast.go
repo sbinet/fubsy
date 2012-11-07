@@ -37,13 +37,13 @@ type ASTExpression interface {
 	fmt.Stringer
 }
 
-// implemented by every AST node via astbase, and also by toktext
+// implemented by every AST node via astbase, and also by token
 type Locatable interface {
 	Location() location
 }
 
 // something with a location and text (so this file does not know
-// about toktext, which is defined in fugrammar.y -- trying to avoid
+// about token, which is defined in fugrammar.y -- trying to avoid
 // dependency cycles within the package)
 type Token interface {
 	Locatable

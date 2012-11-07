@@ -11,7 +11,7 @@ const BADTOKEN = -1
 %}
 
 %union {
-	token toktext
+	token token
 
 	root ASTRoot
 	node ASTNode
@@ -215,26 +215,26 @@ selection:
 %%
 
 // a token together with its location, text, etc.
-type toktext struct {
+type token struct {
 	location location
-	token int
+	id int
 	text string
 }
 
 // implement the Locatable interface
-func (self toktext) Location() location {
+func (self token) Location() location {
 	return self.location
 }
 
 // implement the Token interface defined by ast.go
-func (self toktext) Text() string {
+func (self token) Text() string {
 	 return self.text
 }
 
 
 type Parser struct {
 	// internal state (fed to parser by Lex() method)
-	tokens []toktext
+	tokens []token
 	next int
 
 	// results for caller to use
@@ -242,7 +242,7 @@ type Parser struct {
 	syntaxerror *SyntaxError
 }
 
-func NewParser(tokens []toktext) *Parser {
+func NewParser(tokens []token) *Parser {
 	return &Parser{tokens: tokens}
 }
 
@@ -250,10 +250,10 @@ func (self *Parser) Lex(lval *fuSymType) int {
 	if self.next >= len(self.tokens) {
 		return 0				// eof
 	}
-	toktext := self.tokens[self.next]
+	token := self.tokens[self.next]
 	self.next++
-	lval.token = toktext
-	return toktext.token
+	lval.token = token
+	return token.id
 }
 
 func (self *Parser) Error(e string) {

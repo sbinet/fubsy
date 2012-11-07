@@ -388,7 +388,7 @@ func Test_fuParse_ast_locations(t *testing.T) {
 	// "main{\nfoo = bar(\n  )\n}\n"
 
 	fi := &fileinfo{"foo.txt", []int {0, 6, 17, 21, 23, 24}}
-	tokens := []toktext {
+	tokens := []token {
 		{location{fi, 0, 4}, NAME, "main"},
 		{location{fi, 4, 5}, '{', "{"},
 		{location{fi, 5, 6}, EOL, "\n"},
@@ -433,14 +433,14 @@ func reset() {
 
 // useful for constructing test data
 type minitok struct {
-	tok int
+	id int
 	text string
 }
 
-func toklist(tokens []minitok) []toktext {
-	result := make([]toktext, len(tokens))
+func toklist(tokens []minitok) []token {
+	result := make([]token, len(tokens))
 	for i, mtok := range tokens {
-		result[i] = toktext{token: mtok.tok, text: mtok.text}
+		result[i] = token{id: mtok.id, text: mtok.text}
 	}
 	return result
 }
@@ -474,7 +474,7 @@ func assertSyntaxError(t *testing.T, badtext string, parser *Parser) {
 
 	if !(actual.badtoken.text == badtext && actual.message == message) {
 		expect := &SyntaxError{
-			badtoken: &toktext{text: badtext},
+			badtoken: &token{text: badtext},
 			message: message}
 
 		t.Errorf("expected syntax error:\n%s\nbut got:\n%s",

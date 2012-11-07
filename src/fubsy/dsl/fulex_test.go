@@ -260,22 +260,22 @@ func TestScan_invalid(t *testing.T) {
 		26, 26, 3)
 }
 
-func scan(input string) []toktext {
+func scan(input string) []token {
 	scanner := NewScanner("", []byte(input))
 	scanner.scan()
 	return scanner.tokens
 }
 
-func assertScan(t *testing.T, expect []minitok, actual []toktext) {
+func assertScan(t *testing.T, expect []minitok, actual []token) {
 	lasttok := actual[len(actual)-1]
-	if lasttok.token != EOF {
+	if lasttok.id != EOF {
 		t.Errorf("expected last token to be EOF, but got %d (%#v)",
-			lasttok.token, lasttok.text)
+			lasttok.id, lasttok.text)
 	}
 	assertTokens(t, expect, actual[0:len(actual)-1])
 }
 
-func assertTokens(t *testing.T, expect []minitok, actual []toktext) {
+func assertTokens(t *testing.T, expect []minitok, actual []token) {
 	if len(expect) != len(actual) {
 		tokens := make([]string, len(actual))
 		for i, tok := range actual {
@@ -285,7 +285,7 @@ func assertTokens(t *testing.T, expect []minitok, actual []toktext) {
 			len(expect), len(actual), strings.Join(tokens, "\n"))
 	}
 	for i, etok := range expect {
-		atok := minitok{tok: actual[i].token, text: actual[i].text}
+		atok := minitok{id: actual[i].id, text: actual[i].text}
 		if etok != atok {
 			t.Errorf("token %d: expected\n%#v\nbut got\n%#v", i, etok, atok)
 		}
@@ -295,7 +295,7 @@ func assertTokens(t *testing.T, expect []minitok, actual []toktext) {
 
 // locinfo is a sequence of start, end, startline triples
 // (i.e. length must be N*3)
-func assertLocations(t *testing.T, tokens []toktext, locinfo ...int) {
+func assertLocations(t *testing.T, tokens []token, locinfo ...int) {
 	tokens = tokens[:len(tokens) - 1] // ignore EOF token
 	needlen := len(tokens) * 3
 	if len(locinfo) != needlen {

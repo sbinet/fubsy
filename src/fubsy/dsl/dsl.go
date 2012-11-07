@@ -6,12 +6,12 @@ import (
 )
 
 type SyntaxError struct {
-	badtoken *toktext
+	badtoken *token
 	message string
 }
 
 func (self SyntaxError) Error() string {
-	badtok := self.badtoken.token
+	badtok := self.badtoken.id
 	badtext := self.badtoken.text
 	if badtok == EOF {
 		badtext = "EOF"
