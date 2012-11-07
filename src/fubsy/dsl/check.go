@@ -8,8 +8,7 @@ type SemanticError struct {
 }
 
 func (self SemanticError) Error() string {
-	// filename? line number(s)?
-	return self.message
+	return self.node.Location().String() + self.message
 }
 
 func checkAST(ast *ASTRoot) []error {

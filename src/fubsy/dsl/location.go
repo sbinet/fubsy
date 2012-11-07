@@ -30,11 +30,16 @@ func newlocation(fileinfo *fileinfo) location {
 }
 
 func (self location) String() string {
+	if self.fileinfo == nil {
+		// don't panic on uninitialized location object
+		return ""
+	}
+	var chunks []string
 	fn := self.fileinfo.filename
 	if fn == "" {
 		fn = "(unknown)"
 	}
-	chunks := []string {fn}
+	chunks = append(chunks, fn)
 	sline, eline := self.linerange()
 	if sline > 0 {
 		var lines string

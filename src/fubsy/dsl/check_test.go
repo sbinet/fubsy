@@ -23,11 +23,17 @@ func Test_checkActions_ok(t *testing.T) {
 }
 
 func Test_checkActions_bad(t *testing.T) {
+	// ensure that one of the bad nodes has location info so we can
+	// test that SemanticError.Error() includes it
+	fileinfo := &fileinfo{"foo.fubsy", []int {0, 10, 15, 16, 20}}
+	location := location{fileinfo, 11, 18}  // line 2-4
+
 	nodes := []ASTNode {
 		ASTString{value: "foo bar"},	  // good
 		ASTFileList{patterns: []string {"*.java"}}, // bad
 		ASTFunctionCall{},				  // good
 		ASTBuildRule{					  // bad
+			astbase: astbase{location},
 			targets: ASTString{value: "target"},
 			sources: ASTString{value: "source"},
 			children: []ASTNode {},
@@ -57,6 +63,12 @@ func Test_checkActions_bad(t *testing.T) {
 			"bad node %d: expected\n%T %v\nbut got\n%T %v",
 			i, enode, enode, anode, anode)
 	}
+
+	expect_message := "foo.fubsy:2-4: invalid build action: must be either bare string, function call, or variable assignment"
+	actual_message := errors[1].Error()
+	assertTrue(t, expect_message == actual_message,
+		"expected\n%s\nbut got\n%s", expect_message, actual_message)
+
 	assertTrue(t, reflect.DeepEqual(expect_actions, actions),
 		"expected actions:\n%#v\nbut got:\n%#v",
 		expect_actions, actions)
