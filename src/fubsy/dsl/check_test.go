@@ -7,12 +7,12 @@ import (
 
 func Test_checkActions_ok(t *testing.T) {
 	nodes := []ASTNode {
-		ASTString{"foo"},
-		ASTFunctionCall{function: ASTName{"foo"}},
+		ASTString{value: "foo"},
+		ASTFunctionCall{function: ASTName{name: "foo"}},
 		ASTAssignment{target: "x", expr: ASTFunctionCall{}},
 		ASTFunctionCall{
-			function: ASTName{"blah"},
-			args: []ASTExpression {ASTString{"meep"}, ASTString{"beep"}}},
+			function: ASTName{name: "blah"},
+			args: []ASTExpression {ASTString{}, ASTString{}}},
 	}
 	actions, errors := checkActions(nodes)
 	assertTrue(t, reflect.DeepEqual(actions, nodes),
@@ -24,18 +24,18 @@ func Test_checkActions_ok(t *testing.T) {
 
 func Test_checkActions_bad(t *testing.T) {
 	nodes := []ASTNode {
-		ASTString{"foo bar"},			  // good
-		ASTFileList{[]string {"*.java"}}, // bad
+		ASTString{value: "foo bar"},	  // good
+		ASTFileList{patterns: []string {"*.java"}}, // bad
 		ASTFunctionCall{},				  // good
 		ASTBuildRule{					  // bad
-			targets: ASTString{"t"},
-			sources: ASTString{"s"},
+			targets: ASTString{value: "target"},
+			sources: ASTString{value: "source"},
 			actions: []ASTNode {},
 		},
 		// hmmm: lots of expressions evaluate to a string -- why can't
 		// I say cmd = "cc -o foo foo.c" outside a build rule, and then
 		// reference cmd inside the build rule?
-		ASTName{"blah"},		          // bad (currently)
+		ASTName{name: "blah"},	// bad (currently)
 	}
 	expect_actions := []ASTNode {
 		nodes[0],
@@ -54,8 +54,8 @@ func Test_checkActions_bad(t *testing.T) {
 		enode := err.node
 		anode := errors[i].(SemanticError).node
 		assertTrue(t, anode.Equal(enode),
-			"bad node %d: expected %v, but got %v",
-			i, enode, anode)
+			"bad node %d: expected\n%T %v\nbut got\n%T %v",
+			i, enode, enode, anode, anode)
 	}
 	assertTrue(t, reflect.DeepEqual(expect_actions, actions),
 		"expected actions:\n%#v\nbut got:\n%#v",

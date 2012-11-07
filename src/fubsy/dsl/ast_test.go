@@ -115,6 +115,48 @@ func Test_ASTInline_Dump(t *testing.T) {
 
 }
 
+func Test_ASTName_Equal_location(t *testing.T) {
+	name1 := ASTName{name: "foo"}
+	name2 := ASTName{name: "foo"}
+	assertTrue(t, name1.Equal(name2), "obvious equality fails")
+
+	fileinfo := &fileinfo{"foo.txt", []int {}}
+	name1.location = location{fileinfo, 0, 5}
+	assertTrue(t, name1.Equal(name2), "equality fails with name1.location set")
+
+	name2.location = location{fileinfo, 5, 7}
+	assertTrue(t, name1.Equal(name2),
+		"equality fails with name1.location and name2.location set to different values")
+
+	name2.location = location{fileinfo, 0, 5}
+	assertTrue(t, name1.Equal(name2),
+		"equality fails with name1.location and name2.location set to equal values")
+}
+
+func Test_ASTFunctionCall_Equal_location(t *testing.T) {
+	// location is irrelevant to comparison
+	fcall1 := ASTFunctionCall{
+		function: ASTName{name: "foo"},
+		args: []ASTExpression {ASTString{value: "bar"}}}
+	fcall2 := ASTFunctionCall{
+		function: ASTName{name: "foo"},
+		args: []ASTExpression {ASTString{value: "bar"}}}
+	assertTrue(t, fcall1.Equal(fcall2), "obvious equality fails")
+
+	fileinfo := &fileinfo{"foo.txt", []int {}}
+	fcall1.location = location{fileinfo, 3, 18}
+	assertTrue(t, fcall1.Equal(fcall2),
+		"equality fails when fcall1 has location but fcall2 does not")
+
+	fcall2.location = fcall1.location
+	assertTrue(t, fcall1.Equal(fcall2),
+		"equality fails when fcall2's location is a copy of fcall1's")
+
+	fcall2.location = location{fileinfo, 5, 41}
+	assertTrue(t, fcall1.Equal(fcall2),
+		"equality fails when fcall2's location different from fcall1's")
+}
+
 func assertASTDump(t *testing.T, expect string, node ASTNode) {
 	var buf bytes.Buffer
 	node.Dump(&buf, "")

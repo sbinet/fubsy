@@ -42,12 +42,12 @@ func TestParse_valid_sequence(t *testing.T) {
 	expect := ASTRoot{elements: []ASTNode {
 			ASTPhase{
 				name: "main",
-				statements: []ASTNode {ASTString{"boo"}}},
+				statements: []ASTNode {ASTString{value: "boo"}}},
 			ASTInline{
 				lang: "foo", content: "o'malley & friends\n"},
 			ASTPhase{
 				name: "blob",
-				statements: []ASTNode {ASTString{"meep"}}},
+				statements: []ASTNode {ASTString{value: "meep"}}},
 	}}
 	assertASTEquals(t, &expect, ast)
 }
@@ -61,10 +61,12 @@ func TestParse_internal_newlines(t *testing.T) {
 		tmpdir,
 		"newlines.fubsy",
 		"main {\n"+
-			"  x(\n"+
-			"  a.b\n"+
-			")\n"+
-			"}")
+		//"  x(\n"+
+		//"  a.b\n"+
+		"  x("+
+		"  a.b"+
+		")\n"+
+		"}")
 	ast, err := Parse(fn)
 	testutils.AssertNoErrors(t, err)
 
@@ -74,10 +76,10 @@ func TestParse_internal_newlines(t *testing.T) {
 				name: "main",
 				statements: []ASTNode {
 					ASTFunctionCall{
-						function: ASTName{"x"},
+						function: ASTName{name: "x"},
 						args: []ASTExpression {
 							ASTSelection{
-								container: ASTName{"a"},
+								container: ASTName{name: "a"},
 								member: "b",
 				}}}},
 	}}}

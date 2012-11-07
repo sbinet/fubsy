@@ -17,7 +17,18 @@ type AST interface {
 // leaves, whatever)
 type ASTNode interface {
 	Dump(writer io.Writer, indent string)
+
+	// Compare the important structural/semantic/syntactic elements
+	// represented by this AST node -- in particular, do not compare
+	// location data. (This is because Equal() is really there for the
+	// unit tests, and making unit tests worry about location is just
+	// too much to ask. Plus it makes intuitive sense that two AST
+	// nodes that both mean "foo = bar()" are the same wherever they
+	// originated.
 	Equal(other ASTNode) bool
+
+	Location() location
+	mergeLocations(other Locatable) location
 }
 
 // implemented by all AST nodes produced by a grammar rule 'expr : ...',
@@ -27,35 +38,66 @@ type ASTExpression interface {
 	fmt.Stringer
 }
 
+// implemented by every AST node via astbase, and also by toktext
+type Locatable interface {
+	Location() location
+}
+
+// something with a location and text (so this file does not know
+// about toktext, which is defined in fugrammar.y -- trying to avoid
+// dependency cycles within the package)
+type Token interface {
+	Locatable
+	Text() string
+}
+
+type astbase struct {
+	location
+}
+
+func (self astbase) Location() location {
+	return self.location
+}
+
+func (self astbase) mergeLocations(other Locatable) location {
+	return self.merge(other.Location())
+}
+
 type ASTRoot struct {
+	astbase
 	elements []ASTNode
 }
 
 // import a single plugin, e.g. "import NAME"
 type ASTImport struct {
+	astbase
 	plugin []string				// fully-qualified name split on '.'
 }
 
 // an inline plugin, e.g. "plugin LANG {{{ CONTENT }}}"
 type ASTInline struct {
+	astbase
 	lang string
 	content string
 }
 
 // a build phase, e.g. "NAME { STMTS }"
 type ASTPhase struct {
+	astbase
 	name string
 	statements []ASTNode
 }
 
 // NAME = EXPR (global or local)
 type ASTAssignment struct {
+	astbase
 	target string
 	expr ASTNode
 }
 
 // TARGETS : SOURCES { ACTIONS }
 type ASTBuildRule struct {
+	astbase
 	targets ASTExpression
 	sources ASTExpression
 	actions []ASTNode
@@ -63,36 +105,50 @@ type ASTBuildRule struct {
 
 // OP1 + OP2 (string/list concatenation)
 type ASTAdd struct {
+	astbase
 	op1 ASTExpression
 	op2 ASTExpression
 }
 
-// FUNC(arg, arg, ...) (N.B. FUNC is really an expr, to allow
-// for code like "(a.b.c())(stuff))"
+// FUNC(arg, arg, ...) (N.B. FUNC is an expr to allow for code like
+// "(a.b.c())(stuff))"
 type ASTFunctionCall struct {
+	astbase
 	function ASTExpression
 	args []ASTExpression
 }
 
 // member selection: CONTAINER.NAME where CONTAINER is any expr
 type ASTSelection struct {
+	astbase
 	container ASTExpression
 	member string
 }
 
 // a bare name, like foo in "a = foo" or "foo()"
 type ASTName struct {
+	astbase
 	name string
 }
 
 // a single string
 type ASTString struct {
+	astbase
 	value string
 }
 
 // a list of filename patterns, e.g. [foo*.c **/*.h]
 type ASTFileList struct {
+	astbase
 	patterns []string
+}
+
+func NewASTRoot(elements []ASTNode) ASTRoot {
+	//location := elements[0].Location().merge(elements[len(elements)-1].Location())
+	location := elements[0].mergeLocations(elements[len(elements)-1])
+	result := ASTRoot{elements: elements}
+	result.astbase.location = location
+	return result
 }
 
 func (self ASTRoot) Dump(writer io.Writer, indent string) {
@@ -107,7 +163,7 @@ func (self ASTRoot) Dump(writer io.Writer, indent string) {
 
 func (self ASTRoot) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTRoot); ok {
-		return reflect.DeepEqual(self, other)
+		return listsEqual(self.elements, other.elements)
 	}
 	return false
 }
@@ -116,15 +172,30 @@ func (self ASTRoot) ListPlugins() []string {
 	return []string {"foo", "bar", "baz"}
 }
 
+func NewASTImport(keyword Locatable, names []Token) ASTImport {
+	location := keyword.Location().merge(names[len(names)-1].Location())
+	plugin := extractText(names)
+	result := ASTImport{plugin: plugin}
+	result.astbase.location = location
+	return result
+}
+
 func (self ASTImport) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTImport[%s]\n", indent, strings.Join(self.plugin, "."))
 }
 
 func (self ASTImport) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTImport); ok {
-		return reflect.DeepEqual(self, other)
+		return reflect.DeepEqual(self.plugin, other.plugin)
 	}
 	return false
+}
+
+func NewASTInline(keyword Locatable, lang Token, content Token) ASTInline {
+	location := keyword.Location().merge(content.Location())
+	result := ASTInline{lang: lang.Text(), content: content.Text()}
+	result.astbase.location = location
+	return result
 }
 
 func (self ASTInline) Dump(writer io.Writer, indent string) {
@@ -144,9 +215,23 @@ func (self ASTInline) Dump(writer io.Writer, indent string) {
 
 func (self ASTInline) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTInline); ok {
-		return self == other
+		return self.lang == other.lang &&
+			self.content == other.content
 	}
 	return false
+}
+
+func NewASTPhase(name Token, statements []ASTNode) ASTPhase {
+	var location location
+	// XXX ignores location of closing "}"
+	if len(statements) > 0 {
+		location = name.Location().merge(statements[len(statements)-1].Location())
+	} else {
+		location = name.Location()
+	}
+	result := ASTPhase{name: name.Text(), statements: statements}
+	result.astbase.location = location
+	return result
 }
 
 func (self ASTPhase) Dump(writer io.Writer, indent string) {
@@ -159,9 +244,17 @@ func (self ASTPhase) Dump(writer io.Writer, indent string) {
 
 func (self ASTPhase) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTPhase); ok {
-		return reflect.DeepEqual(self, other)
+		return self.name == other.name &&
+			listsEqual(self.statements, other.statements)
 	}
 	return false
+}
+
+func NewASTAssignment(target Token, expr ASTExpression) ASTAssignment {
+	location := target.Location().merge(expr.Location())
+	result := ASTAssignment{target: target.Text(), expr: expr}
+	result.astbase.location = location
+	return result
 }
 
 func (self ASTAssignment) Dump(writer io.Writer, indent string) {
@@ -171,9 +264,21 @@ func (self ASTAssignment) Dump(writer io.Writer, indent string) {
 
 func (self ASTAssignment) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTAssignment); ok {
-		return self == other
+		return self.target == other.target &&
+			self.expr.Equal(other.expr)
 	}
 	return false
+}
+
+func NewASTBuildRule(
+	targets ASTExpression,
+	sources ASTExpression,
+	actions []ASTNode) ASTBuildRule {
+	// XXX ignoring location of closing "}"
+	location := targets.mergeLocations(actions[len(actions)-1])
+	result := ASTBuildRule{targets: targets, sources: sources, actions: actions}
+	result.astbase.location = location
+	return result
 }
 
 func (self ASTBuildRule) Dump(writer io.Writer, indent string) {
@@ -191,9 +296,18 @@ func (self ASTBuildRule) Dump(writer io.Writer, indent string) {
 
 func (self ASTBuildRule) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTBuildRule); ok {
-		return reflect.DeepEqual(self, other)
+		return self.targets.Equal(other.targets) &&
+			self.sources.Equal(other.sources) &&
+			listsEqual(self.actions, other.actions)
 	}
 	return false
+}
+
+func NewASTAdd(op1 ASTExpression, op2 ASTExpression) ASTAdd {
+	location := op1.mergeLocations(op2)
+	result := ASTAdd{op1: op1, op2: op2}
+	result.astbase.location = location
+	return result
 }
 
 func (self ASTAdd) Dump(writer io.Writer, indent string) {
@@ -206,13 +320,23 @@ func (self ASTAdd) Dump(writer io.Writer, indent string) {
 
 func (self ASTAdd) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTAdd); ok {
-		return reflect.DeepEqual(self, other)
+		return self.op1.Equal(other.op1) && self.op2.Equal(other.op2)
 	}
 	return false
 }
 
 func (self ASTAdd) String() string {
 	return fmt.Sprintf("%s + %s", self.op1, self.op2)
+}
+
+func NewASTFunctionCall(
+	function ASTExpression,
+	args []ASTExpression,
+	closer Locatable) ASTFunctionCall {
+	location := function.Location().merge(closer.Location())
+	result := ASTFunctionCall{function: function, args: args}
+	result.astbase.location = location
+	return result
 }
 
 func (self ASTFunctionCall) Dump(writer io.Writer, indent string) {
@@ -225,17 +349,26 @@ func (self ASTFunctionCall) Dump(writer io.Writer, indent string) {
 
 func (self ASTFunctionCall) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTFunctionCall); ok {
-		return reflect.DeepEqual(self, other)
+		return self.function.Equal(other.function) &&
+			exprlistsEqual(self.args, other.args)
 	}
 	return false
 }
 
 func (self ASTFunctionCall) String() string {
-	args := make([]string, len(self.args))
-	for i, arg := range self.args {
-		args[i] = arg.String()
-	}
-	return fmt.Sprintf("%s(%s)", self.function, strings.Join(args, ", "))
+	// args := make([]string, len(self.args))
+	// for i, arg := range self.args {
+	// 	args[i] = arg.String()
+	// }
+	// return fmt.Sprintf("%s(%s)", self.function, strings.Join(args, ", "))
+	return fmt.Sprintf("%s(%d args)", self.function, len(self.args))
+}
+
+func NewASTSelection(container ASTExpression, member Token) ASTSelection {
+	location := container.mergeLocations(member)
+	result := ASTSelection{container: container, member: member.Text()}
+	result.astbase.location = location
+	return result
 }
 
 func (self ASTSelection) Dump(writer io.Writer, indent string) {
@@ -245,7 +378,8 @@ func (self ASTSelection) Dump(writer io.Writer, indent string) {
 
 func (self ASTSelection) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTSelection); ok {
-		return self == other
+		return self.container.Equal(other.container) &&
+			self.member == other.member
 	}
 	return false
 }
@@ -254,19 +388,36 @@ func (self ASTSelection) String() string {
 	return fmt.Sprintf("%s.%s", self.container, self.member)
 }
 
+func NewASTName(tok Token) ASTName {
+	result := ASTName{name: tok.Text()}
+	result.astbase.location = tok.Location()
+	return result
+}
+
 func (self ASTName) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTName[%s]\n", indent, self.name)
 }
 
 func (self ASTName) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTName); ok {
-		return self == other
+		return self.name == other.name
 	}
 	return false
 }
 
 func (self ASTName) String() string {
 	return self.name
+}
+
+func NewASTString(value Token) ASTString {
+	// strip the quotes: they're preserved by the tokenizer, but not
+	// part of the string value (but note that the node location still
+	// encompasses the quotes!)
+	text := value.Text()
+	text = text[1:len(text)-1]
+	result := ASTString{value: text}
+	result.astbase.location = value.Location()
+	return result
 }
 
 func (self ASTString) Dump(writer io.Writer, indent string) {
@@ -276,7 +427,7 @@ func (self ASTString) Dump(writer io.Writer, indent string) {
 
 func (self ASTString) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTString); ok {
-		return self == other
+		return self.value == other.value
 	}
 	return false
 }
@@ -286,6 +437,16 @@ func (self ASTString) String() string {
 	return fmt.Sprintf("%#v", self.value)
 }
 
+func NewASTFileList(
+	opener Token,
+	patterns []Token,
+	closer Token) ASTFileList {
+	location := opener.Location().merge(closer.Location())
+	result := ASTFileList{patterns: extractText(patterns)}
+	result.astbase.location = location
+	return result
+}
+
 func (self ASTFileList) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer,
 		indent + "ASTFileList[" + strings.Join(self.patterns, " ") + "]")
@@ -293,11 +454,51 @@ func (self ASTFileList) Dump(writer io.Writer, indent string) {
 
 func (self ASTFileList) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(ASTFileList); ok {
-		return reflect.DeepEqual(self, other)
+		return reflect.DeepEqual(self.patterns, other.patterns)
 	}
 	return false
 }
 
 func (self ASTFileList) String() string {
 	return "[" + strings.Join(self.patterns, " ") + "]"
+}
+
+func extractText(tokens []Token) []string {
+	text := make([]string, len(tokens))
+	for i, token := range tokens {
+		text[i] = token.Text()
+	}
+	return text
+}
+
+func listsEqual(alist []ASTNode, blist []ASTNode) bool {
+	//fmt.Printf("comparing node lists:\n  alist=%v\n  blist=%v\n", alist, blist)
+	if len(alist) != len(blist) {
+		//fmt.Println("list lengths differ")
+		return false
+	}
+	for i, anode := range alist {
+		bnode := blist[i]
+		if !anode.Equal(bnode) {
+			//fmt.Printf("alist[%d] != blist[%d]\n", i, i)
+			return false
+		}
+	}
+	//fmt.Println("lists are equal")
+	return true
+}
+
+func exprlistsEqual(aexprs []ASTExpression, bexprs []ASTExpression) bool {
+	// argh, this is stupid: ASTExpression embeds ASTNode, so anything
+	// that implements ASTExpression also implements ASTNode, so why
+	// can't we treat []ASTExpression more like []ASTNode?
+	nodes := func(exprs []ASTExpression) []ASTNode {
+		nodes := make([]ASTNode, len(exprs))
+		for i, expr := range exprs {
+			nodes[i] = ASTNode(expr)
+		}
+		return nodes
+	}
+
+	return listsEqual(nodes(aexprs), nodes(bexprs))
 }

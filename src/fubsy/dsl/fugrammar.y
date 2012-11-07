@@ -11,20 +11,21 @@ const BADTOKEN = -1
 %}
 
 %union {
+	token toktext
+
 	root ASTRoot
 	node ASTNode
 	nodelist []ASTNode
 	expr ASTExpression
 	exprlist []ASTExpression
-	text string
-	stringlist []string
+	tokenlist []Token
 }
 
 %type <root> script
 %type <nodelist> elementlist
 %type <node> element
 %type <node> import
-%type <stringlist> dottedname
+%type <tokenlist> dottedname
 %type <node> global
 %type <node> inline
 %type <node> phase
@@ -41,22 +42,23 @@ const BADTOKEN = -1
 %type <exprlist> arglist
 %type <expr> selection
 %type <expr> filelist
-%type <stringlist> patternlist
+%type <tokenlist> patternlist
 
-%token <text> NAME QSTRING INLINE FILEPATTERN
-%token EOL EOF IMPORT PLUGIN L3BRACE R3BRACE
+%token <token> IMPORT PLUGIN INLINE NAME QSTRING FILEPATTERN
+%token <token> '(' ')' '<' '>'
+%token EOL EOF PLUGIN L3BRACE R3BRACE
 
 %%
 
 script:
 	elementlist EOF
 	{
-		$$ = ASTRoot{elements: $1}
+		$$ = NewASTRoot($1)
 		fulex.(*Parser).ast = &$$
 	}
 |	EOF
 	{
-		$$ = ASTRoot{}
+		$$ = NewASTRoot([]ASTNode {})
 		fulex.(*Parser).ast = &$$
 	}
 
@@ -79,7 +81,7 @@ element:
 import:
 	IMPORT dottedname
 	{
-		$$ = ASTImport{plugin: $2}
+		$$ = NewASTImport($1, $2)
 	}
 
 dottedname:
@@ -89,7 +91,7 @@ dottedname:
 	}
 |	NAME
 	{
-		$$ = []string {$1}
+		$$ = []Token {$1}
 	}
 
 global:
@@ -98,13 +100,13 @@ global:
 inline:
 	PLUGIN NAME L3BRACE INLINE R3BRACE
 	{
-		$$ = ASTInline{lang: $2, content: $4}
+		$$ = NewASTInline($1, $2, $4)
 	}
 
 phase:
 	NAME block
 	{
-		$$ = ASTPhase{name: $1, statements: $2}
+		$$ = NewASTPhase($1, $2)
 	}
 
 block:
@@ -135,7 +137,7 @@ statement:
 assignment:
 	NAME '=' expr
 	{
-		$$ = ASTAssignment{target: $1, expr: $3}
+		$$ = NewASTAssignment($1, $3)
 	}
 
 buildrule:
@@ -143,7 +145,7 @@ buildrule:
 	{
 		// some actions could be invalid: we check those in check.go
 		// after parsing is done
-		$$ = ASTBuildRule{targets: $1, sources: $3, actions: $4}
+		$$ = NewASTBuildRule($1, $3, $4)
 	}
 
 expr:
@@ -151,7 +153,7 @@ expr:
 
 addexpr:
 	postfixexpr				{ $$ = $1 }
-|	addexpr '+' postfixexpr	{ $$ = ASTAdd{op1: $1, op2: $3} }
+|	addexpr '+' postfixexpr	{ $$ = NewASTAdd($1, $3) }
 
 postfixexpr:
 	primaryexpr
@@ -160,14 +162,14 @@ postfixexpr:
 
 primaryexpr:
 	'(' expr ')'			{ $$ = $2 }
-|	NAME					{ $$ = ASTName{$1}}
-|	QSTRING					{ $$ = ASTString{$1}}
+|	NAME					{ $$ = NewASTName($1) }
+|	QSTRING					{ $$ = NewASTString($1)}
 |	filelist				{ $$ = $1}
 
 filelist:
 	'<' patternlist '>'
 	{
-		$$ = ASTFileList{patterns: $2}
+		$$ = NewASTFileList($1, $2, $3)
 	}
 
 patternlist:
@@ -177,21 +179,21 @@ patternlist:
 	}
 |	FILEPATTERN
 	{
-		$$ = []string {$1}
+		$$ = []Token {$1}
 	}
 
 functioncall:
 	postfixexpr '(' ')'
 	{
-		$$ = ASTFunctionCall{function: $1, args: []ASTExpression {}}
+		$$ = NewASTFunctionCall($1, []ASTExpression {}, $3)
 	}
 |	postfixexpr '(' arglist ')'
 	{
-		$$ = ASTFunctionCall{function: $1, args: $3}
+		$$ = NewASTFunctionCall($1, $3, $4)
 	}
 |	postfixexpr '(' arglist ',' ')'
 	{
-		$$ = ASTFunctionCall{function: $1, args: $3}
+		$$ = NewASTFunctionCall($1, $3, $5)
 	}
 
 arglist:
@@ -207,7 +209,7 @@ arglist:
 selection:
 	postfixexpr '.' NAME
 	{
-		$$ = ASTSelection{container: $1, member: $3}
+		$$ = NewASTSelection($1, $3)
 	}
 
 %%
@@ -218,6 +220,17 @@ type toktext struct {
 	token int
 	text string
 }
+
+// implement the Locatable interface
+func (self toktext) Location() location {
+	return self.location
+}
+
+// implement the Token interface defined by ast.go
+func (self toktext) Text() string {
+	 return self.text
+}
+
 
 type Parser struct {
 	// internal state (fed to parser by Lex() method)
@@ -239,14 +252,7 @@ func (self *Parser) Lex(lval *fuSymType) int {
 	}
 	toktext := self.tokens[self.next]
 	self.next++
-	switch toktext.token {
-	case QSTRING:
-		// strip the quotes: they're preserved by the tokenizer,
-		// but not part of the string value
-		lval.text = toktext.text[1:len(toktext.text)-1]
-	case INLINE, NAME, FILEPATTERN:
-		lval.text = toktext.text
-	}
+	lval.token = toktext
 	return toktext.token
 }
 

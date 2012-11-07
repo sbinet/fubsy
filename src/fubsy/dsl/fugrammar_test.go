@@ -48,10 +48,10 @@ func Test_fuParse_valid_phase(t *testing.T) {
 			ASTPhase{
 			name: "main",
 			statements: []ASTNode {
-					ASTString{"foo"},
+					ASTString{value: "foo"},
 					ASTAssignment{
 						target: "x",
-						expr: ASTString{"bar"},
+						expr: ASTString{value: "bar"},
 	}}}}}
 	assertParses(t, &expect, tokens)
 }
@@ -96,7 +96,7 @@ func Test_fuParse_globals(t *testing.T) {
 	elements: []ASTNode {
 			ASTAssignment{
 				target: "v1",
-				expr: ASTString{"blobby!"},
+				expr: ASTString{value: "blobby!"},
 			},
 			ASTAssignment{
 				target: "v2",
@@ -131,7 +131,7 @@ func Test_fuParse_expr_1(t *testing.T) {
 				statements: []ASTNode {
 					ASTAssignment{
 						target: "stuff",
-						expr: ASTName{"foo"},
+						expr: ASTName{name: "foo"},
 	}}}}}
 	assertParses(t, &expect, tokens)
 }
@@ -160,9 +160,11 @@ func Test_fuParse_expr_2(t *testing.T) {
 			name: "floo",
 			statements: []ASTNode {
 				ASTAdd{
-					op1: ASTAdd{op1: ASTName{"a"}, op2: ASTName{"b"}},
+					op1: ASTAdd{
+						op1: ASTName{name: "a"},
+						op2: ASTName{name: "b"}},
 					op2: ASTFunctionCall{
-						function: ASTName{"c"},
+						function: ASTName{name: "c"},
 						args: []ASTExpression {},
 	}}}}}}
 	assertParses(t, &expect, tokens)
@@ -188,7 +190,7 @@ func Test_fuParse_funccall_1(t *testing.T) {
 				name: "frob",
 				statements: []ASTNode {
 					ASTFunctionCall{
-						function: ASTName{"foo"},
+						function: ASTName{name: "foo"},
 						args: []ASTExpression {}},
 				},
 			},
@@ -206,10 +208,10 @@ func init() {
 				name: "frob",
 				statements: []ASTNode {
 					ASTFunctionCall{
-						function: ASTName{"foo"},
+						function: ASTName{name: "foo"},
 						args: []ASTExpression {
-							ASTString{"bip"},
-							ASTName{"x"},
+							ASTString{value: "bip"},
+							ASTName{name: "x"},
 	}}}}}}
 }
 
@@ -322,12 +324,12 @@ func Test_fuParse_buildrule_1(t *testing.T) {
 				name: "main",
 				statements: []ASTNode {
 					ASTBuildRule{
-						targets: ASTName{"a"},
-						sources: ASTString{"x"},
+						targets: ASTName{name: "a"},
+						sources: ASTString{value: "x"},
 						actions: []ASTNode {
-							ASTString{"foo bar"},
+							ASTString{value: "foo bar"},
 							ASTFunctionCall{
-								function: ASTName{"bip"},
+								function: ASTName{name: "bip"},
 								args: []ASTExpression {},
 	}}}}}}}
 	assertParses(t, &expect, tokens)
@@ -378,6 +380,51 @@ func Test_fuParse_badtoken(t *testing.T) {
 	result := fuParse(parser)
 	assertParseFailure(t, result, parser)
 	assertSyntaxError(t, "!#*$", parser)
+}
+
+// Ensure that token locations propagate to AST node locations.
+func Test_fuParse_ast_locations(t *testing.T) {
+	// notional input:
+	// "main{\nfoo = bar(\n  )\n}\n"
+
+	fi := &fileinfo{"foo.txt", []int {0, 6, 17, 21, 23, 24}}
+	tokens := []toktext {
+		{location{fi, 0, 4}, NAME, "main"},
+		{location{fi, 4, 5}, '{', "{"},
+		{location{fi, 5, 6}, EOL, "\n"},
+		{location{fi, 6, 9}, NAME, "foo"},
+		{location{fi, 10, 11}, '=', "="},
+		{location{fi, 12, 15}, NAME, "bar"},
+		{location{fi, 15, 16}, '(', "("},
+		{location{fi, 19, 20}, ')', ")"},
+		{location{fi, 20, 21}, EOL, "\n"},
+		{location{fi, 21, 22}, '}', "}"},
+		{location{fi, 22, 23}, EOL, "\n"},
+		{location{fi, 23, 23}, EOF, ""},
+	}
+
+	parser := NewParser(tokens)
+	result := fuParse(parser)
+	assertTrue(t, result == 0 && parser.ast != nil,
+		"parse failed: result == %d, parser.ast = %v", result, parser.ast)
+
+	assertLocation := func(node ASTNode, estart int, eend int) {
+		location := node.Location()
+		assertTrue(t, location.start == estart && location.end == eend,
+			"%T %v: expected location %d:%d, but got %d:%d",
+			node, node, estart, eend, location.start, location.end)
+	}
+
+	root := parser.ast
+	phase := root.elements[0].(ASTPhase)
+	assign := phase.statements[0].(ASTAssignment)
+	rhs := assign.expr.(ASTFunctionCall)
+	name := rhs.function.(ASTName)
+	assertLocation(name, 12, 15)
+	assertLocation(rhs, 12, 20)
+	assertLocation(assign, 6, 20)
+	//assertLocation(phase, 0, 22)
+	//assertLocation(root, 0, 22)
 }
 
 func reset() {

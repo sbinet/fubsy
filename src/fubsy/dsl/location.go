@@ -48,6 +48,35 @@ func (self location) String() string {
 	return strings.Join(chunks, ":") + ": "
 }
 
+// Return a new location that spans self and other.
+func (self location) merge(other location) location {
+	if self.fileinfo == nil {
+		return other
+	} else if other.fileinfo == nil {
+		return self
+	}
+
+	if self.fileinfo != other.fileinfo {
+		panic(fmt.Sprintf(
+			"cannot merge locations from different files" +
+			" (self.fileinfo = %#v, other.fileinfo = %#v)",
+			self.fileinfo, other.fileinfo))
+	}
+	result := newlocation(self.fileinfo)
+	if self.start <= other.end {
+		result.start = self.start
+		result.end = other.end
+	} else {
+		result.start = other.start
+		result.end = other.end
+	}
+	return result
+}
+
+func (self location) span() (int, int) {
+	return self.start, self.end
+}
+
 func (self location) linerange() (startline int, endline int) {
 	// don't try to call this with uninitialized lineoffsets!
 	offsets := self.fileinfo.lineoffsets
