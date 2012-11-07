@@ -411,8 +411,8 @@ func Test_fuParse_ast_locations(t *testing.T) {
 	assertLocation := func(node ASTNode, estart int, eend int) {
 		location := node.Location()
 		assertTrue(t, location.start == estart && location.end == eend,
-			"%T %v: expected location %d:%d, but got %d:%d",
-			node, node, estart, eend, location.start, location.end)
+			"%T: expected location %d:%d, but got %d:%d",
+			node, estart, eend, location.start, location.end)
 	}
 
 	root := parser.ast
@@ -423,8 +423,8 @@ func Test_fuParse_ast_locations(t *testing.T) {
 	assertLocation(name, 12, 15)
 	assertLocation(rhs, 12, 20)
 	assertLocation(assign, 6, 20)
-	//assertLocation(phase, 0, 22)
-	//assertLocation(root, 0, 22)
+	assertLocation(phase, 0, 22)
+	assertLocation(root, 0, 22)
 }
 
 func reset() {

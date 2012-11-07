@@ -91,6 +91,14 @@ type ASTPhase struct {
 	children
 }
 
+// the body of a phase or build rule: { node node ... node }
+// (not visible in the final AST; only used to get location info from
+// the parser to the ASTPhase or ASTBuildRule node)
+type ASTBlock struct {
+	astbase
+	children
+}
+
 // NAME = EXPR (global or local)
 type ASTAssignment struct {
 	astbase
@@ -230,15 +238,9 @@ func (self ASTInline) Equal(other_ ASTNode) bool {
 	return false
 }
 
-func NewASTPhase(name Token, children []ASTNode) ASTPhase {
-	var location location
-	// XXX ignores location of closing "}"
-	if len(children) > 0 {
-		location = name.Location().merge(children[len(children)-1].Location())
-	} else {
-		location = name.Location()
-	}
-	result := ASTPhase{name: name.Text(), children: children}
+func NewASTPhase(name Token, block ASTBlock) ASTPhase {
+	location := name.Location().merge(block.Location())
+	result := ASTPhase{name: name.Text(), children: block.children}
 	result.astbase.location = location
 	return result
 }
@@ -255,6 +257,21 @@ func (self ASTPhase) Equal(other_ ASTNode) bool {
 			self.children.Equal(other.children)
 	}
 	return false
+}
+
+func NewASTBlock(opener Token, children []ASTNode, closer Token) ASTBlock {
+	location := opener.Location().merge(closer.Location())
+	result := ASTBlock{children: children}
+	result.astbase.location = location
+	return result
+}
+
+func (self ASTBlock) Dump(writer io.Writer, indent string) {
+	panic("Dump() not supported for ASTBlock (transient node type)")
+}
+
+func (self ASTBlock) Equal(other ASTNode) bool {
+	panic("Equal() not supported for ASTBlock (transient node type)")
 }
 
 func NewASTAssignment(target Token, expr ASTExpression) ASTAssignment {
@@ -280,10 +297,9 @@ func (self ASTAssignment) Equal(other_ ASTNode) bool {
 func NewASTBuildRule(
 	targets ASTExpression,
 	sources ASTExpression,
-	children []ASTNode) ASTBuildRule {
-	// XXX ignoring location of closing "}"
-	location := targets.mergeLocations(children[len(children)-1])
-	result := ASTBuildRule{targets: targets, sources: sources, children: children}
+	block ASTBlock) ASTBuildRule {
+	location := targets.mergeLocations(block)
+	result := ASTBuildRule{targets: targets, sources: sources, children: block.children}
 	result.astbase.location = location
 	return result
 }

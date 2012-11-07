@@ -29,7 +29,7 @@ const BADTOKEN = -1
 %type <node> global
 %type <node> inline
 %type <node> phase
-%type <nodelist> block
+%type <node> block
 %type <nodelist> statementlist
 %type <node> statement
 %type <node> assignment
@@ -45,7 +45,7 @@ const BADTOKEN = -1
 %type <tokenlist> patternlist
 
 %token <token> IMPORT PLUGIN INLINE NAME QSTRING FILEPATTERN
-%token <token> '(' ')' '<' '>'
+%token <token> '(' ')' '<' '>' '{' '}'
 %token EOL EOF PLUGIN L3BRACE R3BRACE
 
 %%
@@ -106,17 +106,17 @@ inline:
 phase:
 	NAME block
 	{
-		$$ = NewASTPhase($1, $2)
+		$$ = NewASTPhase($1, $2.(ASTBlock))
 	}
 
 block:
 	'{' EOL statementlist '}'
 	{
-		$$ = $3
+		$$ = NewASTBlock($1, $3, $4)
 	}
 |	'{' '}'
 	{
-		$$ = []ASTNode {}
+		$$ = NewASTBlock($1, []ASTNode {}, $2)
 	}
 
 statementlist:
@@ -145,7 +145,7 @@ buildrule:
 	{
 		// some actions could be invalid: we check those in check.go
 		// after parsing is done
-		$$ = NewASTBuildRule($1, $3, $4)
+		$$ = NewASTBuildRule($1, $3, $4.(ASTBlock))
 	}
 
 expr:
