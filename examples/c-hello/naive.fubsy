@@ -1,0 +1,11 @@
+# the NAIVE WAY to build a C program; in reality, you should
+# use the 'c' plugin!
+main {
+    headers = <*.h>
+    source = <*.c>
+
+    # rebuild mytool when any source or header file changes
+    "mytool": headers + source {
+        "cc -o $TARGET $source"
+    }
+}

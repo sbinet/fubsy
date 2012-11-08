@@ -1,0 +1,29 @@
+# the naive way to build a simple Java project (core fubsy features
+# only, no plugins)
+
+main {
+    mainsrc = <src/main/**/*.java>
+    testsrc = <src/test/**/*.java>
+    mainjar = "example.jar"
+    testjar = "example-test.jar"
+
+    # recompile all production code and rebuild the production
+    # jar file when any production source file changes
+    mainjar: mainsrc {
+        classdir = "classes/main"
+        "javac -d $classdir $mainsrc"
+        "jar -cf $TARGET -C $classdir ."
+        remove(classdir)
+    }
+
+    # similar for the test code, but make it depend on the
+    # production jar too -- i.e. recompile test code when the
+    # production *bytecode* changes, not necessarily the source
+    # code
+    testjar: testsrc + mainjar {
+        classdir = "classes/test"
+        "javac -d $classdir -classpath $mainjar $testsrc"
+        "jar -cf $TARGET -C $classdir ."
+        remove(classdir)
+    }
+}

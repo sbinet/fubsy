@@ -6,3 +6,4 @@
 ^[a-z]+\.test$
 ^src/fubsy/dsl/fu(grammar|lex)\.go$
 ^doc/.*\.html$
+^examples/.*/classes$

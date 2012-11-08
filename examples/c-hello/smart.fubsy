@@ -1,0 +1,7 @@
+# the smart way to build a C program: use the c plugin
+
+import c
+
+main {
+    c.binary("myapp", <*.c>)
+}

@@ -1,0 +1,16 @@
+# the smart way to build a simple Java project: use the java plugin
+
+import java
+
+main {
+    mainjar = "example.jar"
+    testjar = "example-test.jar"
+
+    classdir = "classes/main"
+    java.classes(classdir, <src/main/**/*.java>)
+    java.jar(mainjar, classdir)
+
+    classdir = "classes/test"
+    java.classes(classdir, <src/test/**/*.java>, CLASSPATH=mainjar)
+    java.jar(testjar, classdir)
+}
