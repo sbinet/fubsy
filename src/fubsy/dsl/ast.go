@@ -10,7 +10,15 @@ import (
 // interface for the whole AST, not just a particular node
 // (implemented by ASTRoot)
 type AST interface {
-	ListPlugins() []string
+	// Return the list of external plugins imported by this script.
+	// Does not include inline plugins. Each plugin is represented as
+	// a []string, e.g. "import foo.bar.baz" becomes {"foo", "bar",
+	// "baz"}.
+	ListPlugins() [][]string
+
+	// Return the AST node for the specified phase, or nil if no such
+	// phase in this script.
+	FindPhase(name string) *ASTPhase
 }
 
 // interface for any particular node in the AST (root, internal,
@@ -184,8 +192,23 @@ func (self ASTRoot) Equal(other_ ASTNode) bool {
 	return false
 }
 
-func (self ASTRoot) ListPlugins() []string {
-	return []string {"foo", "bar", "baz"}
+func (self ASTRoot) ListPlugins() [][]string {
+	result := make([][]string, 0)
+	for _, node_ := range self.children {
+		if node, ok := node_.(ASTImport); ok {
+			result = append(result, node.plugin)
+		}
+	}
+	return result
+}
+
+func (self ASTRoot) FindPhase(name string) *ASTPhase {
+	for _, node_ := range self.children {
+		if node, ok := node_.(ASTPhase); ok && node.name == name {
+			return &node
+		}
+	}
+	return nil
 }
 
 func NewASTImport(keyword Locatable, names []Token) ASTImport {

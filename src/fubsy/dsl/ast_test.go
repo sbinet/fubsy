@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"testing"
+	"reflect"
 	"bytes"
 )
 
@@ -27,6 +28,50 @@ func Test_ASTRoot_Equal(t *testing.T) {
 	if node1.Equal(other) {
 		t.Error("nodes of different type are equal")
 	}
+}
+
+func Test_ASTRoot_ListPlugins(t *testing.T) {
+	root := ASTRoot{
+		children: []ASTNode {
+			ASTPhase{},
+			ASTPhase{},
+			ASTImport{plugin: []string {"ding"}},
+			ASTInline{},
+			ASTImport{plugin: []string {"meep", "beep"}},
+	}}
+	expect := [][]string {{"ding"}, {"meep", "beep"}}
+	actual := root.ListPlugins()
+	assertTrue(t, reflect.DeepEqual(expect, actual),
+		"expected\n%v\nbut got\n%v", expect, actual)
+}
+
+func Test_ASTRoot_Phase(t *testing.T) {
+	root := ASTRoot{
+		children: []ASTNode {
+			ASTImport{},
+			ASTPhase{name: "meep"},
+			ASTInline{},
+			ASTPhase{name: "meep"}, // duplicate is invisible
+			ASTPhase{name: "bong"},
+	}}
+	var expect ASTPhase
+	var actual *ASTPhase
+	//expect = nil
+	actual = root.FindPhase("main")
+	assertTrue(t, nil == actual, "expected nil, but got %v", actual)
+
+	// hmmm: would be nice to compare pointers to guarantee that we're
+	// not copying structs, but I'm pretty sure we *do* copy structs
+	// because we're not putting pointers into (say) root.children
+	expect = root.children[1].(ASTPhase)
+	actual = root.FindPhase("meep")
+	assertTrue(t, expect.Equal(*actual), "expected\n%#v\nbut got\n%#v",
+		expect, actual)
+
+	expect = root.children[4].(ASTPhase)
+	actual= root.FindPhase("bong")
+	assertTrue(t, expect.Equal(*actual), "expected\n%#v\nbut got\n%#v",
+		expect, actual)
 }
 
 func Test_ASTFileList_Equal(t *testing.T) {

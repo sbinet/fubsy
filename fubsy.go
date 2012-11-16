@@ -1,9 +1,12 @@
 package main
 
-import "os"
-import "fmt"
+import (
+	"os"
+	"fmt"
 
-import "fubsy/dsl"
+	"fubsy"
+	"fubsy/dsl"
+)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -21,13 +24,9 @@ func main() {
 		}
 	 	os.Exit(1)
 	}
-	if ast != nil {
-		fmt.Printf("ast:\n")
-		ast.Dump(os.Stdout, "")
-	}
+	fmt.Printf("ast:\n")
+	ast.Dump(os.Stdout, "")
 
-/*
 	runtime := fubsy.NewRuntime(script, ast)
-	runtime.LoadPlugins()
-*/
+	runtime.RunScript()
 }
