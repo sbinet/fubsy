@@ -2,20 +2,17 @@ package dsl
 
 import (
 	"testing"
-	"os"
-	"io/ioutil"
 	"bytes"
-	"path"
 
 	"fubsy/testutils"
 )
 
 func TestParse_valid_1(t *testing.T) {
-	tmpdir, cleanup := mktemp()
+	tmpdir, cleanup := testutils.Mktemp()
 	defer cleanup()
 
 	// dead simple: a single top-level element
-	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n<meep>\n\n}")
+	fn := testutils.Mkfile(tmpdir, "valid_1.fubsy", "main {\n<meep>\n\n}")
 
 	expect := &ASTRoot{children: []ASTNode {
 			&ASTPhase{name: "main", children: []ASTNode {
@@ -26,11 +23,11 @@ func TestParse_valid_1(t *testing.T) {
 }
 
 func TestParse_valid_sequence(t *testing.T) {
-	tmpdir, cleanup := mktemp()
+	tmpdir, cleanup := testutils.Mktemp()
 	defer cleanup()
 
 	// sequence of top-level children
-	fn := mkfile(
+	fn := testutils.Mkfile(
 		tmpdir,
 		"valid_2.fubsy",
 		"main {\n\"boo\"\n}\n" +
@@ -54,10 +51,10 @@ func TestParse_valid_sequence(t *testing.T) {
 
 func TestParse_internal_newlines(t *testing.T) {
 	// newlines in a function call are invisible to the parser
-	tmpdir, cleanup := mktemp()
+	tmpdir, cleanup := testutils.Mktemp()
 	defer cleanup()
 
-	fn := mkfile(
+	fn := testutils.Mkfile(
 		tmpdir,
 		"newlines.fubsy",
 		"main {\n"+
@@ -87,22 +84,22 @@ func TestParse_internal_newlines(t *testing.T) {
 }
 
 func TestParse_invalid_1(t *testing.T) {
-	tmpdir, cleanup := mktemp()
+	tmpdir, cleanup := testutils.Mktemp()
 	defer cleanup()
 
 	// invalid: no closing rbracket
-	fn := mkfile(tmpdir, "invalid_1.fubsy", "main{  \n\"borf\"\n")
+	fn := testutils.Mkfile(tmpdir, "invalid_1.fubsy", "main{  \n\"borf\"\n")
 	_, err := Parse(fn)
 	expect := fn + ":3: syntax error (near EOF)"
 	assertOneError(t, expect, err)
 }
 
 func TestParse_invalid_2(t *testing.T) {
-	tmpdir, cleanup := mktemp()
+	tmpdir, cleanup := testutils.Mktemp()
 	defer cleanup()
 
 	// invalid: bad token
-	fn := mkfile(tmpdir, "invalid_2.fubsy", "main{\n *&! \"whizz\"\n}")
+	fn := testutils.Mkfile(tmpdir, "invalid_2.fubsy", "main{\n *&! \"whizz\"\n}")
 	_, err := Parse(fn)
 	expect := fn + ":2: syntax error (near *&!)"
 	assertOneError(t, expect, err)
@@ -120,10 +117,10 @@ func assertOneError(t *testing.T, expect string, actual []error) {
 
 // this one tries to exercise many token types and grammar rules
 func TestParse_omnibus_1(t *testing.T) {
-	tmpdir, cleanup := mktemp()
+	tmpdir, cleanup := testutils.Mktemp()
 	defer cleanup()
 
-	fn := mkfile(tmpdir, "omnibus_1.fubsy",
+	fn := testutils.Mkfile(tmpdir, "omnibus_1.fubsy",
 		"# start with a comment\n" +
 		"import foo\n" +
 		"import foo.bar.baz\n" +
@@ -178,10 +175,10 @@ func TestParse_omnibus_1(t *testing.T) {
 }
 
 func TestParse_omnibus_2(t *testing.T) {
-	tmpdir, cleanup := mktemp()
+	tmpdir, cleanup := testutils.Mktemp()
 	defer cleanup()
 
-	fn := mkfile(tmpdir, "omnibus_2.fubsy",
+	fn := testutils.Mkfile(tmpdir, "omnibus_2.fubsy",
 		"\n" +
 		"main {\n" +
 		"  headers = <*.h>\n" +
@@ -230,27 +227,4 @@ func TestParse_omnibus_2(t *testing.T) {
 	if expect != actual {
 		t.Errorf("expected AST:\n%s\nbut got:\n%s", expect, actual)
 	}
-}
-
-func mktemp() (tmpdir string, cleanup func()) {
-	tmpdir, err := ioutil.TempDir("", "dsl_test.")
-	if err != nil {
-		panic(err)
-	}
-	cleanup = func() {
-		err := os.RemoveAll(tmpdir)
-		if err != nil {
-			panic(err)
-		}
-	}
-	return
-}
-
-func mkfile(tmpdir string, basename string, data string) string {
-	fn := path.Join(tmpdir, basename)
-	err := ioutil.WriteFile(fn, []byte(data), 0644)
-	if err != nil {
-		panic(err)
-	}
-	return fn
 }
