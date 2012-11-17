@@ -110,7 +110,7 @@ type ASTBlock struct {
 type ASTAssignment struct {
 	astbase
 	target string
-	expr ASTNode
+	expr ASTExpression
 }
 
 // TARGETS : SOURCES { ACTIONS }
@@ -170,6 +170,10 @@ func (self children) Dump(writer io.Writer, indent string) {
 
 func (self children) Equal(other children) bool {
 	return listsEqual(self, other)
+}
+
+func (self children) Children() []ASTNode {
+	return ([]ASTNode)(self)
 }
 
 func NewASTRoot(children []ASTNode) *ASTRoot {
@@ -326,6 +330,17 @@ func (self *ASTAssignment) Equal(other_ ASTNode) bool {
 			self.expr.Equal(other.expr)
 	}
 	return false
+}
+
+// return the name of the variable that is the target of this assignment
+func (self *ASTAssignment) Target() string {
+	return self.target
+}
+
+// return the expression node that is the RHS (right-hand side) of
+// this assignment
+func (self *ASTAssignment) Expression() ASTExpression {
+	return self.expr
 }
 
 func NewASTBuildRule(

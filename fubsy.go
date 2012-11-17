@@ -4,7 +4,7 @@ import (
 	"os"
 	"fmt"
 
-	"fubsy"
+	"fubsy/runtime"
 	"fubsy/dsl"
 )
 
@@ -27,6 +27,6 @@ func main() {
 	fmt.Printf("ast:\n")
 	ast.Dump(os.Stdout, "")
 
-	runtime := fubsy.NewRuntime(script, ast)
-	runtime.RunScript()
+	rt := runtime.NewRuntime(script, ast)
+	rt.RunScript()
 }

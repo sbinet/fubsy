@@ -19,9 +19,11 @@ gofmt -w src/fubsy/dsl/fulex.go
 go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y
 
 # unoptimized (for debugging)
-go install -v -gcflags "-N -l" fubsy
-go test -v -gcflags "-N -l" -i fubsy/dsl
-go test -v -gcflags "-N -l" -c fubsy/dsl
-./dsl.test -test.v=true $tests
+for pkg in dsl runtime ; do
+    go install -v -gcflags "-N -l" fubsy/$pkg
+    go test -v -gcflags "-N -l" -i fubsy/$pkg
+    go test -v -gcflags "-N -l" -c fubsy/$pkg
+    ./$pkg.test -test.v=true $tests
+done
 
 go build -v -gcflags "-N -l"
