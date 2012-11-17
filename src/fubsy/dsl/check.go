@@ -17,7 +17,7 @@ func checkAST(ast *ASTRoot) []error {
 	for _, elem_ := range ast.children {
 		if elem, ok := elem_.(ASTPhase); ok {
 			for _, stmt_ := range elem.children {
-				if stmt, ok := stmt_.(ASTBuildRule); ok {
+				if stmt, ok := stmt_.(*ASTBuildRule); ok {
 					actions, brerrors := checkActions(stmt.children)
 					stmt.children = actions
 					errors = append(errors, brerrors...)
@@ -35,9 +35,9 @@ func checkAST(ast *ASTRoot) []error {
 func checkActions(nodes []ASTNode) (actions []ASTNode, errors []error) {
 	actions = make([]ASTNode, 0, len(nodes))
 	for _, node := range nodes {
-		_, ok1 := node.(ASTString)
-		_, ok2 := node.(ASTFunctionCall)
-		_, ok3 := node.(ASTAssignment)
+		_, ok1 := node.(*ASTString)
+		_, ok2 := node.(*ASTFunctionCall)
+		_, ok3 := node.(*ASTAssignment)
 		if !(ok1 || ok2 || ok3) {
 			errors = append(errors, SemanticError{
 				node: node,

@@ -17,12 +17,12 @@ func TestParse_valid_1(t *testing.T) {
 	// dead simple: a single top-level element
 	fn := mkfile(tmpdir, "valid_1.fubsy", "main {\n<meep>\n\n}")
 
-	expect := ASTRoot{children: []ASTNode {
-			ASTPhase{name: "main", children: []ASTNode {
-					ASTFileList{patterns: []string {"meep"}}}}}}
+	expect := &ASTRoot{children: []ASTNode {
+			&ASTPhase{name: "main", children: []ASTNode {
+					&ASTFileList{patterns: []string {"meep"}}}}}}
 	ast, err := Parse(fn)
 	testutils.AssertNoErrors(t, err)
-	assertASTEquals(t, &expect, ast)
+	assertASTEquals(t, expect, ast)
 }
 
 func TestParse_valid_sequence(t *testing.T) {
@@ -39,17 +39,17 @@ func TestParse_valid_sequence(t *testing.T) {
 	ast, err := Parse(fn)
 	testutils.AssertNoErrors(t, err)
 
-	expect := ASTRoot{children: []ASTNode {
-			ASTPhase{
+	expect := &ASTRoot{children: []ASTNode {
+			&ASTPhase{
 				name: "main",
-				children: []ASTNode {ASTString{value: "boo"}}},
-			ASTInline{
+				children: []ASTNode {&ASTString{value: "boo"}}},
+			&ASTInline{
 				lang: "foo", content: "o'malley & friends\n"},
-			ASTPhase{
+			&ASTPhase{
 				name: "blob",
-				children: []ASTNode {ASTString{value: "meep"}}},
+				children: []ASTNode {&ASTString{value: "meep"}}},
 	}}
-	assertASTEquals(t, &expect, ast)
+	assertASTEquals(t, expect, ast)
 }
 
 func TestParse_internal_newlines(t *testing.T) {
@@ -70,20 +70,20 @@ func TestParse_internal_newlines(t *testing.T) {
 	ast, err := Parse(fn)
 	testutils.AssertNoErrors(t, err)
 
-	expect := ASTRoot{
+	expect := &ASTRoot{
 		children: []ASTNode {
-			ASTPhase{
+			&ASTPhase{
 				name: "main",
 				children: []ASTNode {
-					ASTFunctionCall{
-						function: ASTName{name: "x"},
+					&ASTFunctionCall{
+						function: &ASTName{name: "x"},
 						args: []ASTExpression {
-							ASTSelection{
-								container: ASTName{name: "a"},
+							&ASTSelection{
+								container: &ASTName{name: "a"},
 								member: "b",
 				}}}},
 	}}}
-	assertASTEquals(t, &expect, ast)
+	assertASTEquals(t, expect, ast)
 }
 
 func TestParse_invalid_1(t *testing.T) {

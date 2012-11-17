@@ -13,7 +13,7 @@ const BADTOKEN = -1
 %union {
 	token token
 
-	root ASTRoot
+	root *ASTRoot
 	node ASTNode
 	nodelist []ASTNode
 	expr ASTExpression
@@ -54,12 +54,12 @@ script:
 	elementlist EOF
 	{
 		$$ = NewASTRoot($1)
-		fulex.(*Parser).ast = &$$
+		fulex.(*Parser).ast = $$
 	}
 |	EOF
 	{
 		$$ = NewASTRoot([]ASTNode {})
-		fulex.(*Parser).ast = &$$
+		fulex.(*Parser).ast = $$
 	}
 
 elementlist:
@@ -106,7 +106,7 @@ inline:
 phase:
 	NAME block
 	{
-		$$ = NewASTPhase($1, $2.(ASTBlock))
+		$$ = NewASTPhase($1, $2.(*ASTBlock))
 	}
 
 block:
@@ -145,7 +145,7 @@ buildrule:
 	{
 		// some actions could be invalid: we check those in check.go
 		// after parsing is done
-		$$ = NewASTBuildRule($1, $3, $4.(ASTBlock))
+		$$ = NewASTBuildRule($1, $3, $4.(*ASTBlock))
 	}
 
 expr:

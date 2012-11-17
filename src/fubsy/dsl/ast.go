@@ -172,9 +172,9 @@ func (self children) Equal(other children) bool {
 	return listsEqual(self, other)
 }
 
-func NewASTRoot(children []ASTNode) ASTRoot {
+func NewASTRoot(children []ASTNode) *ASTRoot {
 	location := mergeLocations(children[0], children[len(children)-1])
-	return ASTRoot{
+	return &ASTRoot{
 		astbase: astbase{location},
 		children: children}
 }
@@ -186,8 +186,8 @@ func (self ASTRoot) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTRoot) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTRoot); ok {
-		return self.children.Equal(other.children)
+	if other, ok := other_.(*ASTRoot); ok {
+		return other != nil && self.children.Equal(other.children)
 	}
 	return false
 }
@@ -195,7 +195,7 @@ func (self ASTRoot) Equal(other_ ASTNode) bool {
 func (self ASTRoot) ListPlugins() [][]string {
 	result := make([][]string, 0)
 	for _, node_ := range self.children {
-		if node, ok := node_.(ASTImport); ok {
+		if node, ok := node_.(*ASTImport); ok {
 			result = append(result, node.plugin)
 		}
 	}
@@ -204,17 +204,17 @@ func (self ASTRoot) ListPlugins() [][]string {
 
 func (self ASTRoot) FindPhase(name string) *ASTPhase {
 	for _, node_ := range self.children {
-		if node, ok := node_.(ASTPhase); ok && node.name == name {
-			return &node
+		if node, ok := node_.(*ASTPhase); ok && node.name == name {
+			return node
 		}
 	}
 	return nil
 }
 
-func NewASTImport(keyword Locatable, names []Token) ASTImport {
+func NewASTImport(keyword Locatable, names []Token) *ASTImport {
 	location := mergeLocations(keyword, names[len(names)-1])
 	plugin := extractText(names)
-	return ASTImport{
+	return &ASTImport{
 		astbase: astbase{location},
 		plugin: plugin}
 }
@@ -224,15 +224,15 @@ func (self ASTImport) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTImport) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTImport); ok {
-		return reflect.DeepEqual(self.plugin, other.plugin)
+	if other, ok := other_.(*ASTImport); ok {
+		return other != nil && reflect.DeepEqual(self.plugin, other.plugin)
 	}
 	return false
 }
 
-func NewASTInline(keyword Locatable, lang Token, content Token) ASTInline {
+func NewASTInline(keyword Locatable, lang Token, content Token) *ASTInline {
 	location := mergeLocations(keyword, content)
-	return ASTInline{
+	return &ASTInline{
 		astbase: astbase{location},
 		lang: lang.Text(),
 		content: content.Text()}
@@ -254,16 +254,17 @@ func (self ASTInline) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTInline) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTInline); ok {
-		return self.lang == other.lang &&
+	if other, ok := other_.(*ASTInline); ok {
+		return other != nil &&
+			self.lang == other.lang &&
 			self.content == other.content
 	}
 	return false
 }
 
-func NewASTPhase(name Token, block ASTBlock) ASTPhase {
+func NewASTPhase(name Token, block *ASTBlock) *ASTPhase {
 	location := mergeLocations(name, block)
-	return ASTPhase{
+	return &ASTPhase{
 		astbase: astbase{location},
 		name: name.Text(),
 		children: block.children}
@@ -276,16 +277,23 @@ func (self ASTPhase) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTPhase) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTPhase); ok {
-		return self.name == other.name &&
+	// switch other := other_.(type) {
+	// case ASTPhase:
+	// 	return self.name == other.name && self.children.Equal(other.children)
+	// case *ASTPhase:
+	// 	return self.name == other.name && self.children.Equal(other.children)
+	// }
+	if other, ok := other_.(*ASTPhase); ok {
+		return other != nil &&
+			self.name == other.name &&
 			self.children.Equal(other.children)
 	}
 	return false
 }
 
-func NewASTBlock(opener Token, children []ASTNode, closer Token) ASTBlock {
+func NewASTBlock(opener Token, children []ASTNode, closer Token) *ASTBlock {
 	location := mergeLocations(opener, closer)
-	return ASTBlock{
+	return &ASTBlock{
 		astbase: astbase{location},
 		children: children}
 }
@@ -298,9 +306,9 @@ func (self ASTBlock) Equal(other ASTNode) bool {
 	panic("Equal() not supported for ASTBlock (transient node type)")
 }
 
-func NewASTAssignment(target Token, expr ASTExpression) ASTAssignment {
+func NewASTAssignment(target Token, expr ASTExpression) *ASTAssignment {
 	location := mergeLocations(target, expr)
-	return ASTAssignment{
+	return &ASTAssignment{
 		astbase: astbase{location},
 		target: target.Text(),
 		expr: expr}
@@ -312,8 +320,9 @@ func (self ASTAssignment) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTAssignment) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTAssignment); ok {
-		return self.target == other.target &&
+	if other, ok := other_.(*ASTAssignment); ok {
+		return other != nil &&
+			self.target == other.target &&
 			self.expr.Equal(other.expr)
 	}
 	return false
@@ -322,9 +331,9 @@ func (self ASTAssignment) Equal(other_ ASTNode) bool {
 func NewASTBuildRule(
 	targets ASTExpression,
 	sources ASTExpression,
-	block ASTBlock) ASTBuildRule {
+	block *ASTBlock) *ASTBuildRule {
 	location := mergeLocations(targets, block)
-	return ASTBuildRule{
+	return &ASTBuildRule{
 		astbase: astbase{location},
 		targets: targets,
 		sources: sources,
@@ -343,17 +352,18 @@ func (self ASTBuildRule) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTBuildRule) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTBuildRule); ok {
-		return self.targets.Equal(other.targets) &&
+	if other, ok := other_.(*ASTBuildRule); ok {
+		return other != nil &&
+			self.targets.Equal(other.targets) &&
 			self.sources.Equal(other.sources) &&
 			self.children.Equal(other.children)
 	}
 	return false
 }
 
-func NewASTAdd(op1 ASTExpression, op2 ASTExpression) ASTAdd {
+func NewASTAdd(op1 ASTExpression, op2 ASTExpression) *ASTAdd {
 	location := mergeLocations(op1, op2)
-	return ASTAdd{
+	return &ASTAdd{
 		astbase: astbase{location},
 		op1: op1,
 		op2: op2}
@@ -368,8 +378,10 @@ func (self ASTAdd) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTAdd) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTAdd); ok {
-		return self.op1.Equal(other.op1) && self.op2.Equal(other.op2)
+	if other, ok := other_.(*ASTAdd); ok {
+		return other != nil &&
+			self.op1.Equal(other.op1) &&
+			self.op2.Equal(other.op2)
 	}
 	return false
 }
@@ -381,9 +393,9 @@ func (self ASTAdd) String() string {
 func NewASTFunctionCall(
 	function ASTExpression,
 	args []ASTExpression,
-	closer Locatable) ASTFunctionCall {
+	closer Locatable) *ASTFunctionCall {
 	location := mergeLocations(function, closer)
-	return ASTFunctionCall{
+	return &ASTFunctionCall{
 		astbase: astbase{location},
 		function: function,
 		args: args}
@@ -398,8 +410,9 @@ func (self ASTFunctionCall) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTFunctionCall) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTFunctionCall); ok {
-		return self.function.Equal(other.function) &&
+	if other, ok := other_.(*ASTFunctionCall); ok {
+		return other != nil &&
+			self.function.Equal(other.function) &&
 			exprlistsEqual(self.args, other.args)
 	}
 	return false
@@ -414,9 +427,9 @@ func (self ASTFunctionCall) String() string {
 	return fmt.Sprintf("%s(%d args)", self.function, len(self.args))
 }
 
-func NewASTSelection(container ASTExpression, member Token) ASTSelection {
+func NewASTSelection(container ASTExpression, member Token) *ASTSelection {
 	location := mergeLocations(container, member)
-	return ASTSelection{
+	return &ASTSelection{
 		astbase: astbase{location},
 		container: container,
 		member: member.Text()}
@@ -428,8 +441,9 @@ func (self ASTSelection) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTSelection) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTSelection); ok {
-		return self.container.Equal(other.container) &&
+	if other, ok := other_.(*ASTSelection); ok {
+		return other != nil &&
+			self.container.Equal(other.container) &&
 			self.member == other.member
 	}
 	return false
@@ -439,8 +453,8 @@ func (self ASTSelection) String() string {
 	return fmt.Sprintf("%s.%s", self.container, self.member)
 }
 
-func NewASTName(tok Token) ASTName {
-	return ASTName{
+func NewASTName(tok Token) *ASTName {
+	return &ASTName{
 		astbase: astbase{tok.Location()},
 		name: tok.Text()}
 }
@@ -450,8 +464,8 @@ func (self ASTName) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTName) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTName); ok {
-		return self.name == other.name
+	if other, ok := other_.(*ASTName); ok {
+		return other != nil && self.name == other.name
 	}
 	return false
 }
@@ -460,13 +474,13 @@ func (self ASTName) String() string {
 	return self.name
 }
 
-func NewASTString(value Token) ASTString {
+func NewASTString(value Token) *ASTString {
 	// strip the quotes: they're preserved by the tokenizer, but not
 	// part of the string value (but note that the node location still
 	// encompasses the quotes!)
 	text := value.Text()
 	text = text[1:len(text)-1]
-	return ASTString{
+	return &ASTString{
 		astbase: astbase{value.Location()},
 		value: text}
 }
@@ -477,8 +491,8 @@ func (self ASTString) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTString) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTString); ok {
-		return self.value == other.value
+	if other, ok := other_.(*ASTString); ok {
+		return other != nil && self.value == other.value
 	}
 	return false
 }
@@ -491,9 +505,9 @@ func (self ASTString) String() string {
 func NewASTFileList(
 	opener Token,
 	patterns []Token,
-	closer Token) ASTFileList {
+	closer Token) *ASTFileList {
 	location := mergeLocations(opener, closer)
-	return ASTFileList{
+	return &ASTFileList{
 		astbase: astbase{location},
 		patterns: extractText(patterns)}
 }
@@ -504,8 +518,8 @@ func (self ASTFileList) Dump(writer io.Writer, indent string) {
 }
 
 func (self ASTFileList) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(ASTFileList); ok {
-		return reflect.DeepEqual(self.patterns, other.patterns)
+	if other, ok := other_.(*ASTFileList); ok {
+		return other != nil && reflect.DeepEqual(self.patterns, other.patterns)
 	}
 	return false
 }

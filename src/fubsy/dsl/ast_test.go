@@ -7,37 +7,37 @@ import (
 )
 
 func Test_ASTRoot_Equal(t *testing.T) {
-	node1 := ASTRoot{}
-	node2 := ASTRoot{}
+	node1 := &ASTRoot{}
+	node2 := &ASTRoot{}
 	if !node1.Equal(node1) {
 		t.Error("root node not equal to itself")
 	}
 	if !node1.Equal(node2) {
 		t.Error("empty root nodes not equal")
 	}
-	node1.children = []ASTNode {ASTString{}}
+	node1.children = []ASTNode {&ASTString{}}
 	if node1.Equal(node2) {
 		t.Error("non-empty root node equals empty root node")
 	}
-	node2.children = []ASTNode {ASTString{}}
+	node2.children = []ASTNode {&ASTString{}}
 	if !node1.Equal(node2) {
 		t.Error("root nodes with one child each not equal")
 	}
 
-	other := ASTString{}
+	other := &ASTString{}
 	if node1.Equal(other) {
 		t.Error("nodes of different type are equal")
 	}
 }
 
 func Test_ASTRoot_ListPlugins(t *testing.T) {
-	root := ASTRoot{
+	root := &ASTRoot{
 		children: []ASTNode {
-			ASTPhase{},
-			ASTPhase{},
-			ASTImport{plugin: []string {"ding"}},
-			ASTInline{},
-			ASTImport{plugin: []string {"meep", "beep"}},
+			&ASTPhase{},
+			&ASTPhase{},
+			&ASTImport{plugin: []string {"ding"}},
+			&ASTInline{},
+			&ASTImport{plugin: []string {"meep", "beep"}},
 	}}
 	expect := [][]string {{"ding"}, {"meep", "beep"}}
 	actual := root.ListPlugins()
@@ -46,37 +46,41 @@ func Test_ASTRoot_ListPlugins(t *testing.T) {
 }
 
 func Test_ASTRoot_Phase(t *testing.T) {
-	root := ASTRoot{
+	root := &ASTRoot{
 		children: []ASTNode {
-			ASTImport{},
-			ASTPhase{name: "meep"},
-			ASTInline{},
-			ASTPhase{name: "meep"}, // duplicate is invisible
-			ASTPhase{name: "bong"},
+			&ASTImport{},
+			&ASTPhase{name: "meep"},
+			&ASTInline{},
+			&ASTPhase{name: "meep"}, // duplicate is invisible
+			&ASTPhase{name: "bong"},
 	}}
-	var expect ASTPhase
+	var expect *ASTPhase
 	var actual *ASTPhase
-	//expect = nil
 	actual = root.FindPhase("main")
 	assertTrue(t, nil == actual, "expected nil, but got %v", actual)
 
-	// hmmm: would be nice to compare pointers to guarantee that we're
-	// not copying structs, but I'm pretty sure we *do* copy structs
-	// because we're not putting pointers into (say) root.children
-	expect = root.children[1].(ASTPhase)
+	expect = root.children[1].(*ASTPhase)
 	actual = root.FindPhase("meep")
-	assertTrue(t, expect.Equal(*actual), "expected\n%#v\nbut got\n%#v",
-		expect, actual)
+	assertTrue(t, expect == actual, "expected %p (%v)\nbut got %p (%v)",
+		expect, expect, actual, actual)
 
-	expect = root.children[4].(ASTPhase)
+	expect = root.children[4].(*ASTPhase)
 	actual= root.FindPhase("bong")
-	assertTrue(t, expect.Equal(*actual), "expected\n%#v\nbut got\n%#v",
-		expect, actual)
+	assertTrue(t, expect == actual, "expected %p (%#v)\nbut got %p (%#v)",
+		expect, expect, actual, actual)
+}
+
+func Test_ASTPhase_Equal(t *testing.T) {
+	phase1 := &ASTPhase{name: "foo"}
+	phase2 := &ASTPhase{name: "foo"}
+	if !phase1.Equal(phase2) {
+		t.Error("phase nodes not equal")
+	}
 }
 
 func Test_ASTFileList_Equal(t *testing.T) {
-	node1 := ASTFileList{}
-	node2 := ASTFileList{}
+	node1 := &ASTFileList{}
+	node2 := &ASTFileList{}
 	if !node1.Equal(node1) {
 		t.Error("list node not equal to itself")
 	}
@@ -105,8 +109,8 @@ func Test_ASTFileList_Equal(t *testing.T) {
 }
 
 func Test_ASTInline_Equal(t *testing.T) {
-	node1 := ASTInline{}
-	node2 := ASTInline{}
+	node1 := &ASTInline{}
+	node2 := &ASTInline{}
 	if !node1.Equal(node1) {
 		t.Error("ASTInline not equal to itself")
 	}
@@ -134,7 +138,7 @@ func Test_ASTInline_Equal(t *testing.T) {
 }
 
 func Test_ASTInline_Dump(t *testing.T) {
-	node := ASTInline{lang: "foo"}
+	node := &ASTInline{lang: "foo"}
 	assertASTDump(t, "ASTInline[foo] {{{}}}\n", node)
 
 	node.content = "foobar"
@@ -161,8 +165,8 @@ func Test_ASTInline_Dump(t *testing.T) {
 }
 
 func Test_ASTName_Equal_location(t *testing.T) {
-	name1 := ASTName{name: "foo"}
-	name2 := ASTName{name: "foo"}
+	name1 := &ASTName{name: "foo"}
+	name2 := &ASTName{name: "foo"}
 	assertTrue(t, name1.Equal(name2), "obvious equality fails")
 
 	fileinfo := &fileinfo{"foo.txt", []int {}}
@@ -180,12 +184,12 @@ func Test_ASTName_Equal_location(t *testing.T) {
 
 func Test_ASTFunctionCall_Equal_location(t *testing.T) {
 	// location is irrelevant to comparison
-	fcall1 := ASTFunctionCall{
-		function: ASTName{name: "foo"},
-		args: []ASTExpression {ASTString{value: "bar"}}}
-	fcall2 := ASTFunctionCall{
-		function: ASTName{name: "foo"},
-		args: []ASTExpression {ASTString{value: "bar"}}}
+	fcall1 := &ASTFunctionCall{
+		function: &ASTName{name: "foo"},
+		args: []ASTExpression {&ASTString{value: "bar"}}}
+	fcall2 := &ASTFunctionCall{
+		function: &ASTName{name: "foo"},
+		args: []ASTExpression {&ASTString{value: "bar"}}}
 	assertTrue(t, fcall1.Equal(fcall2), "obvious equality fails")
 
 	fileinfo := &fileinfo{"foo.txt", []int {}}

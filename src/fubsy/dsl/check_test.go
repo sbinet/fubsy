@@ -7,12 +7,12 @@ import (
 
 func Test_checkActions_ok(t *testing.T) {
 	nodes := []ASTNode {
-		ASTString{value: "foo"},
-		ASTFunctionCall{function: ASTName{name: "foo"}},
-		ASTAssignment{target: "x", expr: ASTFunctionCall{}},
-		ASTFunctionCall{
-			function: ASTName{name: "blah"},
-			args: []ASTExpression {ASTString{}, ASTString{}}},
+		&ASTString{value: "foo"},
+		&ASTFunctionCall{function: &ASTName{name: "foo"}},
+		&ASTAssignment{target: "x", expr: &ASTFunctionCall{}},
+		&ASTFunctionCall{
+			function: &ASTName{name: "blah"},
+			args: []ASTExpression {&ASTString{}, &ASTString{}}},
 	}
 	actions, errors := checkActions(nodes)
 	assertTrue(t, reflect.DeepEqual(actions, nodes),
@@ -29,19 +29,19 @@ func Test_checkActions_bad(t *testing.T) {
 	location := location{fileinfo, 11, 18}  // line 2-4
 
 	nodes := []ASTNode {
-		ASTString{value: "foo bar"},	  // good
-		ASTFileList{patterns: []string {"*.java"}}, // bad
-		ASTFunctionCall{},				  // good
-		ASTBuildRule{					  // bad
+		&ASTString{value: "foo bar"},	  // good
+		&ASTFileList{patterns: []string {"*.java"}}, // bad
+		&ASTFunctionCall{},				  // good
+		&ASTBuildRule{					  // bad
 			astbase: astbase{location},
-			targets: ASTString{value: "target"},
-			sources: ASTString{value: "source"},
+			targets: &ASTString{value: "target"},
+			sources: &ASTString{value: "source"},
 			children: []ASTNode {},
 		},
 		// hmmm: lots of expressions evaluate to a string -- why can't
 		// I say cmd = "cc -o foo foo.c" outside a build rule, and then
 		// reference cmd inside the build rule?
-		ASTName{name: "blah"},	// bad (currently)
+		&ASTName{name: "blah"},	// bad (currently)
 	}
 	expect_actions := []ASTNode {
 		nodes[0],
@@ -60,7 +60,7 @@ func Test_checkActions_bad(t *testing.T) {
 		enode := err.node
 		anode := errors[i].(SemanticError).node
 		assertTrue(t, anode.Equal(enode),
-			"bad node %d: expected\n%T %v\nbut got\n%T %v",
+			"bad node %d: expected\n%T %p\nbut got\n%T %p",
 			i, enode, enode, anode, anode)
 	}
 
