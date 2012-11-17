@@ -15,7 +15,7 @@ func checkAST(ast *ASTRoot) []error {
 	// ugh: need generic AST walker?
 	errors := make([]error, 0)
 	for _, elem_ := range ast.children {
-		if elem, ok := elem_.(ASTPhase); ok {
+		if elem, ok := elem_.(*ASTPhase); ok {
 			for _, stmt_ := range elem.children {
 				if stmt, ok := stmt_.(*ASTBuildRule); ok {
 					actions, brerrors := checkActions(stmt.children)

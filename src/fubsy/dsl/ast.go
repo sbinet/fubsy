@@ -179,20 +179,20 @@ func NewASTRoot(children []ASTNode) *ASTRoot {
 		children: children}
 }
 
-func (self ASTRoot) Dump(writer io.Writer, indent string) {
+func (self *ASTRoot) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer, indent + "ASTRoot {")
 	self.children.Dump(writer, indent)
 	fmt.Fprintln(writer, indent + "}")
 }
 
-func (self ASTRoot) Equal(other_ ASTNode) bool {
+func (self *ASTRoot) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTRoot); ok {
 		return other != nil && self.children.Equal(other.children)
 	}
 	return false
 }
 
-func (self ASTRoot) ListPlugins() [][]string {
+func (self *ASTRoot) ListPlugins() [][]string {
 	result := make([][]string, 0)
 	for _, node_ := range self.children {
 		if node, ok := node_.(*ASTImport); ok {
@@ -202,7 +202,7 @@ func (self ASTRoot) ListPlugins() [][]string {
 	return result
 }
 
-func (self ASTRoot) FindPhase(name string) *ASTPhase {
+func (self *ASTRoot) FindPhase(name string) *ASTPhase {
 	for _, node_ := range self.children {
 		if node, ok := node_.(*ASTPhase); ok && node.name == name {
 			return node
@@ -219,11 +219,11 @@ func NewASTImport(keyword Locatable, names []Token) *ASTImport {
 		plugin: plugin}
 }
 
-func (self ASTImport) Dump(writer io.Writer, indent string) {
+func (self *ASTImport) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTImport[%s]\n", indent, strings.Join(self.plugin, "."))
 }
 
-func (self ASTImport) Equal(other_ ASTNode) bool {
+func (self *ASTImport) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTImport); ok {
 		return other != nil && reflect.DeepEqual(self.plugin, other.plugin)
 	}
@@ -238,7 +238,7 @@ func NewASTInline(keyword Locatable, lang Token, content Token) *ASTInline {
 		content: content.Text()}
 }
 
-func (self ASTInline) Dump(writer io.Writer, indent string) {
+func (self *ASTInline) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTInline[%s] {{{", indent, self.lang)
 	if len(self.content) > 0 {
 		replace := -1			// indent all lines by default
@@ -253,7 +253,7 @@ func (self ASTInline) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%s}}}\n", indent)
 }
 
-func (self ASTInline) Equal(other_ ASTNode) bool {
+func (self *ASTInline) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTInline); ok {
 		return other != nil &&
 			self.lang == other.lang &&
@@ -270,13 +270,13 @@ func NewASTPhase(name Token, block *ASTBlock) *ASTPhase {
 		children: block.children}
 }
 
-func (self ASTPhase) Dump(writer io.Writer, indent string) {
+func (self *ASTPhase) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTPhase[%s] {\n", indent, self.name)
 	self.children.Dump(writer, indent)
 	fmt.Fprintln(writer, indent + "}")
 }
 
-func (self ASTPhase) Equal(other_ ASTNode) bool {
+func (self *ASTPhase) Equal(other_ ASTNode) bool {
 	// switch other := other_.(type) {
 	// case ASTPhase:
 	// 	return self.name == other.name && self.children.Equal(other.children)
@@ -298,11 +298,11 @@ func NewASTBlock(opener Token, children []ASTNode, closer Token) *ASTBlock {
 		children: children}
 }
 
-func (self ASTBlock) Dump(writer io.Writer, indent string) {
+func (self *ASTBlock) Dump(writer io.Writer, indent string) {
 	panic("Dump() not supported for ASTBlock (transient node type)")
 }
 
-func (self ASTBlock) Equal(other ASTNode) bool {
+func (self *ASTBlock) Equal(other ASTNode) bool {
 	panic("Equal() not supported for ASTBlock (transient node type)")
 }
 
@@ -314,12 +314,12 @@ func NewASTAssignment(target Token, expr ASTExpression) *ASTAssignment {
 		expr: expr}
 }
 
-func (self ASTAssignment) Dump(writer io.Writer, indent string) {
+func (self *ASTAssignment) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTAssignment[%s]\n", indent, self.target)
 	self.expr.Dump(writer, indent + "  ")
 }
 
-func (self ASTAssignment) Equal(other_ ASTNode) bool {
+func (self *ASTAssignment) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTAssignment); ok {
 		return other != nil &&
 			self.target == other.target &&
@@ -340,7 +340,7 @@ func NewASTBuildRule(
 		children: block.children}
 }
 
-func (self ASTBuildRule) Dump(writer io.Writer, indent string) {
+func (self *ASTBuildRule) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTBuildRule {\n", indent)
 	fmt.Fprintf(writer, "%stargets:\n", indent)
 	self.targets.Dump(writer, indent + "  ")
@@ -351,7 +351,7 @@ func (self ASTBuildRule) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%s}\n", indent)
 }
 
-func (self ASTBuildRule) Equal(other_ ASTNode) bool {
+func (self *ASTBuildRule) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTBuildRule); ok {
 		return other != nil &&
 			self.targets.Equal(other.targets) &&
@@ -369,7 +369,7 @@ func NewASTAdd(op1 ASTExpression, op2 ASTExpression) *ASTAdd {
 		op2: op2}
 }
 
-func (self ASTAdd) Dump(writer io.Writer, indent string) {
+func (self *ASTAdd) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTAdd\n", indent)
 	fmt.Fprintf(writer, "%sop1:\n", indent)
 	self.op1.Dump(writer, indent + "  ")
@@ -377,7 +377,7 @@ func (self ASTAdd) Dump(writer io.Writer, indent string) {
 	self.op2.Dump(writer, indent + "  ")
 }
 
-func (self ASTAdd) Equal(other_ ASTNode) bool {
+func (self *ASTAdd) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTAdd); ok {
 		return other != nil &&
 			self.op1.Equal(other.op1) &&
@@ -386,7 +386,7 @@ func (self ASTAdd) Equal(other_ ASTNode) bool {
 	return false
 }
 
-func (self ASTAdd) String() string {
+func (self *ASTAdd) String() string {
 	return fmt.Sprintf("%s + %s", self.op1, self.op2)
 }
 
@@ -401,7 +401,7 @@ func NewASTFunctionCall(
 		args: args}
 }
 
-func (self ASTFunctionCall) Dump(writer io.Writer, indent string) {
+func (self *ASTFunctionCall) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTFunctionCall[%s] (%d args)\n",
 		indent, self.function, len(self.args))
 	for _, arg := range self.args {
@@ -409,7 +409,7 @@ func (self ASTFunctionCall) Dump(writer io.Writer, indent string) {
 	}
 }
 
-func (self ASTFunctionCall) Equal(other_ ASTNode) bool {
+func (self *ASTFunctionCall) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTFunctionCall); ok {
 		return other != nil &&
 			self.function.Equal(other.function) &&
@@ -418,7 +418,7 @@ func (self ASTFunctionCall) Equal(other_ ASTNode) bool {
 	return false
 }
 
-func (self ASTFunctionCall) String() string {
+func (self *ASTFunctionCall) String() string {
 	// args := make([]string, len(self.args))
 	// for i, arg := range self.args {
 	// 	args[i] = arg.String()
@@ -435,12 +435,12 @@ func NewASTSelection(container ASTExpression, member Token) *ASTSelection {
 		member: member.Text()}
 }
 
-func (self ASTSelection) Dump(writer io.Writer, indent string) {
+func (self *ASTSelection) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTSelection[%s: %s]\n",
 		indent, self.container, self.member)
 }
 
-func (self ASTSelection) Equal(other_ ASTNode) bool {
+func (self *ASTSelection) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTSelection); ok {
 		return other != nil &&
 			self.container.Equal(other.container) &&
@@ -449,7 +449,7 @@ func (self ASTSelection) Equal(other_ ASTNode) bool {
 	return false
 }
 
-func (self ASTSelection) String() string {
+func (self *ASTSelection) String() string {
 	return fmt.Sprintf("%s.%s", self.container, self.member)
 }
 
@@ -459,18 +459,18 @@ func NewASTName(tok Token) *ASTName {
 		name: tok.Text()}
 }
 
-func (self ASTName) Dump(writer io.Writer, indent string) {
+func (self *ASTName) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTName[%s]\n", indent, self.name)
 }
 
-func (self ASTName) Equal(other_ ASTNode) bool {
+func (self *ASTName) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTName); ok {
 		return other != nil && self.name == other.name
 	}
 	return false
 }
 
-func (self ASTName) String() string {
+func (self *ASTName) String() string {
 	return self.name
 }
 
@@ -485,19 +485,19 @@ func NewASTString(value Token) *ASTString {
 		value: text}
 }
 
-func (self ASTString) Dump(writer io.Writer, indent string) {
+func (self *ASTString) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer,
 		indent + "ASTString[" + self.value + "]")
 }
 
-func (self ASTString) Equal(other_ ASTNode) bool {
+func (self *ASTString) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTString); ok {
 		return other != nil && self.value == other.value
 	}
 	return false
 }
 
-func (self ASTString) String() string {
+func (self *ASTString) String() string {
 	// this assumes that Go syntax for strings is Fubsy syntax!
 	return fmt.Sprintf("%#v", self.value)
 }
@@ -512,19 +512,19 @@ func NewASTFileList(
 		patterns: extractText(patterns)}
 }
 
-func (self ASTFileList) Dump(writer io.Writer, indent string) {
+func (self *ASTFileList) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer,
 		indent + "ASTFileList[" + strings.Join(self.patterns, " ") + "]")
 }
 
-func (self ASTFileList) Equal(other_ ASTNode) bool {
+func (self *ASTFileList) Equal(other_ ASTNode) bool {
 	if other, ok := other_.(*ASTFileList); ok {
 		return other != nil && reflect.DeepEqual(self.patterns, other.patterns)
 	}
 	return false
 }
 
-func (self ASTFileList) String() string {
+func (self *ASTFileList) String() string {
 	return "[" + strings.Join(self.patterns, " ") + "]"
 }
 
