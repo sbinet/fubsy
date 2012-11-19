@@ -13,7 +13,7 @@ func Test_linerange_basic(t *testing.T) {
 	// lineoffsets for this file has 6 elements, the last one pointing
 	// just past EOF, as a convenience.)
 	fi := &fileinfo{lineoffsets: []int {0, 4, 5, 17, 26, 27}}
-	loc := location{fi, 0, 0}	// empty token at start of line 1
+	loc := Location{fi, 0, 0}	// empty token at start of line 1
 	assertLines(t, 1, 1, loc)
 
 	loc.end = 3				// still entirely in line 1
@@ -57,7 +57,7 @@ func Test_linerange_oneline(t *testing.T) {
 	//   "foobar"
 	// (1 line, no newlines)
 	fi := &fileinfo{lineoffsets: []int {0, 6}}
-	loc := location{fi, 0, 0}	// empty token at start of line 1
+	loc := Location{fi, 0, 0}	// empty token at start of line 1
 	assertLines(t, 1, 1, loc)
 
 	loc.end = 6				// span all of line 1
@@ -75,14 +75,14 @@ func Test_linerange_oneline(t *testing.T) {
 
 func Test_linerange_panic_lineoffsets(t *testing.T) {
 	fi := &fileinfo{lineoffsets: []int {}}
-	location := newlocation(fi)
+	location := newLocation(fi)
 	defer wantpanic(t)
 	location.linerange()
 }
 
 func Test_linerange_panic_aftereof_1(t *testing.T) {
 	fi := &fileinfo{lineoffsets: []int {0, 10}}
-	location := newlocation(fi)
+	location := newLocation(fi)
 	location.start = 10
 	location.end = 15
 	defer wantpanic(t)
@@ -91,16 +91,16 @@ func Test_linerange_panic_aftereof_1(t *testing.T) {
 
 func Test_linerange_panic_aftereof_2(t *testing.T) {
 	fi := &fileinfo{lineoffsets: []int {0, 10}}
-	location := newlocation(fi)
+	location := newLocation(fi)
 	location.start = 5
 	location.end = 11
 	defer wantpanic(t)
 	location.linerange()
 }
 
-func Test_location_String(t *testing.T) {
+func Test_Location_String(t *testing.T) {
 	fi := &fileinfo{lineoffsets: []int {0, 4, 5, 17, 26, 27}}
-	loc := newlocation(fi)
+	loc := newLocation(fi)
 	testutils.AssertStrings(t, "(unknown): ", loc.String())
 
 	fi.filename = "foo.txt"
@@ -117,7 +117,7 @@ func Test_location_String(t *testing.T) {
 	testutils.AssertStrings(t, "(unknown):1-3: ", loc.String())
 }
 
-func assertLines(t *testing.T, start int, end int, location location) {
+func assertLines(t *testing.T, start int, end int, location Location) {
 	actualstart, actualend := location.linerange()
 	if !(start == actualstart && end == actualend) {
 		t.Errorf(

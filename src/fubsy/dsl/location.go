@@ -16,7 +16,7 @@ type fileinfo struct {
 }
 
 // physical location of a token or AST node
-type location struct {
+type Location struct {
 	fileinfo *fileinfo
 	// [start:end] is a slice into the file contents, i.e.
 	// start is the offset of the first byte of this location,
@@ -25,13 +25,13 @@ type location struct {
 	end int
 }
 
-func newlocation(fileinfo *fileinfo) location {
-	return location{fileinfo, -1, -1}
+func newLocation(fileinfo *fileinfo) Location {
+	return Location{fileinfo, -1, -1}
 }
 
-func (self location) String() string {
+func (self Location) String() string {
 	if self.fileinfo == nil {
-		// don't panic on uninitialized location object
+		// don't panic on uninitialized Location object
 		return ""
 	}
 	var chunks []string
@@ -53,8 +53,8 @@ func (self location) String() string {
 	return strings.Join(chunks, ":") + ": "
 }
 
-// Return a new location that spans self and other.
-func (self location) merge(other location) location {
+// Return a new Location that spans self and other.
+func (self Location) merge(other Location) Location {
 	if self.fileinfo == nil {
 		return other
 	} else if other.fileinfo == nil {
@@ -63,11 +63,11 @@ func (self location) merge(other location) location {
 
 	if self.fileinfo != other.fileinfo {
 		panic(fmt.Sprintf(
-			"cannot merge locations from different files" +
+			"cannot merge Locations from different files" +
 			" (self.fileinfo = %#v, other.fileinfo = %#v)",
 			self.fileinfo, other.fileinfo))
 	}
-	result := newlocation(self.fileinfo)
+	result := newLocation(self.fileinfo)
 	if self.start <= other.end {
 		result.start = self.start
 		result.end = other.end
@@ -78,11 +78,11 @@ func (self location) merge(other location) location {
 	return result
 }
 
-func (self location) span() (int, int) {
+func (self Location) span() (int, int) {
 	return self.start, self.end
 }
 
-func (self location) linerange() (startline int, endline int) {
+func (self Location) linerange() (startline int, endline int) {
 	// don't try to call this with uninitialized lineoffsets!
 	offsets := self.fileinfo.lineoffsets
 	if len(offsets) < 2 {

@@ -389,18 +389,18 @@ func Test_fuParse_ast_locations(t *testing.T) {
 
 	fi := &fileinfo{"foo.txt", []int {0, 6, 17, 21, 23, 24}}
 	tokens := []token {
-		{location{fi, 0, 4}, NAME, "main"},
-		{location{fi, 4, 5}, '{', "{"},
-		{location{fi, 5, 6}, EOL, "\n"},
-		{location{fi, 6, 9}, NAME, "foo"},
-		{location{fi, 10, 11}, '=', "="},
-		{location{fi, 12, 15}, NAME, "bar"},
-		{location{fi, 15, 16}, '(', "("},
-		{location{fi, 19, 20}, ')', ")"},
-		{location{fi, 20, 21}, EOL, "\n"},
-		{location{fi, 21, 22}, '}', "}"},
-		{location{fi, 22, 23}, EOL, "\n"},
-		{location{fi, 23, 23}, EOF, ""},
+		{Location{fi, 0, 4}, NAME, "main"},
+		{Location{fi, 4, 5}, '{', "{"},
+		{Location{fi, 5, 6}, EOL, "\n"},
+		{Location{fi, 6, 9}, NAME, "foo"},
+		{Location{fi, 10, 11}, '=', "="},
+		{Location{fi, 12, 15}, NAME, "bar"},
+		{Location{fi, 15, 16}, '(', "("},
+		{Location{fi, 19, 20}, ')', ")"},
+		{Location{fi, 20, 21}, EOL, "\n"},
+		{Location{fi, 21, 22}, '}', "}"},
+		{Location{fi, 22, 23}, EOL, "\n"},
+		{Location{fi, 23, 23}, EOF, ""},
 	}
 
 	parser := NewParser(tokens)

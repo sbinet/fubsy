@@ -26,7 +26,7 @@ func Test_checkActions_bad(t *testing.T) {
 	// ensure that one of the bad nodes has location info so we can
 	// test that SemanticError.Error() includes it
 	fileinfo := &fileinfo{"foo.fubsy", []int {0, 10, 15, 16, 20}}
-	location := location{fileinfo, 11, 18}  // line 2-4
+	location := Location{fileinfo, 11, 18}  // line 2-4
 
 	nodes := []ASTNode {
 		&ASTString{value: "foo bar"},	  // good

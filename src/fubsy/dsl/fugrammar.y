@@ -216,13 +216,13 @@ selection:
 
 // a token together with its location, text, etc.
 type token struct {
-	location location
+	location Location
 	id int
 	text string
 }
 
 // implement the Locatable interface
-func (self token) Location() location {
+func (self token) Location() Location {
 	return self.location
 }
 

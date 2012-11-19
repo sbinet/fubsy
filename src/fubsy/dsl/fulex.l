@@ -102,7 +102,7 @@ func (self *Scanner) scan() {
 		condition = cond
 	}
 	addtok := func(filename string, startpos *int, tokid int, text []byte) {
-		location := newlocation(self.fileinfo)
+		location := newLocation(self.fileinfo)
 		location.start = *startpos
 		location.end = self.pos - 1
 		tt := token{location, tokid, string(text)}

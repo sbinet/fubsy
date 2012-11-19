@@ -47,10 +47,10 @@ type ASTExpression interface {
 
 // implemented by every AST node via astbase, and also by token
 type Locatable interface {
-	Location() location
+	Location() Location
 }
 
-// something with a location and text (so this file does not know
+// something with a Location and text (so this file does not know
 // about token, which is defined in fugrammar.y -- trying to avoid
 // dependency cycles within the package)
 type Token interface {
@@ -59,14 +59,14 @@ type Token interface {
 }
 
 type astbase struct {
-	location
+	location Location
 }
 
-func (self astbase) Location() location {
+func (self astbase) Location() Location {
 	return self.location
 }
 
-func mergeLocations(loc1 Locatable, loc2 Locatable) location {
+func mergeLocations(loc1 Locatable, loc2 Locatable) Location {
 	return loc1.Location().merge(loc2.Location())
 }
 
