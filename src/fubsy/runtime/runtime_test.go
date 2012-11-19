@@ -24,14 +24,13 @@ func Test_Runtime_evaluate_simple(t *testing.T) {
 	// the expression "meep" evaluates to the string "meep"
 	var expect FuObject
 	snode := stringnode("meep")
-	rt := &Runtime{}
+	rt := NewRuntime("", nil)
 	expect = FuString("meep")
 	assertEvaluateOK(t, rt, expect, snode)
 
 	// the expression foo evaluates to the string "meep" if foo is set
 	// to that string in the local namespace...
-	ns := NewNamespace()
-	rt.locals = ns
+	ns := rt.locals
 	ns["foo"] = expect
 	nnode := dsl.NewASTName(stubtoken{"foo"})
 	assertEvaluateOK(t, rt, expect, nnode)

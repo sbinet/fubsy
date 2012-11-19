@@ -25,7 +25,11 @@ func NewNamespace() Namespace {
 }
 
 func NewRuntime(script string, ast dsl.AST) *Runtime {
-	return &Runtime{script: script, ast: ast}
+	return &Runtime{
+		script: script,
+		ast: ast,
+		locals: NewNamespace(),
+	}
 }
 
 func (self *Runtime) RunScript() []error {
