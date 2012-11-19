@@ -83,6 +83,8 @@ func (self *Runtime) evaluate (expr_ dsl.ASTExpression) (FuObject, error) {
 			}
 			return nil, err
 		}
+	case *dsl.ASTFileList:
+		result = NewFileFinder(expr.Patterns())
 	}
 	return result, nil
 }

@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"testing"
+	"reflect"
 	"fubsy/testutils"
 	"fubsy/dsl"
 )
@@ -21,9 +22,10 @@ func Test_Runtime_assign(t *testing.T) {
 // evaluate simple expressions (no operators)
 func Test_Runtime_evaluate_simple(t *testing.T) {
 	// the expression "meep" evaluates to the string "meep"
+	var expect FuObject
 	snode := stringnode("meep")
 	rt := &Runtime{}
-	expect := FuString("meep")
+	expect = FuString("meep")
 	assertEvaluateOK(t, rt, expect, snode)
 
 	// the expression foo evaluates to the string "meep" if foo is set
@@ -37,6 +39,13 @@ func Test_Runtime_evaluate_simple(t *testing.T) {
 	// ... and to an error if the variable is not defined
 	nnode = dsl.NewASTName(stubtoken{"boo"})
 	assertEvaluateFail(t, rt, "undefined variable 'boo'", nnode)
+
+	// expression <*.c blah> evaluates to a FileFinder with two
+	// include patterns
+	patterns := []dsl.Token {stubtoken{"*.c"}, stubtoken{"blah"}}
+	flnode := dsl.NewASTFileList(nil, patterns, nil)
+	expect = &FuFileFinder{includes: []string {"*.c", "blah"}}
+	assertEvaluateOK(t, rt, expect, flnode)
 }
 
 func stringnode(value string) *dsl.ASTString {
@@ -63,8 +72,10 @@ func assertEvaluateOK(
 
 	obj, err := rt.evaluate(input)
 	testutils.AssertNoError(t, err)
-	if expect != obj {
-		t.Errorf("expected %#v, but got %#v", expect, obj)
+
+	// need to use DeepEqual() to handle (e.g.) slices inside structs
+	if !reflect.DeepEqual(expect, obj) {
+		t.Errorf("expected\n%#v\nbut got\n%#v", expect, obj)
 	}
 }
 

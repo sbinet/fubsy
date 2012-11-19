@@ -67,6 +67,11 @@ func (self astbase) Location() Location {
 }
 
 func mergeLocations(loc1 Locatable, loc2 Locatable) Location {
+	if loc1 == nil || loc2 == nil {
+		// so lazy test code can get away with not creating real
+		// Location objects
+		return newLocation(nil)
+	}
 	return loc1.Location().merge(loc2.Location())
 }
 
@@ -549,6 +554,10 @@ func (self *ASTFileList) Equal(other_ ASTNode) bool {
 
 func (self *ASTFileList) String() string {
 	return "[" + strings.Join(self.patterns, " ") + "]"
+}
+
+func (self *ASTFileList) Patterns() []string {
+	return self.patterns
 }
 
 func extractText(tokens []Token) []string {

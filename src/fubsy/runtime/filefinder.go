@@ -15,6 +15,10 @@ type FuFileFinder struct {
 	excludes []string
 }
 
+func NewFileFinder(includes []string) *FuFileFinder {
+	return &FuFileFinder{includes: includes}
+}
+
 func (self *FuFileFinder) String() string {
 	return "<" + strings.Join(self.includes, " ") + ">"
 }
