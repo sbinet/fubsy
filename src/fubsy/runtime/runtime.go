@@ -6,11 +6,22 @@ import (
 	"fubsy/dsl"
 )
 
+type Namespace map[string] FuObject
+
 type Runtime struct {
 	script string				// filename
 	ast dsl.AST
 
-	locals map[string] FuObject
+	locals Namespace
+}
+
+type RuntimeError struct {
+	location dsl.Location
+	message string
+}
+
+func NewNamespace() Namespace {
+	return make(Namespace)
 }
 
 func NewRuntime(script string, ast dsl.AST) *Runtime {
@@ -33,7 +44,7 @@ func (self *Runtime) runStatements(main *dsl.ASTPhase) []error {
 		var err error
 		switch node := node_.(type) {
 		case *dsl.ASTAssignment:
-			err = self.assign(node)
+			err = self.assign(node, self.locals)
 		case *dsl.ASTBuildRule:
 			err = self.addRule(node)
 		}
@@ -45,19 +56,41 @@ func (self *Runtime) runStatements(main *dsl.ASTPhase) []error {
 	return errors
 }
 
-func (self *Runtime) assign(node *dsl.ASTAssignment) error {
+// node represents code like "NAME = EXPR": evaluate EXPR and store
+// the result in ns
+func (self *Runtime) assign(node *dsl.ASTAssignment, ns Namespace) error {
 	value, err := self.evaluate(node.Expression())
 	if err != nil {
 		return err
 	}
-	self.locals[node.Target()] = value
+	ns[node.Target()] = value
 	return nil
 }
 
-func (self *Runtime) evaluate (expr dsl.ASTExpression) (FuObject, error) {
-	return nil, nil
+func (self *Runtime) evaluate (expr_ dsl.ASTExpression) (FuObject, error) {
+	var result FuObject
+	var ok bool
+	switch expr := expr_.(type) {
+	case *dsl.ASTString:
+		result = FuString(expr.Value())
+	case *dsl.ASTName:
+		name := expr.Name()
+		result, ok = self.locals[name]
+		if !ok {
+			err := RuntimeError{
+				location: expr.Location(),
+				message: fmt.Sprintf("undefined variable '%s'", name),
+			}
+			return nil, err
+		}
+	}
+	return result, nil
 }
 
 func (self *Runtime) addRule(node *dsl.ASTBuildRule) error {
 	return nil
+}
+
+func (self RuntimeError) Error() string {
+	return self.location.String() + self.message
 }

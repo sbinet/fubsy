@@ -489,6 +489,10 @@ func (self *ASTName) String() string {
 	return self.name
 }
 
+func (self *ASTName) Name() string {
+	return self.name
+}
+
 func NewASTString(value Token) *ASTString {
 	// strip the quotes: they're preserved by the tokenizer, but not
 	// part of the string value (but note that the node location still
@@ -515,6 +519,10 @@ func (self *ASTString) Equal(other_ ASTNode) bool {
 func (self *ASTString) String() string {
 	// this assumes that Go syntax for strings is Fubsy syntax!
 	return fmt.Sprintf("%#v", self.value)
+}
+
+func (self *ASTString) Value() string {
+	return self.value
 }
 
 func NewASTFileList(
