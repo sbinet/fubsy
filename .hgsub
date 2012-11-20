@@ -3,3 +3,4 @@ src/github.com/cznic/golex  = [git]git://github.com/cznic/golex
 src/github.com/cznic/lexer  = [git]git://github.com/cznic/lexer
 src/github.com/cznic/lex    = [git]git://github.com/cznic/lex
 src/github.com/stretchrcom/testify = [git]:git://github.com/stretchrcom/testify
+src/code.google.com/p/go-bit = https://code.google.com/p/go-bit
