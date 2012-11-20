@@ -30,6 +30,12 @@ func Test_FileNode_parents(t *testing.T) {
 	expect := []string {}
 	assertParents(t, expect, node)
 
+	// add a single parent in isolation
+	p0 := makeFileNode(dag, "bong")
+	expect = []string {"bong"}
+	node.AddParent(p0)
+	assertParents(t, expect, node)
+
 	// test that AddParent() preserves order (highly unlikely that
 	// hash order would preserve the sequence of 100 names by
 	// coincidence!)
@@ -55,13 +61,14 @@ func Test_FileNode_parents(t *testing.T) {
 
 func Benchmark_FileNode_AddParent(b *testing.B) {
 	b.StopTimer()
+	dag := NewDAG()
 	nodes := make([]*FileNode, b.N)
 	for i := range nodes {
-		nodes[i] = &FileNode{name: fmt.Sprintf("file%04d", i)}
+		nodes[i] = makeFileNode(dag, fmt.Sprintf("file%04d", i))
 	}
 	b.StartTimer()
 
-	node := &FileNode{name: "bop"}
+	node := makeFileNode(dag, "bop")
 	for _, pnode := range nodes {
 		node.AddParent(pnode)
 	}

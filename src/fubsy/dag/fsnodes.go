@@ -2,11 +2,22 @@ package dag
 
 // Fubsy Node types for filesystem objects
 
+import (
+	"fmt"
+)
+
 type FileNode struct {
 	dag *DAG
 	id int
 	name string
 	parents []Node
+
+	// Bit array: element [0] tells whether nodes 0..7 are members,
+	// [1] describes 8..15, etc. Least significant bit of a byte is
+	// for the lowest numbered node in that range.
+	// Invariant after addParent():
+	//     len(parentset) == (dag.length() + 7) / 8
+	parentset []byte
 }
 
 // Lookup and return the named file node in dag. If it doesn't exist,
@@ -45,13 +56,45 @@ func (self *FileNode) Parents() []Node {
 	return self.parents
 }
 
-// XXX this is O(N) in the number of parents, so O(N^2) when adding
-// many parents!
 func (self *FileNode) AddParent (node Node) {
-	for _, parent := range self.parents {
-		if node.Equal(parent) {
-			return
+	// make sure parentset is big enough
+	self.parentset = bitsetResize(self.parentset, self.dag.length())
+
+	// Bail if node is already in parentset.
+	id := node.Id()
+	if id < 0 || id >= self.dag.length() {
+		panic(fmt.Sprintf(
+			"%v has impossible id %d (should be >= 0 && <= %d)",
+			node, id, self.dag.length() - 1))
+	}
+	offset, mask := bitsetCoordinates(id)
+	if self.parentset[offset] & mask != 0 {
+		return
+	}
+
+	self.parents = append(self.parents, node)
+	self.parentset[offset] |= mask
+}
+
+func bitsetResize(set []byte, length int) []byte {
+	needbytes := (length + 7) / 8
+	if len(set) < needbytes {
+		if cap(set) >= needbytes {
+			// no problem: just reslice
+			set = set[0:needbytes]
+		} else {
+			// argh, gotta grow it
+			newcap := needbytes * 3 / 2
+			newset := make([]byte, needbytes, newcap)
+			copy(newset, set)
+			set = newset
 		}
 	}
-	self.parents = append(self.parents, node)
+	return set
+}
+
+func bitsetCoordinates(idx int) (offset int, mask byte) {
+	offset = idx / 8
+	mask = 1 << (uint(idx) % 8)
+	return
 }

@@ -18,13 +18,17 @@ gofmt -w src/fubsy/dsl/fulex.go
 
 go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y
 
+# uncomment this to run benchmarks
+#benchopt="-test.bench=.*"
+
 # unoptimized (for debugging)
 packages="dsl dag runtime"
+#packages="dag"
 for pkg in $packages; do
     go install -v -gcflags "-N -l" fubsy/$pkg
     go test -v -gcflags "-N -l" -i fubsy/$pkg
     go test -v -gcflags "-N -l" -c fubsy/$pkg
-    ./$pkg.test -test.v=true -test.bench='.*' $tests
+    ./$pkg.test -test.v=true $benchopt $tests
 done
 
 go build -v -gcflags "-N -l"

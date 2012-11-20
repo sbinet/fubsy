@@ -96,3 +96,8 @@ func (self *DAG) addNode(node Node) int {
 	self.index[name] = id
 	return id
 }
+
+// Return the number of nodes in the DAG.
+func (self *DAG) length() int {
+	return len(self.nodes)
+}
