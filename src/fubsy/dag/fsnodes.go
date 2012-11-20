@@ -11,7 +11,6 @@ type FileNode struct {
 	dag *DAG
 	id int
 	name string
-	parents []Node
 	parentset bit.Set
 }
 
@@ -48,7 +47,12 @@ func (self *FileNode) Equal(other_ Node) bool {
 }
 
 func (self *FileNode) Parents() []Node {
-	return self.parents
+	result := make([]Node, 0)
+	fetch := func(id int) {
+		result = append(result, self.dag.nodes[id])
+	}
+	self.parentset.Do(fetch)
+	return result
 }
 
 func (self *FileNode) AddParent (node Node) {
@@ -63,6 +67,5 @@ func (self *FileNode) AddParent (node Node) {
 		return
 	}
 
-	self.parents = append(self.parents, node)
 	self.parentset.Add(id)
 }

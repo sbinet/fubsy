@@ -36,26 +36,50 @@ func Test_FileNode_parents(t *testing.T) {
 	node.AddParent(p0)
 	assertParents(t, expect, node)
 
-	// test that AddParent() preserves order (highly unlikely that
-	// hash order would preserve the sequence of 100 names by
-	// coincidence!)
-	var name string
-	for i := 0; i < 100; i++ {
-		name = fmt.Sprintf("file%02d", i)
-		node.AddParent(makeFileNode(dag, name))
-		expect = append(expect, name)
-	}
+	// add a couple more
+	p1 := makeFileNode(dag, "blorp")
+	p2 := makeFileNode(dag, "meep")
+	node.AddParent(p1)
+	node.AddParent(p2)
+	expect = append(expect, "blorp", "meep")
 	assertParents(t, expect, node)
 
 	// ensure that duplicates are not re-added
-	node.AddParent(node.parents[53])
-	node.AddParent(node.parents[17])
-	node.AddParent(node.parents[75])
+	node.AddParent(p2)
+	node.AddParent(p0)
+	assertParents(t, expect, node)
+}
+
+func Test_FileNode_parents_order(t *testing.T) {
+	dag := NewDAG()
+	node := makeFileNode(dag, "foo")
+
+	// test that AddParent() preserves order (highly unlikely that
+	// hash order would preserve the sequence of 100 names by
+	// coincidence!)
+	expect := make([]string, 100)
+	var name string
+	for i := 0; i < 100; i++ {
+		name = fmt.Sprintf("file%02d", i)
+		expect[i] = name
+		node.AddParent(makeFileNode(dag, name))
+	}
 	assertParents(t, expect, node)
 
-	// again, but with new node objects (not reused)
-	node.AddParent(makeFileNode(dag, "file63"))
-	node.AddParent(makeFileNode(dag, "file19"))
+	// More specifically, Parents() returns nodes ordered by node ID,
+	// *not* by the order in which AddParent() was called (a
+	// distinction that escapes the above loop). This is an
+	// implementation detail of using a bitset; the important thing is
+	// that the order of Parents() is consistent, deterministic,
+	// non-arbitrary, and sensible to a human reader -- i.e. not
+	// random and not hash order. Asserting that it's ordered by node
+	// ID is a sanity check of the implementation, not part of the
+	// interface.
+	p1 := makeFileNode(dag, "p1")
+	p2 := makeFileNode(dag, "p2")
+	node.AddParent(p2)
+	node.AddParent(p1)
+	expect = append(expect, "p1", "p2")
 	assertParents(t, expect, node)
 }
 
