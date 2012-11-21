@@ -2,7 +2,6 @@ package dsl
 
 import (
 	"testing"
-	"fmt"
 	"github.com/stretchrcom/testify/assert"
 )
 
@@ -121,10 +120,9 @@ func Test_Location_String(t *testing.T) {
 func assertLines(t *testing.T, start int, end int, location Location) {
 	actualstart, actualend := location.linerange()
 	assert.True(t, start == actualstart && end == actualend,
-		fmt.Sprintf(
 		"bad location.linerange(): " +
 		"expected (%d, %d) but got (%d, %d)",
-		start, end, actualstart, actualend))
+		start, end, actualstart, actualend)
 }
 
 func wantpanic(t *testing.T) {

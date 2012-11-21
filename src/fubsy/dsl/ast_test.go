@@ -3,7 +3,6 @@ package dsl
 import (
 	"testing"
 	"reflect"
-	"fmt"
 	"bytes"
 	"github.com/stretchrcom/testify/assert"
 )
@@ -44,7 +43,7 @@ func Test_ASTRoot_ListPlugins(t *testing.T) {
 	expect := [][]string {{"ding"}, {"meep", "beep"}}
 	actual := root.ListPlugins()
 	assert.True(t, reflect.DeepEqual(expect, actual),
-	 	fmt.Sprintf("expected\n%v\nbut got\n%v", expect, actual))
+	 	"expected\n%v\nbut got\n%v", expect, actual)
 }
 
 func Test_ASTRoot_Phase(t *testing.T) {
@@ -64,14 +63,14 @@ func Test_ASTRoot_Phase(t *testing.T) {
 	expect = root.children[1].(*ASTPhase)
 	actual = root.FindPhase("meep")
 	assert.True(t, expect == actual,
-		fmt.Sprintf("expected %p (%v)\nbut got %p (%v)",
-		expect, expect, actual, actual))
+		"expected %p (%v)\nbut got %p (%v)",
+		expect, expect, actual, actual)
 
 	expect = root.children[4].(*ASTPhase)
 	actual = root.FindPhase("bong")
 	assert.True(t, expect == actual,
-		fmt.Sprintf("expected %p (%#v)\nbut got %p (%#v)",
-		expect, expect, actual, actual))
+		"expected %p\n%#v\nbut got %p\n%#v",
+		expect, expect, actual, actual)
 }
 
 func Test_ASTPhase_Equal(t *testing.T) {

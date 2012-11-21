@@ -3,7 +3,6 @@ package dsl
 import (
 	"testing"
 	"reflect"
-	"fmt"
 	"github.com/stretchrcom/testify/assert"
 )
 
@@ -18,8 +17,8 @@ func Test_checkActions_ok(t *testing.T) {
 	}
 	actions, errors := checkActions(nodes)
 	assert.True(t, reflect.DeepEqual(actions, nodes),
-		fmt.Sprintf("expected %d valid actions, but got %d: %v",
-		len(nodes), len(actions), actions))
+		"expected %d valid actions, but got %d: %v",
+		len(nodes), len(actions), actions)
 	assert.Equal(t, 0, len(errors),
 		"expected no errors")
 }
@@ -56,14 +55,14 @@ func Test_checkActions_bad(t *testing.T) {
 	}
 	actions, errors := checkActions(nodes)
 	assert.True(t, len(expect_errors) == len(errors),
-		fmt.Sprintf("expected %d errors, but got %d: %v",
-		len(expect_errors), len(errors), errors))
+		"expected %d errors, but got %d: %v",
+		len(expect_errors), len(errors), errors)
 	for i, err := range expect_errors {
 		enode := err.node
 		anode := errors[i].(SemanticError).node
 		assert.True(t, anode.Equal(enode),
-			fmt.Sprintf("bad node %d: expected\n%T %p\nbut got\n%T %p",
-			i, enode, enode, anode, anode))
+			"bad node %d: expected\n%T %p\nbut got\n%T %p",
+			i, enode, enode, anode, anode)
 	}
 
 	expect_message := "foo.fubsy:2-4: invalid build action: must be either bare string, function call, or variable assignment"
@@ -71,6 +70,6 @@ func Test_checkActions_bad(t *testing.T) {
 	assert.Equal(t, expect_message, actual_message,)
 
 	assert.True(t, reflect.DeepEqual(expect_actions, actions),
-		fmt.Sprintf("expected actions:\n%#v\nbut got:\n%#v",
-		expect_actions, actions))
+		"expected actions:\n%#v\nbut got:\n%#v",
+		expect_actions, actions)
 }

@@ -2,7 +2,6 @@ package dsl
 
 import (
 	"testing"
-	"fmt"
 	"bytes"
 	"github.com/stretchrcom/testify/assert"
 )
@@ -407,14 +406,14 @@ func Test_fuParse_ast_locations(t *testing.T) {
 	parser := NewParser(tokens)
 	result := fuParse(parser)
 	assert.True(t, result == 0 && parser.ast != nil,
-		fmt.Sprintf("parse failed: result == %d, parser.ast = %v",
-		result, parser.ast))
+		"parse failed: result == %d, parser.ast = %v",
+		result, parser.ast)
 
 	assertLocation := func(node ASTNode, estart int, eend int) {
 		location := node.Location()
 		assert.True(t, location.start == estart && location.end == eend,
-			fmt.Sprintf("%T: expected location %d:%d, but got %d:%d",
-			node, estart, eend, location.start, location.end))
+			"%T: expected location %d:%d, but got %d:%d",
+			node, estart, eend, location.start, location.end)
 	}
 
 	root := parser.ast
@@ -473,8 +472,8 @@ func assertSyntaxError(t *testing.T, badtext string, parser *Parser) {
 
 	assert.Equal(t, message, actual.message)
 	assert.Equal(t, badtext, actual.badtoken.text,
-		fmt.Sprintf("bad token text: expected %#v, but got %#v",
-		badtext, actual.badtoken.text))
+		"bad token text: expected %#v, but got %#v",
+		badtext, actual.badtoken.text)
 }
 
 func assertASTEquals(t *testing.T, expect *ASTRoot, actual *ASTRoot) {
