@@ -4,13 +4,14 @@ import (
 	"testing"
 	"os"
 	"reflect"
+	"github.com/stretchrcom/testify/assert"
 	"fubsy/testutils"
 )
 
 func Test_FuFileFinder_String(t *testing.T) {
 	var ff FuObject
 	ff = &FuFileFinder{includes: []string {"*.c", "**/*.h"}}
-	testutils.AssertStrings(t, "<*.c **/*.h>", ff.String())
+	assert.Equal(t, "<*.c **/*.h>", ff.String())
 }
 
 func Test_FuFileFinder_empty(t *testing.T) {

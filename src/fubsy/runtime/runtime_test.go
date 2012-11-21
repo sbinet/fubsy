@@ -3,6 +3,7 @@ package runtime
 import (
 	"testing"
 	"reflect"
+	"github.com/stretchrcom/testify/assert"
 	"fubsy/testutils"
 	"fubsy/dsl"
 )
@@ -70,7 +71,7 @@ func assertEvaluateOK(
 	input dsl.ASTExpression) {
 
 	obj, err := rt.evaluate(input)
-	testutils.AssertNoError(t, err)
+	assert.Nil(t, err)
 
 	// need to use DeepEqual() to handle (e.g.) slices inside structs
 	if !reflect.DeepEqual(expect, obj) {
