@@ -119,6 +119,7 @@ type ASTAssignment struct {
 }
 
 // TARGETS : SOURCES { ACTIONS }
+// (children is a list of ASTNode, one per action)
 type ASTBuildRule struct {
 	astbase
 	targets ASTExpression
@@ -381,6 +382,18 @@ func (self *ASTBuildRule) Equal(other_ ASTNode) bool {
 	return false
 }
 
+func (self *ASTBuildRule) Targets() ASTExpression {
+	return self.targets
+}
+
+func (self *ASTBuildRule) Sources() ASTExpression {
+	return self.sources
+}
+
+func (self *ASTBuildRule) Actions() []ASTNode {
+	return self.children
+}
+
 func NewASTAdd(op1 ASTExpression, op2 ASTExpression) *ASTAdd {
 	location := mergeLocations(op1, op2)
 	return &ASTAdd{
@@ -408,6 +421,10 @@ func (self *ASTAdd) Equal(other_ ASTNode) bool {
 
 func (self *ASTAdd) String() string {
 	return fmt.Sprintf("%s + %s", self.op1, self.op2)
+}
+
+func (self *ASTAdd) Operands() (ASTExpression, ASTExpression) {
+	return self.op1, self.op2
 }
 
 func NewASTFunctionCall(

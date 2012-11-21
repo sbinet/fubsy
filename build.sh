@@ -23,7 +23,7 @@ go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y
 
 # unoptimized (for debugging)
 packages="dsl dag runtime"
-#packages="dag"
+#packages="runtime"
 for pkg in $packages; do
     go install -v -gcflags "-N -l" fubsy/$pkg
     go test -v -gcflags "-N -l" -i fubsy/$pkg
