@@ -3,7 +3,9 @@ package dsl
 import (
 	"testing"
 	"reflect"
+	"fmt"
 	"bytes"
+	"github.com/stretchrcom/testify/assert"
 )
 
 func Test_ASTRoot_Equal(t *testing.T) {
@@ -41,8 +43,8 @@ func Test_ASTRoot_ListPlugins(t *testing.T) {
 	}}
 	expect := [][]string {{"ding"}, {"meep", "beep"}}
 	actual := root.ListPlugins()
-	assertTrue(t, reflect.DeepEqual(expect, actual),
-		"expected\n%v\nbut got\n%v", expect, actual)
+	assert.True(t, reflect.DeepEqual(expect, actual),
+	 	fmt.Sprintf("expected\n%v\nbut got\n%v", expect, actual))
 }
 
 func Test_ASTRoot_Phase(t *testing.T) {
@@ -57,84 +59,75 @@ func Test_ASTRoot_Phase(t *testing.T) {
 	var expect *ASTPhase
 	var actual *ASTPhase
 	actual = root.FindPhase("main")
-	assertTrue(t, nil == actual, "expected nil, but got %v", actual)
+	assert.Nil(t, actual)
 
 	expect = root.children[1].(*ASTPhase)
 	actual = root.FindPhase("meep")
-	assertTrue(t, expect == actual, "expected %p (%v)\nbut got %p (%v)",
-		expect, expect, actual, actual)
+	assert.True(t, expect == actual,
+		fmt.Sprintf("expected %p (%v)\nbut got %p (%v)",
+		expect, expect, actual, actual))
 
 	expect = root.children[4].(*ASTPhase)
-	actual= root.FindPhase("bong")
-	assertTrue(t, expect == actual, "expected %p (%#v)\nbut got %p (%#v)",
-		expect, expect, actual, actual)
+	actual = root.FindPhase("bong")
+	assert.True(t, expect == actual,
+		fmt.Sprintf("expected %p (%#v)\nbut got %p (%#v)",
+		expect, expect, actual, actual))
 }
 
 func Test_ASTPhase_Equal(t *testing.T) {
 	phase1 := &ASTPhase{name: "foo"}
 	phase2 := &ASTPhase{name: "foo"}
-	if !phase1.Equal(phase2) {
-		t.Error("phase nodes not equal")
-	}
+	assert.True(t, phase1.Equal(phase2), "phase nodes not equal")
 }
 
 func Test_ASTFileList_Equal(t *testing.T) {
 	node1 := &ASTFileList{}
 	node2 := &ASTFileList{}
-	if !node1.Equal(node1) {
-		t.Error("list node not equal to itself")
-	}
-	if !node1.Equal(node2) {
-		t.Error("empty list nodes not equal")
-	}
+	assert.True(t, node1.Equal(node1),
+		"list node not equal to itself")
+	assert.True(t, node1.Equal(node2),
+		"empty list nodes not equal")
 	node1.patterns = []string {"bop"}
-	if !node1.Equal(node1) {
-		t.Error("non-empty list node not equal to itself")
-	}
-	if node1.Equal(node2) {
-		t.Error("non-empty list node equal to empty list node")
-	}
+	assert.True(t, node1.Equal(node1),
+		"non-empty list node not equal to itself")
+	assert.False(t, node1.Equal(node2),
+		"non-empty list node equal to empty list node")
 	node2.patterns = []string {"pop"}
-	if node1.Equal(node2) {
-		t.Error("list node equal to list node with different element")
-	}
+	assert.False(t, node1.Equal(node2),
+		"list node equal to list node with different element")
 	node2.patterns[0] = "bop"
-	if !node1.Equal(node2) {
-		t.Error("equivalent list nodes not equal")
-	}
+	assert.True(t, node1.Equal(node2),
+		"equivalent list nodes not equal")
 	node1.patterns = append(node1.patterns, "boo")
-	if node1.Equal(node2) {
-		t.Error("list node equal to list node with different length")
-	}
+	assert.False(t, node1.Equal(node2),
+		"list node equal to list node with different length")
 }
 
 func Test_ASTInline_Equal(t *testing.T) {
 	node1 := &ASTInline{}
 	node2 := &ASTInline{}
-	if !node1.Equal(node1) {
-		t.Error("ASTInline not equal to itself")
-	}
-	if !node1.Equal(node2) {
-		t.Error("empty ASTInlines not equal")
-	}
+	assert.True(t, node1.Equal(node1),
+		"ASTInline not equal to itself")
+	assert.True(t, node1.Equal(node2),
+		"empty ASTInlines not equal")
+
 	node1.lang = "foo"
 	node2.lang = "bar"
-	if node1.Equal(node2) {
-		t.Error("ASTInlines equal despite different lang")
-	}
+	assert.False(t, node1.Equal(node2),
+		"ASTInlines equal despite different lang")
+
 	node2.lang = "foo"
-	if !node1.Equal(node2) {
-		t.Error("ASTInlines not equal")
-	}
+	assert.True(t, node1.Equal(node2),
+		"ASTInlines not equal")
+
 	node1.content = "hello\nworld\n"
 	node2.content = "hello\nworld"
-	if node1.Equal(node2) {
-		t.Error("ASTInlines equal despite different content")
-	}
+	assert.False(t, node1.Equal(node2),
+		"ASTInlines equal despite different content")
+
 	node2.content += "\n"
-	if !node1.Equal(node2) {
-		t.Error("ASTInlines not equal")
-	}
+	assert.True(t, node1.Equal(node2),
+		"ASTInlines not equal")
 }
 
 func Test_ASTInline_Dump(t *testing.T) {
@@ -167,18 +160,20 @@ func Test_ASTInline_Dump(t *testing.T) {
 func Test_ASTName_Equal_location(t *testing.T) {
 	name1 := &ASTName{name: "foo"}
 	name2 := &ASTName{name: "foo"}
-	assertTrue(t, name1.Equal(name2), "obvious equality fails")
+	assert.True(t, name1.Equal(name2),
+		"obvious equality fails")
 
 	fileinfo := &fileinfo{"foo.txt", []int {}}
 	name1.location = Location{fileinfo, 0, 5}
-	assertTrue(t, name1.Equal(name2), "equality fails with name1.location set")
+	assert.True(t, name1.Equal(name2),
+		"equality fails with name1.location set")
 
 	name2.location = Location{fileinfo, 5, 7}
-	assertTrue(t, name1.Equal(name2),
+	assert.True(t, name1.Equal(name2),
 		"equality fails with name1.location and name2.location set to different values")
 
 	name2.location = Location{fileinfo, 0, 5}
-	assertTrue(t, name1.Equal(name2),
+	assert.True(t, name1.Equal(name2),
 		"equality fails with name1.location and name2.location set to equal values")
 }
 
@@ -190,19 +185,20 @@ func Test_ASTFunctionCall_Equal_location(t *testing.T) {
 	fcall2 := &ASTFunctionCall{
 		function: &ASTName{name: "foo"},
 		args: []ASTExpression {&ASTString{value: "bar"}}}
-	assertTrue(t, fcall1.Equal(fcall2), "obvious equality fails")
+	assert.True(t, fcall1.Equal(fcall2),
+		"obvious equality fails")
 
 	fileinfo := &fileinfo{"foo.txt", []int {}}
 	fcall1.location = Location{fileinfo, 3, 18}
-	assertTrue(t, fcall1.Equal(fcall2),
+	assert.True(t, fcall1.Equal(fcall2),
 		"equality fails when fcall1 has location but fcall2 does not")
 
 	fcall2.location = fcall1.location
-	assertTrue(t, fcall1.Equal(fcall2),
+	assert.True(t, fcall1.Equal(fcall2),
 		"equality fails when fcall2's location is a copy of fcall1's")
 
 	fcall2.location = Location{fileinfo, 5, 41}
-	assertTrue(t, fcall1.Equal(fcall2),
+	assert.True(t, fcall1.Equal(fcall2),
 		"equality fails when fcall2's location different from fcall1's")
 }
 
@@ -210,7 +206,5 @@ func assertASTDump(t *testing.T, expect string, node ASTNode) {
 	var buf bytes.Buffer
 	node.Dump(&buf, "")
 	actual := buf.String()
-	if expect != actual {
-		t.Errorf("AST dump: expected\n%s\nbut got\n%s", expect, actual)
-	}
+	assert.Equal(t, expect, actual, "AST dump")
 }

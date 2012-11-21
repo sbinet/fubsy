@@ -2,7 +2,8 @@ package dsl
 
 import (
 	"testing"
-	"fubsy/testutils"
+	"fmt"
+	"github.com/stretchrcom/testify/assert"
 )
 
 func Test_linerange_basic(t *testing.T) {
@@ -101,30 +102,29 @@ func Test_linerange_panic_aftereof_2(t *testing.T) {
 func Test_Location_String(t *testing.T) {
 	fi := &fileinfo{lineoffsets: []int {0, 4, 5, 17, 26, 27}}
 	loc := newLocation(fi)
-	testutils.AssertStrings(t, "(unknown): ", loc.String())
+	assert.Equal(t, "(unknown): ", loc.String())
 
 	fi.filename = "foo.txt"
-	testutils.AssertStrings(t, "foo.txt: ", loc.String())
+	assert.Equal(t, "foo.txt: ", loc.String())
 
 	loc.start = 2
 	loc.end = 3
-	testutils.AssertStrings(t, "foo.txt:1: ", loc.String())
+	assert.Equal(t, "foo.txt:1: ", loc.String())
 
 	loc.end = 6
-	testutils.AssertStrings(t, "foo.txt:1-3: ", loc.String())
+	assert.Equal(t, "foo.txt:1-3: ", loc.String())
 
 	fi.filename = ""
-	testutils.AssertStrings(t, "(unknown):1-3: ", loc.String())
+	assert.Equal(t, "(unknown):1-3: ", loc.String())
 }
 
 func assertLines(t *testing.T, start int, end int, location Location) {
 	actualstart, actualend := location.linerange()
-	if !(start == actualstart && end == actualend) {
-		t.Errorf(
-			"bad location.linerange(): " +
-			"expected (%d, %d) but got (%d, %d)",
-			start, end, actualstart, actualend)
-	}
+	assert.True(t, start == actualstart && end == actualend,
+		fmt.Sprintf(
+		"bad location.linerange(): " +
+		"expected (%d, %d) but got (%d, %d)",
+		start, end, actualstart, actualend))
 }
 
 func wantpanic(t *testing.T) {

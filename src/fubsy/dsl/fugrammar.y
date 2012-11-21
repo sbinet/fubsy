@@ -257,7 +257,7 @@ func (self *Parser) Lex(lval *fuSymType) int {
 }
 
 func (self *Parser) Error(e string) {
-	 self.syntaxerror = &SyntaxError{
+	self.syntaxerror = &SyntaxError{
 		badtoken: &self.tokens[self.next-1],
 		message: e}
 }

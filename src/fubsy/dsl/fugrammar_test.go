@@ -4,6 +4,7 @@ import (
 	"testing"
 	"fmt"
 	"bytes"
+	"github.com/stretchrcom/testify/assert"
 )
 
 func Test_fuParse_valid_imports(t *testing.T) {
@@ -405,14 +406,15 @@ func Test_fuParse_ast_locations(t *testing.T) {
 
 	parser := NewParser(tokens)
 	result := fuParse(parser)
-	assertTrue(t, result == 0 && parser.ast != nil,
-		"parse failed: result == %d, parser.ast = %v", result, parser.ast)
+	assert.True(t, result == 0 && parser.ast != nil,
+		fmt.Sprintf("parse failed: result == %d, parser.ast = %v",
+		result, parser.ast))
 
 	assertLocation := func(node ASTNode, estart int, eend int) {
 		location := node.Location()
-		assertTrue(t, location.start == estart && location.end == eend,
-			"%T: expected location %d:%d, but got %d:%d",
-			node, estart, eend, location.start, location.end)
+		assert.True(t, location.start == estart && location.end == eend,
+			fmt.Sprintf("%T: expected location %d:%d, but got %d:%d",
+			node, estart, eend, location.start, location.end))
 	}
 
 	root := parser.ast
@@ -450,36 +452,29 @@ func assertParses(t *testing.T, expect *ASTRoot, tokens []minitok) {
 	parser := NewParser(toklist(tokens))
 	result := fuParse(parser)
 	//assertNoError(t, parser.syntaxerror)
-	if parser.syntaxerror != nil {
-		t.Fatal(fmt.Sprintf("unexpected syntax error: %s", parser.syntaxerror))
-	}
-	assertTrue(t, result == 0, "fuParse() returned %d (expected 0)", result)
-	assertTrue(t, parser.ast != nil, "parser.ast is nil (expected non-nil)")
+	assert.Nil(t, parser.syntaxerror)
+	// if parser.syntaxerror != nil {
+	// 	t.Fatal(fmt.Sprintf("unexpected syntax error: %s", parser.syntaxerror))
+	// }
+	assert.Equal(t, 0, result)
+	assert.NotNil(t, parser.ast)
 	assertASTEquals(t, expect, parser.ast)
 }
 
 func assertParseFailure(t *testing.T, result int, parser *Parser) {
-	if result != 1 {
-		t.Errorf("expected fuParse() to return 1, not %d", result)
-	}
-	if parser.ast != nil {
-		t.Errorf("expected nil parser.ast, but it's: %v", parser.ast)
-	}
-	assertNotNil(t, "parser.syntaxerror", parser.syntaxerror)
+	assert.Equal(t, 1, result)
+	assert.Nil(t, parser.ast)
+	assert.NotNil(t, parser.syntaxerror)
 }
 
 func assertSyntaxError(t *testing.T, badtext string, parser *Parser) {
 	actual := parser.syntaxerror
 	message := "syntax error"
 
-	if !(actual.badtoken.text == badtext && actual.message == message) {
-		expect := &SyntaxError{
-			badtoken: &token{text: badtext},
-			message: message}
-
-		t.Errorf("expected syntax error:\n%s\nbut got:\n%s",
-			expect, actual)
-	}
+	assert.Equal(t, message, actual.message)
+	assert.Equal(t, badtext, actual.badtoken.text,
+		fmt.Sprintf("bad token text: expected %#v, but got %#v",
+		badtext, actual.badtoken.text))
 }
 
 func assertASTEquals(t *testing.T, expect *ASTRoot, actual *ASTRoot) {
@@ -491,23 +486,3 @@ func assertASTEquals(t *testing.T, expect *ASTRoot, actual *ASTRoot) {
 		t.Errorf("expected AST node:\n%sbut got:\n%s", expectbuf, actualbuf)
 	}
 }
-
-func assertNotNil(t *testing.T, name string, p *SyntaxError) {
-	if p == nil {
-		t.Fatal(fmt.Sprintf("%s == nil (expected non-nil)", name))
-	}
-}
-
-func assertTrue(t *testing.T, p bool, fmt string, args ...interface{}) {
-	if !p {
-		t.Fatalf(fmt, args...)
-	}
-}
-
-/*
-// return a token in the form expected by parser.Parse()
-func ptok(name string, value string) ParseTOKENTYPE {
-	tok := ASTNode(ttok(name, value)) // ttok() is in fulex_test.go
-	return ParseTOKENTYPE(&tok)
-}
-*/

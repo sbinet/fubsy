@@ -4,6 +4,7 @@ import (
 	"testing"
 	"fmt"
 	"strings"
+	"github.com/stretchrcom/testify/assert"
 )
 
 func TestScan_valid_1(t *testing.T) {
@@ -126,9 +127,9 @@ func TestScan_inline_1(t *testing.T) {
 		34, 34, 6)
 
 	sline, eline := tokens[4].location.linerange()
-	assertTrue(t, sline == 3 && eline == 5,
-		"expected sline == 3 (got %d) && eline == 5 (got %d)",
-		sline, eline)
+	assert.True(t, sline == 3 && eline == 5,
+		fmt.Sprintf("expected sline == 3 (got %d) && eline == 5 (got %d)",
+		sline, eline))
 }
 
 func TestScan_inline_2(t *testing.T) {
@@ -268,10 +269,9 @@ func scan(input string) []token {
 
 func assertScan(t *testing.T, expect []minitok, actual []token) {
 	lasttok := actual[len(actual)-1]
-	if lasttok.id != EOF {
-		t.Errorf("expected last token to be EOF, but got %d (%#v)",
-			lasttok.id, lasttok.text)
-	}
+	assert.Equal(t, EOF, lasttok.id,
+		fmt.Sprintf("expected last token to be EOF, but got %d (%#v)",
+		lasttok.id, lasttok.text))
 	assertTokens(t, expect, actual[0:len(actual)-1])
 }
 
@@ -286,11 +286,9 @@ func assertTokens(t *testing.T, expect []minitok, actual []token) {
 	}
 	for i, etok := range expect {
 		atok := minitok{id: actual[i].id, text: actual[i].text}
-		if etok != atok {
-			t.Errorf("token %d: expected\n%#v\nbut got\n%#v", i, etok, atok)
-		}
+		assert.Equal(t, etok, atok,
+			fmt.Sprintf("token %d: expected\n%#v\nbut got\n%#v", i, etok, atok))
 	}
-
 }
 
 // locinfo is a sequence of start, end, startline triples
@@ -310,16 +308,16 @@ func assertLocations(t *testing.T, tokens []token, locinfo ...int) {
 		start := locinfo[i*3 + 0]
 		end := locinfo[i*3 + 1]
 		startline := locinfo[i*3 + 2]
-		assertTrue(t, start == tok.location.start,
-			prefix + "expected start == %d, but got %d",
-			start, tok.location.start)
-		assertTrue(t, end == tok.location.end,
-			prefix + "expected end == %d, but got %d",
-			end, tok.location.end)
+		assert.Equal(t, start, tok.location.start,
+			fmt.Sprintf(prefix + "expected start == %d, but got %d",
+			start, tok.location.start))
+		assert.Equal(t, end, tok.location.end,
+			fmt.Sprintf(prefix + "expected end == %d, but got %d",
+			end, tok.location.end))
 
 		sline, _ := tok.location.linerange()
-		assertTrue(t, startline == sline,
-			prefix + "expected startline == %d, but got %d",
-			startline, sline)
+		assert.Equal(t, startline, sline,
+			fmt.Sprintf(prefix + "expected startline == %d, but got %d",
+			startline, sline))
 	}
 }

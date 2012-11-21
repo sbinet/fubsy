@@ -3,6 +3,8 @@ package dsl
 import (
 	"testing"
 	"reflect"
+	"fmt"
+	"github.com/stretchrcom/testify/assert"
 )
 
 func Test_checkActions_ok(t *testing.T) {
@@ -15,11 +17,11 @@ func Test_checkActions_ok(t *testing.T) {
 			args: []ASTExpression {&ASTString{}, &ASTString{}}},
 	}
 	actions, errors := checkActions(nodes)
-	assertTrue(t, reflect.DeepEqual(actions, nodes),
-		"expected %d valid actions, but got %d: %v",
-		len(nodes), len(actions), actions)
-	assertTrue(t, len(errors) == 0,
-		"expected no errors, but got %d: %v", len(errors), errors)
+	assert.True(t, reflect.DeepEqual(actions, nodes),
+		fmt.Sprintf("expected %d valid actions, but got %d: %v",
+		len(nodes), len(actions), actions))
+	assert.Equal(t, 0, len(errors),
+		"expected no errors")
 }
 
 func Test_checkActions_bad(t *testing.T) {
@@ -53,23 +55,22 @@ func Test_checkActions_bad(t *testing.T) {
 		SemanticError{node: nodes[4]},
 	}
 	actions, errors := checkActions(nodes)
-	assertTrue(t, len(expect_errors) == len(errors),
-		"expected %d errors, but got %d: %v",
-		len(expect_errors), len(errors), errors)
+	assert.True(t, len(expect_errors) == len(errors),
+		fmt.Sprintf("expected %d errors, but got %d: %v",
+		len(expect_errors), len(errors), errors))
 	for i, err := range expect_errors {
 		enode := err.node
 		anode := errors[i].(SemanticError).node
-		assertTrue(t, anode.Equal(enode),
-			"bad node %d: expected\n%T %p\nbut got\n%T %p",
-			i, enode, enode, anode, anode)
+		assert.True(t, anode.Equal(enode),
+			fmt.Sprintf("bad node %d: expected\n%T %p\nbut got\n%T %p",
+			i, enode, enode, anode, anode))
 	}
 
 	expect_message := "foo.fubsy:2-4: invalid build action: must be either bare string, function call, or variable assignment"
 	actual_message := errors[1].Error()
-	assertTrue(t, expect_message == actual_message,
-		"expected\n%s\nbut got\n%s", expect_message, actual_message)
+	assert.Equal(t, expect_message, actual_message,)
 
-	assertTrue(t, reflect.DeepEqual(expect_actions, actions),
-		"expected actions:\n%#v\nbut got:\n%#v",
-		expect_actions, actions)
+	assert.True(t, reflect.DeepEqual(expect_actions, actions),
+		fmt.Sprintf("expected actions:\n%#v\nbut got:\n%#v",
+		expect_actions, actions))
 }
