@@ -2,4 +2,4 @@ src/github.com/cznic/ebnf   = [git]git://github.com/cznic/ebnf
 src/github.com/cznic/golex  = [git]git://github.com/cznic/golex
 src/github.com/cznic/lexer  = [git]git://github.com/cznic/lexer
 src/github.com/cznic/lex    = [git]git://github.com/cznic/lex
-src/github.com/stretchrcom/testify = [git]:git://github.com/stretchrcom/testify
+src/github.com/stretchrcom/testify = [git]git://github.com/stretchrcom/testify
