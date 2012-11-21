@@ -27,6 +27,10 @@ func (self *FuFileFinder) Add(other FuObject) (FuObject, error) {
 	panic("FileFinder add not implemented yet")
 }
 
+func (self *FuFileFinder) typename() string {
+	return "file finder"
+}
+
 // Walk the filesystem for files matching this FileFinder's include
 // patterns. Return the list of matching filenames.
 func (self *FuFileFinder) find() []string {
