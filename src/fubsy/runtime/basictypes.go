@@ -39,9 +39,7 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 		copy(newlist[1:], other)
 		return newlist, nil
 	default:
-		message := fmt.Sprintf("unsupported operation: cannot add %s to %s",
-			other.typename(), self.typename())
-		return nil, RuntimeError{message: message}
+		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
 	}
 	panic("unreachable code")
 }
@@ -60,9 +58,31 @@ func (self FuList) String() string {
 }
 
 func (self FuList) Add(other_ FuObject) (FuObject, error) {
-	panic("list add not implemented yet")
+	switch other := other_.(type) {
+	case FuList:
+		// ["foo", "bar"] + ["qux"] == ["foo", "bar", "qux"]
+		newlist := make(FuList, len(self) + len(other))
+		copy(newlist, self)
+		copy(newlist[len(self):], other)
+		return newlist, nil
+	case FuString:
+		// ["foo", "bar"] + "qux" == ["foo", "bar", "qux"]
+		newlist := make(FuList, len(self) + 1)
+		copy(newlist, self)
+		newlist[len(self)] = other
+		return newlist, nil
+	default:
+		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
+	}
+	panic("unreachable code")
 }
 
 func (self FuList) typename() string {
 	return "list"
+}
+
+func unsupportedOperation(self FuObject, other FuObject, detail string) error {
+	message := fmt.Sprintf("unsupported operation: " + detail,
+		other.typename(), self.typename())
+	return RuntimeError{message: message}
 }
