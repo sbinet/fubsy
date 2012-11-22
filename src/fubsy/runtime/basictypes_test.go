@@ -44,7 +44,7 @@ func Test_FuString_Add_strings(t *testing.T) {
 
 func Test_FuString_Add_list(t *testing.T) {
 	cmd := FuString("ls")
-	args := FuList([]FuObject {FuString("-l"), FuString("-a"), FuString("foo")})
+	args := makeFuList("-l", "-a", "foo")
 	result, err := cmd.Add(args)
 	assert.Nil(t, err)
 	assert.Equal(t, "[ls,-l,-a,foo]", result.String())
@@ -60,44 +60,39 @@ func Test_FuString_Expand(t *testing.T) {
 }
 
 func Test_FuList_String(t *testing.T) {
-	l := FuList([]FuObject{FuString("beep"), FuString("meep")})
+	l := makeFuList("beep", "meep")
 	assert.Equal(t, "[beep,meep]", l.String())
 
-	l = FuList([]FuObject{FuString("beep"), FuString(""), FuString("meep")})
+	l = makeFuList("beep", "", "meep")
 	assert.Equal(t, "[beep,,meep]", l.String())
 }
 
 func Test_FuList_Add_list(t *testing.T) {
-	l1 := FuList([]FuObject {FuString("foo"), FuString("bar")})
-	l2 := FuList([]FuObject {FuString("qux")})
+	l1 := makeFuList("foo", "bar")
+	l2 := makeFuList("qux")
 
 	result, err := l1.Add(l2)
-	expect := FuList([]FuObject {
-		FuString("foo"), FuString("bar"), FuString("qux")})
+	expect := makeFuList("foo", "bar", "qux")
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
 
 	result, err = l2.Add(l1)
-	expect = FuList([]FuObject {
-		FuString("qux"), FuString("foo"), FuString("bar")})
+	expect = makeFuList("qux", "foo", "bar")
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
 }
 
 func Test_FuList_Add_string(t *testing.T) {
-	cmd := FuList([]FuObject {
-		FuString("ls"), FuString("-la")})
+	cmd := makeFuList("ls", "-la")
 	arg := FuString("stuff/")
 
 	result, err := cmd.Add(arg)
-	expect := FuList([]FuObject {
-		FuString("ls"), FuString("-la"), FuString("stuff/")})
+	expect := makeFuList("ls", "-la", "stuff/")
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
 }
 
 func Test_FuList_Expand(t *testing.T) {
-	//input := newFuList(FuString("gob"), FuString("mob"))
 	input := makeFuList("gob", "mob")
 	output, err := input.Expand(nil)
 	assert.Nil(t, err)
@@ -111,8 +106,4 @@ func makeFuList(strings ...string) FuList {
 		result[i] = FuString(s)
 	}
 	return result
-}
-
-func newFuList(objects ...FuObject) FuList {
-	return FuList(objects)
 }

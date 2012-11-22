@@ -80,10 +80,7 @@ func assertExpand(t *testing.T, expect []string, ff *FuFileFinder) {
 	actual, err := ff.Expand(nil)
 	assert.Nil(t, err)
 
-	expectobj := make(FuList, len(expect))
-	for i, fn := range expect {
-		expectobj[i] = FuString(fn)
-	}
+	expectobj := makeFuList(expect...)
 	if !reflect.DeepEqual(expectobj, actual) {
 		t.Errorf("FuFileFinder.find(): expected\n%v\nbut got\n%v",
 			expectobj, actual)
