@@ -14,24 +14,24 @@ func Test_FuFileFinder_String(t *testing.T) {
 	assert.Equal(t, "<*.c **/*.h>", ff.String())
 }
 
-func Test_FuFileFinder_empty(t *testing.T) {
+func Test_FuFileFinder_Expand_empty(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
 	// no patterns, no files: of course we find nothing
 	ff := &FuFileFinder{}
-	assertFind(t, []string {}, ff)
+	assertExpand(t, []string {}, ff)
 
 	// patterns, but no files: still nothing
 	ff.includes = []string {"**/*.c", "include/*.h", "*/*.txt"}
-	assertFind(t, []string {}, ff)
+	assertExpand(t, []string {}, ff)
 
 	// no patterns, some files: still nothing
 	ff.includes = ff.includes[0:0]
 	mkdirs("lib1", "lib1/sub", "lib2", "include")
 	touchfiles(
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
-	assertFind(t, []string {}, ff)
+	assertExpand(t, []string {}, ff)
 }
 
 func Test_FuFileFinder_single_include(t *testing.T) {
@@ -46,16 +46,16 @@ func Test_FuFileFinder_single_include(t *testing.T) {
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
 
 	ff := &FuFileFinder{includes: []string {"*/*.c"}}
-	assertFind(t, []string {"lib1/foo.c"}, ff)
+	assertExpand(t, []string {"lib1/foo.c"}, ff)
 
 	ff.includes[0] = "**/*.c"
-	assertFind(t, []string {"lib1/foo.c", "lib1/sub/blah.c"}, ff)
+	assertExpand(t, []string {"lib1/foo.c", "lib1/sub/blah.c"}, ff)
 
 	ff.includes[0] = "in?lu?e/*.h"
-	assertFind(t, []string {"include/bip.h", "include/bop.h"}, ff)
+	assertExpand(t, []string {"include/bip.h", "include/bop.h"}, ff)
 
 	ff.includes[0] = "inc*/?i*.h"
-	assertFind(t, []string {"include/bip.h"}, ff)
+	assertExpand(t, []string {"include/bip.h"}, ff)
 }
 
 func mkdirs(dirs ...string) {
@@ -76,10 +76,16 @@ func touchfiles(filenames ...string) {
 	}
 }
 
-func assertFind(t *testing.T, expect []string, ff *FuFileFinder) {
-	actual := ff.find()
-	if !reflect.DeepEqual(expect, actual) {
+func assertExpand(t *testing.T, expect []string, ff *FuFileFinder) {
+	actual, err := ff.Expand(nil)
+	assert.Nil(t, err)
+
+	expectobj := make(FuList, len(expect))
+	for i, fn := range expect {
+		expectobj[i] = FuString(fn)
+	}
+	if !reflect.DeepEqual(expectobj, actual) {
 		t.Errorf("FuFileFinder.find(): expected\n%v\nbut got\n%v",
-			expect, actual)
+			expectobj, actual)
 	}
 }

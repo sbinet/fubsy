@@ -50,6 +50,14 @@ func Test_FuString_Add_list(t *testing.T) {
 	assert.Equal(t, "[ls,-l,-a,foo]", result.String())
 }
 
+func Test_FuString_Expand(t *testing.T) {
+	input := FuString("meep meep!")
+	output, err := input.Expand(nil)
+	assert.Nil(t, err)
+	assert.Equal(t, input, output)
+
+	// not testing variable expansion because it's not implemented yet
+}
 
 func Test_FuList_String(t *testing.T) {
 	l := FuList([]FuObject{FuString("beep"), FuString("meep")})
@@ -86,4 +94,25 @@ func Test_FuList_Add_string(t *testing.T) {
 		FuString("ls"), FuString("-la"), FuString("stuff/")})
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
+}
+
+func Test_FuList_Expand(t *testing.T) {
+	//input := newFuList(FuString("gob"), FuString("mob"))
+	input := makeFuList("gob", "mob")
+	output, err := input.Expand(nil)
+	assert.Nil(t, err)
+	assert.Equal(t, input, output)
+}
+
+// Convert a variable number of strings to a FuList of FuString.
+func makeFuList(strings ...string) FuList {
+	result := make(FuList, len(strings))
+	for i, s := range strings {
+		result[i] = FuString(s)
+	}
+	return result
+}
+
+func newFuList(objects ...FuObject) FuList {
+	return FuList(objects)
 }

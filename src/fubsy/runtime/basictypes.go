@@ -12,6 +12,17 @@ type FuObject interface {
 	String() string
 	Add(FuObject) (FuObject, error)
 
+	// Convert an object from its initial form, seen in the main phase
+	// (the result of evaluating an expression in the AST), to the
+	// final form seen in the build phase. For example, expansion
+	// might convert a string "$CC $CFLAGS" to "/usr/bin/gcc -Wall
+	// -O2". Expansion can involve conversions within Fubsy's type
+	// system: e.g. expanding a FuFileFinder might result in a FuList
+	// of file nodes.
+	Expand(runtime *Runtime) (FuObject, error)
+
+	// Return a brief, human-readable description of the type of this
+	// object. Used in error messages.
 	typename() string
 }
 
@@ -42,6 +53,11 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
 	}
 	panic("unreachable code")
+}
+
+func (self FuString) Expand(runtime *Runtime) (FuObject, error) {
+	// XXX variable expansion!!!
+	return self, nil
 }
 
 func (self FuString) typename() string {
@@ -75,6 +91,18 @@ func (self FuList) Add(other_ FuObject) (FuObject, error) {
 		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
 	}
 	panic("unreachable code")
+}
+
+func (self FuList) Expand(runtime *Runtime) (FuObject, error) {
+	result := make(FuList, len(self))
+	var err error
+	for i, val := range self {
+		result[i], err = val.Expand(runtime)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
 }
 
 func (self FuList) typename() string {

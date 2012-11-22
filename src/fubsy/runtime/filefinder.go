@@ -33,7 +33,7 @@ func (self *FuFileFinder) typename() string {
 
 // Walk the filesystem for files matching this FileFinder's include
 // patterns. Return the list of matching filenames.
-func (self *FuFileFinder) find() []string {
-	result := make([]string, 0)
-	return result
+func (self *FuFileFinder) Expand(runtime *Runtime) (FuObject, error) {
+	result := make(FuList, 0)
+	return result, nil
 }
