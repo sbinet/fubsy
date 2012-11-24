@@ -17,6 +17,9 @@ type FuFileFinder struct {
 
 	// exclude patterns (can only be added by exclude() method)
 	excludes []string
+
+	// sum of filefinders (<*.c> + <*.h>) is just a linked list
+	chain *FuFileFinder
 }
 
 func NewFileFinder(includes []string) *FuFileFinder {
@@ -27,8 +30,17 @@ func (self *FuFileFinder) String() string {
 	return "<" + strings.Join(self.includes, " ") + ">"
 }
 
-func (self *FuFileFinder) Add(other FuObject) (FuObject, error) {
-	panic("FileFinder add not implemented yet")
+func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
+	other, ok := other_.(*FuFileFinder)
+	if !ok {
+		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
+	}
+
+	// uh, what if self.chain is already set?
+	result := NewFileFinder(self.includes)
+	result.excludes = self.excludes
+	result.chain = other
+	return result, nil
 }
 
 func (self *FuFileFinder) typename() string {
@@ -41,20 +53,22 @@ func (self *FuFileFinder) typename() string {
 func (self *FuFileFinder) Expand(runtime *Runtime) (FuObject, error) {
 	result := make(FuList, 0)
 	var matches []string
-	for _, pattern := range self.includes {
-		recursive, prefix, tail, err := splitPattern(pattern)
-		if err != nil {
-			return nil, err
+	for ; self != nil; self = self.chain {
+		for _, pattern := range self.includes {
+			recursive, prefix, tail, err := splitPattern(pattern)
+			if err != nil {
+				return nil, err
+			}
+			if recursive {
+				matches, err = recursiveGlob(prefix, tail)
+			} else {
+				matches, err = simpleGlob(pattern)
+			}
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, makeFuList(matches...)...)
 		}
-		if recursive {
-			matches, err = recursiveGlob(prefix, tail)
-		} else {
-			matches, err = simpleGlob(pattern)
-		}
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, makeFuList(matches...)...)
 	}
 	return result, nil
 }

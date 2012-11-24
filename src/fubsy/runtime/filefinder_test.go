@@ -223,6 +223,26 @@ func Test_FuFileFinder_Expand_double_recursion(t *testing.T) {
 	assertExpand(t, expect, ff)
 }
 
+func Test_FileFinder_Add(t *testing.T) {
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+	mkdirs("src", "include", "doc")
+	touchfiles(
+		"src/foo.c", "src/foo.h", "main.c", "include/bop.h",
+		"doc.txt", "doc/stuff.txt", "doc/blahblah.rst")
+
+	ff1 := NewFileFinder([]string {"**/*.c"})
+	ff2 := NewFileFinder([]string {"doc/*.txt"})
+
+	expect := makeFuList("main.c", "src/foo.c", "doc/stuff.txt")
+
+	sum, err := ff1.Add(ff2)
+	assert.Nil(t, err)
+	actual, err := sum.Expand(nil)
+	assert.Nil(t, err)
+	assert.Equal(t, expect, actual)
+}
+
 func mkdirs(dirs ...string) {
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
