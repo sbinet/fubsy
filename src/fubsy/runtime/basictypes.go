@@ -114,3 +114,12 @@ func unsupportedOperation(self FuObject, other FuObject, detail string) error {
 		other.typename(), self.typename())
 	return RuntimeError{message: message}
 }
+
+// Convert a variable number of strings to a FuList of FuString.
+func makeFuList(strings ...string) FuList {
+	result := make(FuList, len(strings))
+	for i, s := range strings {
+		result[i] = FuString(s)
+	}
+	return result
+}

@@ -4,9 +4,113 @@ import (
 	"testing"
 	"os"
 	"reflect"
+	"regexp"
 	"github.com/stretchrcom/testify/assert"
 	"fubsy/testutils"
 )
+
+func Test_translateGlob(t *testing.T) {
+	tests := []struct {glob string; re string} {
+		{"", "$"},
+		{"foo", "foo$"},
+		{"foo/bar", "foo/bar$"},
+
+		{"foo?bar", "foo[^/]bar$"},
+		{"*.c", "[^/]*\\.c$"},
+		{"foo[abc]", "foo[abc]$"},
+		{"foo[a-m]*.bop", "foo[a-m][^/]*\\.bop$"},
+	}
+
+	for _, pair := range tests {
+		actual, err := translateGlob(pair.glob)
+		assert.Nil(t, err)
+		assert.Equal(t, pair.re, actual)
+	}
+
+	// make sure one of those regexps actually works as intended
+	pat, err := translateGlob("foo[a-m]/p*g/*.[ch]")
+	assert.Nil(t, err)
+	re, err := regexp.Compile("^" + pat)
+	assert.Nil(t, err)
+	match := []string {
+		"foom/pong/bop.c",
+		"foog/pig/abc.c",
+		"foog/pig/a.c.-af#@0(.h",
+		"foob/pg/a_b&.c",
+	}
+	for _, fn := range match {
+		assert.Equal(t, fn, re.FindString(fn))
+	}
+
+	nomatch := []string {
+		"foo/pong/bop.c",
+		"foom/pongx/bop.c",
+		"foom/pong/bop.cpp",
+		"foom/pong/bop.c/x",
+		"fooz/pong/bop.c",
+		"foom/pg/bop.d",
+	}
+	for _, fn := range nomatch {
+		assert.Equal(t, "", re.FindString(fn))
+	}
+}
+
+func Test_findRecursive_no_recursive(t *testing.T) {
+	var prefix, tail string
+	var err error
+	prefix, tail, err = findRecursive("")
+	assert.Nil(t, err)
+	assert.True(t, prefix == "" && tail == "")
+
+	prefix, tail, err = findRecursive("foobar")
+	assert.Nil(t, err)
+	assert.True(t, prefix == "foobar" && tail == "")
+
+	prefix, tail, err = findRecursive("foo/b?r/*/blah/*.[ch]")
+	assert.Nil(t, err)
+	assert.True(t, prefix == "foo/b?r/*/blah/*.[ch]" && tail == "")
+}
+
+func Test_findRecursive_valid_recursive(t *testing.T) {
+	var prefix, tail string
+	var err error
+	prefix, tail, err = findRecursive("**/*.c")
+	assert.Nil(t, err)
+	assert.Equal(t, "", prefix)
+	assert.Equal(t, "*.c", tail)
+
+	prefix, tail, err = findRecursive("**/foo/b?r/*.[ch]")
+	assert.Nil(t, err)
+	assert.Equal(t, "", prefix)
+	assert.Equal(t, "foo/b?r/*.[ch]", tail)
+
+	prefix, tail, err = findRecursive("foo/**/*.c")
+	assert.Nil(t, err)
+	assert.Equal(t, "foo", prefix)
+	assert.Equal(t, "*.c", tail)
+
+	prefix, tail, err = findRecursive("f?o/*/**/?eep/*.[ch]")
+	assert.Nil(t, err)
+	assert.Equal(t, "f?o/*", prefix)
+	assert.Equal(t, "?eep/*.[ch]", tail)
+}
+
+func Test_findRecursive_invalid(t *testing.T) {
+	patterns := []string {
+		"**",
+		"**/",
+		"foo/**",
+		"foo/**/",
+		"foo**/x",
+		"foo/**x",
+	}
+
+	for _, pattern := range patterns {
+		_, _, err := findRecursive(pattern)
+		assert.NotNil(t, err)
+	}
+}
+
 
 func Test_FuFileFinder_String(t *testing.T) {
 	var ff FuObject
@@ -35,9 +139,6 @@ func Test_FuFileFinder_Expand_empty(t *testing.T) {
 }
 
 func Test_FuFileFinder_single_include(t *testing.T) {
-	// punt on this, since FuFileFinder is just a stub for now
-	return
-
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
@@ -49,6 +150,10 @@ func Test_FuFileFinder_single_include(t *testing.T) {
 	assertExpand(t, []string {"lib1/foo.c"}, ff)
 
 	ff.includes[0] = "**/*.c"
+	assertExpand(t, []string {"lib1/foo.c", "lib1/sub/blah.c"}, ff)
+	return
+
+	ff.includes[0] = "l?b?/**/*.c"
 	assertExpand(t, []string {"lib1/foo.c", "lib1/sub/blah.c"}, ff)
 
 	ff.includes[0] = "in?lu?e/*.h"
@@ -82,7 +187,8 @@ func assertExpand(t *testing.T, expect []string, ff *FuFileFinder) {
 
 	expectobj := makeFuList(expect...)
 	if !reflect.DeepEqual(expectobj, actual) {
-		t.Errorf("FuFileFinder.find(): expected\n%v\nbut got\n%v",
-			expectobj, actual)
+		t.Errorf("FuFileFinder.Expand(): includes=%v: " +
+			"expected\n%v\nbut got\n%v",
+			ff.includes, expectobj, actual)
 	}
 }

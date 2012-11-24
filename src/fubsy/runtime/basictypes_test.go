@@ -98,12 +98,3 @@ func Test_FuList_Expand(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
 }
-
-// Convert a variable number of strings to a FuList of FuString.
-func makeFuList(strings ...string) FuList {
-	result := make(FuList, len(strings))
-	for i, s := range strings {
-		result[i] = FuString(s)
-	}
-	return result
-}
