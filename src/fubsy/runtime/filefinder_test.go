@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"testing"
+	//"fmt"
 	"os"
 	"reflect"
 	"regexp"
@@ -234,21 +235,36 @@ func Test_FileFinder_Add(t *testing.T) {
 	ff1 := NewFileFinder([]string {"**/*.c"})
 	ff2 := NewFileFinder([]string {"doc/*.txt"})
 
-	expect := makeFuList("main.c", "src/foo.c", "doc/stuff.txt")
-
+	// simulate sum = <**/*.c> + <doc/*.txt>
+	expect := []string {
+		"main.c", "src/foo.c", "doc/stuff.txt"}
 	sum, err := ff1.Add(ff2)
+	//fmt.Printf("ff1 = %v\nff2 = %v\nsum = %v\n", ff1, ff2, sum)
 	assert.Nil(t, err)
-	actual, err := sum.Expand(nil)
-	assert.Nil(t, err)
-	assert.Equal(t, expect, actual)
+	assertExpand(t, expect, sum)
 
+	// simulate sum + <"*c*/?o?.h">
 	ff3 := NewFileFinder([]string {"*c*/?o?.h"})
-	expect = append(expect, makeFuList("include/bop.h", "src/foo.h")...)
+	expect = append(expect, "include/bop.h", "src/foo.h")
 	sum, err = sum.Add(ff3)
-	actual, err = sum.Expand(nil)
+	//fmt.Printf("ff3 = %v\nnew sum = %v\n", ff3, sum)
 	assert.Nil(t, err)
-	assert.Equal(t, expect, actual)
+	assertExpand(t, expect, sum)
+	return
 
+	// simulate <doc/*.txt> + (<*c*/?o?.h> + <**/*.c>)
+	// (same as before, just different order)
+	expect = []string {
+		//"doc/stuff.txt", "include/bop.h", "src/foo.h", "main.c", "src/foo.c"}
+		"include/bop.h", "src/foo.h", "main.c", "src/foo.c"}
+	sum, err = ff3.Add(ff1)
+	assert.Nil(t, err)
+	assertExpand(t, expect, sum)
+
+	expect = append([]string {"doc/stuff.txt"}, expect...)
+	sum, err = ff2.Add(sum)
+	assert.Nil(t, err)
+	assertExpand(t, expect, sum)
 }
 
 func mkdirs(dirs ...string) {
@@ -269,14 +285,14 @@ func touchfiles(filenames ...string) {
 	}
 }
 
-func assertExpand(t *testing.T, expect []string, ff *FuFileFinder) {
-	actual, err := ff.Expand(nil)
+func assertExpand(t *testing.T, expect []string, obj FuObject) {
+	actual, err := obj.Expand(nil)
 	assert.Nil(t, err)
 
 	expectobj := makeFuList(expect...)
 	if !reflect.DeepEqual(expectobj, actual) {
-		t.Errorf("FuFileFinder.Expand(): includes=%v: " +
+		t.Errorf("%v Expand(): " +
 			"expected\n%v\nbut got\n%v",
-			ff.includes, expectobj, actual)
+			obj, expectobj, actual)
 	}
 }

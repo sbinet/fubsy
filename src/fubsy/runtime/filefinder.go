@@ -17,9 +17,14 @@ type FuFileFinder struct {
 
 	// exclude patterns (can only be added by exclude() method)
 	excludes []string
+}
 
-	// sum of filefinders (<*.c> + <*.h>) is just a linked list
-	chain *FuFileFinder
+// Object that results from adding file finders together: e.g.
+//   <*.c> + <*.h> + <**/*.java>
+// evaluates to a FuFinderList with three elements. Expanding
+// the FuFinderList expands each of its elements in turn.
+type FuFinderList struct {
+	elements []*FuFileFinder
 }
 
 func NewFileFinder(includes []string) *FuFileFinder {
@@ -31,20 +36,29 @@ func (self *FuFileFinder) String() string {
 }
 
 func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
-	other, ok := other_.(*FuFileFinder)
-	if !ok {
+	result := &FuFinderList{}
+	result.elements = []*FuFileFinder {self}
+	switch other := other_.(type) {
+	case *FuFileFinder:
+		// <p1> + <p2>
+		result.elements = append(result.elements, other)
+	case *FuFinderList:
+		// <p1> + (<p2> + <p3>) (evaluating the outer +)
+		result.elements = append(result.elements, other.elements...)
+	default:
 		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
 	}
-
-	result := NewFileFinder(self.includes)
-	result.excludes = self.excludes
-	result.chain = self.chain
-	prev := result
-	for cur := self.chain; cur != nil; cur = cur.chain {
-		prev = cur
-	}
-	prev.chain = other
 	return result, nil
+
+	// result := NewFileFinder(self.includes)
+	// result.excludes = self.excludes
+	// result.chain = self.chain
+	// prev := result
+	// for cur := self.chain; cur != nil; cur = cur.chain {
+	// 	prev = cur
+	// }
+	// prev.chain = other
+	// return result, nil
 }
 
 func (self *FuFileFinder) typename() string {
@@ -57,22 +71,20 @@ func (self *FuFileFinder) typename() string {
 func (self *FuFileFinder) Expand(runtime *Runtime) (FuObject, error) {
 	result := make(FuList, 0)
 	var matches []string
-	for ; self != nil; self = self.chain {
-		for _, pattern := range self.includes {
-			recursive, prefix, tail, err := splitPattern(pattern)
-			if err != nil {
-				return nil, err
-			}
-			if recursive {
-				matches, err = recursiveGlob(prefix, tail)
-			} else {
-				matches, err = simpleGlob(pattern)
-			}
-			if err != nil {
-				return nil, err
-			}
-			result = append(result, makeFuList(matches...)...)
+	for _, pattern := range self.includes {
+		recursive, prefix, tail, err := splitPattern(pattern)
+		if err != nil {
+			return nil, err
 		}
+		if recursive {
+			matches, err = recursiveGlob(prefix, tail)
+		} else {
+			matches, err = simpleGlob(pattern)
+		}
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, makeFuList(matches...)...)
 	}
 	return result, nil
 }
@@ -231,4 +243,44 @@ func translateGlob(glob string) (string, error) {
 	}
 	re = append(re, '$')
 	return string(re), nil
+}
+
+func (self *FuFinderList) typename() string {
+	return "file finder"		// hmmm: ambiguous, but clearer errors?
+}
+
+func (self *FuFinderList) String() string {
+	result := make([]string, len(self.elements))
+	for i, finder := range self.elements {
+		result[i] = finder.String()
+	}
+	return strings.Join(result, " + ")
+}
+
+func (self *FuFinderList) Add(other_ FuObject) (FuObject, error) {
+	result := &FuFinderList{}
+	result.elements = make([]*FuFileFinder, len(self.elements))
+	copy(result.elements, self.elements)
+
+	switch other := other_.(type) {
+	case *FuFileFinder:
+		result.elements = append(result.elements, other)
+	case *FuFinderList:
+		result.elements = append(result.elements, other.elements...)
+	default:
+		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
+	}
+	return result, nil
+}
+
+func (self *FuFinderList) Expand(runtime *Runtime) (FuObject, error) {
+	result := make(FuList, 0)
+	for _, element := range self.elements {
+		batch, err := element.Expand(runtime)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, batch.(FuList)...)
+	}
+	return result, nil
 }
