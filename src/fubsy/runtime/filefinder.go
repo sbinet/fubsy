@@ -42,16 +42,14 @@ func (self *FuFileFinder) Expand(runtime *Runtime) (FuObject, error) {
 	result := make(FuList, 0)
 	var matches []string
 	for _, pattern := range self.includes {
-		prefix, tail, err := findRecursive(pattern)
-		_ = prefix
+		recursive, prefix, tail, err := splitPattern(pattern)
 		if err != nil {
 			return nil, err
 		}
-		if tail == "" {
-			// no recursive patterns here: just do ordinary glob
-			matches, err = simpleGlob(pattern)
-		} else {
+		if recursive {
 			matches, err = recursiveGlob(prefix, tail)
+		} else {
+			matches, err = simpleGlob(pattern)
 		}
 		if err != nil {
 			return nil, err
@@ -61,15 +59,18 @@ func (self *FuFileFinder) Expand(runtime *Runtime) (FuObject, error) {
 	return result, nil
 }
 
-// Scan pattern for valid uses of the recursive glob pattern "**/". If
-// exactly one valid pattern is found, return prefix for pattern
-// before the "**/" and tail for the part after it. If no recursive
-// glob found, return prefix == pattern and tail == "". Otherwise
-// return an error describing exactly what is wrong with the pattern.
-func findRecursive(pattern string) (prefix, tail string, err error) {
+// Scan pattern for the recursive glob pattern "**". If any are found,
+// return recursive = true, prefix = pattern up to the first "**/" and
+// tail = the part after it. If no recursive glob found, return
+// recursive = false. Otherwise return an error describing exactly
+// what is wrong with the pattern.
+func splitPattern(pattern string) (
+	recursive bool,
+	prefix, tail string,
+	err error) {
 	idx := strings.Index(pattern, "**")
 	if idx == -1 {
-		prefix = pattern
+		recursive = false
 		return
 	}
 	if idx > 0 && pattern[idx-1] != '/' {
@@ -86,8 +87,9 @@ func findRecursive(pattern string) (prefix, tail string, err error) {
 			"by / and at least one more character")
 		return
 	}
+	recursive = true
 	if idx == 0 {
-		prefix = ""
+		prefix = "."
 	} else {
 		prefix = pattern[0:idx-1]
 	}
@@ -103,26 +105,28 @@ func recursiveGlob(prefix, tail string) ([]string, error) {
 	// prefix might be "", "foo", "fo?", or "fo?/*/b*r": let
 	// filepath.Glob() find all matching filenames, and then reduce
 	// the list to matching directories
+
+	// XXX using filepath.Glob() means that sometimes we allow \ as an
+	// escape character, and sometimes we don't: I suspect we're just
+	// gonna have to reimplement filepath.Glob() and friends to get
+	// exactly the syntax we want ;-(
+
+	allmatches, err := filepath.Glob(prefix)
+	if err != nil {
+		return nil, err
+	}
 	var dirmatches []string
-	if prefix == "" {
-		dirmatches = []string {"."}
-	} else {
-		allmatches, err := filepath.Glob(prefix)
+	for _, name := range allmatches {
+		info, err := os.Stat(name)
 		if err != nil {
 			return nil, err
 		}
-		for _, name := range allmatches {
-			info, err := os.Stat(name)
-			if err != nil {
-				return nil, err
-			}
-			if info.IsDir() {
-				dirmatches = append(dirmatches, name)
-			}
+		if info.IsDir() {
+			dirmatches = append(dirmatches, name)
 		}
 	}
 
-	tail, err := translateGlob(tail)
+	tail, err = translateGlob(tail)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +136,7 @@ func recursiveGlob(prefix, tail string) ([]string, error) {
 	}
 
 	// Recursively walk each directory matched by prefix, testing
-	// every file found against tail.
+	// every file found against tailre.
 	var curdir string
 	var matches []string
 	var choplen int				// leading bytes to ignore
@@ -147,7 +151,7 @@ func recursiveGlob(prefix, tail string) ([]string, error) {
 		}
 
 		relevant := path[choplen:]
-		if tailre.FindString(relevant) != "" {
+		if !info.IsDir() && tailre.FindString(relevant) != "" {
 			matches = append(matches, path)
 		}
 		return nil
@@ -169,21 +173,32 @@ func recursiveGlob(prefix, tail string) ([]string, error) {
 	return matches, nil
 }
 
-// translate a Unix wildcard pattern (same syntax as path/filepath.Match())
-// to an uncompiled regular expression
+// Translate a Unix wildcard pattern to a regular expression (caller
+// must compile it). Syntax:
+// - "*" matches zero or more non-separator characters
+//   (where separator is platform-dependent / or \)
+// - "?" matches exactly one non-separator character
+// - "[<range>]" matches exactly one character in <range> (using
+//   RE2 regex syntax)
+// - "**" matches zero or more characters (including separators) --
+//   effectively a recursive search
 func translateGlob(glob string) (string, error) {
 	re := []byte {}
 	for i := 0; i < len(glob); i++ {
 		ch := glob[i]
 		switch ch {
 		case '*':
-			re = append(re, "[^/]*"...)
+			if i+1 < len(glob) && glob[i+1] == '*' {
+				re = append(re, ".*"...)
+				i++
+			} else {
+				re = append(re, "[^/]*"...)
+			}
 		case '?':
 			re = append(re, "[^/]"...)
 		case '.':
 			re = append(re, "\\."...)
 		case '[':
-			//re = append(re, '[')
 			for ; i < len(glob) && glob[i] != ']'; i++ {
 				re = append(re, glob[i])
 			}

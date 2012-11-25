@@ -19,6 +19,10 @@ func Test_translateGlob(t *testing.T) {
 		{"*.c", "[^/]*\\.c$"},
 		{"foo[abc]", "foo[abc]$"},
 		{"foo[a-m]*.bop", "foo[a-m][^/]*\\.bop$"},
+		{"foo/**/bar", "foo/.*/bar$"},
+		{"**/foo/bar", ".*/foo/bar$"},
+		{"foo/bar/**", "foo/bar/.*$"},
+		{"foo/**/bar/**/baz/**", "foo/.*/bar/.*/baz/.*$"},
 	}
 
 	for _, pair := range tests {
@@ -55,47 +59,54 @@ func Test_translateGlob(t *testing.T) {
 	}
 }
 
-func Test_findRecursive_no_recursive(t *testing.T) {
-	var prefix, tail string
-	var err error
-	prefix, tail, err = findRecursive("")
-	assert.Nil(t, err)
-	assert.True(t, prefix == "" && tail == "")
+func Test_splitPattern_no_recursive(t *testing.T) {
+	patterns := []string {
+		"",
+		"foobar",
+		"foo/b?r/*/blah/*.[ch]",
+	}
+	for _, pattern := range patterns {
+		recursive, _, _, err := splitPattern(pattern)
+		assert.False(t, recursive)
+		assert.Nil(t, err)
+	}
 
-	prefix, tail, err = findRecursive("foobar")
-	assert.Nil(t, err)
-	assert.True(t, prefix == "foobar" && tail == "")
 
-	prefix, tail, err = findRecursive("foo/b?r/*/blah/*.[ch]")
-	assert.Nil(t, err)
-	assert.True(t, prefix == "foo/b?r/*/blah/*.[ch]" && tail == "")
+
+
+	// var prefix, tail string
+	// var err error
+	// recursive, prefix, tail, err = splitPattern("")
+	// assert.Nil(t, err)
+	// assert.True(t, prefix == "" && tail == "")
+
+	// recursive, prefix, tail, err = splitPattern("foobar")
+	// assert.Nil(t, err)
+	// assert.True(t, prefix == "foobar" && tail == "")
+
+	// recursive, prefix, tail, err = splitPattern("foo/b?r/*/blah/*.[ch]")
+	// assert.Nil(t, err)
+	// assert.True(t, prefix == "foo/b?r/*/blah/*.[ch]" && tail == "")
 }
 
-func Test_findRecursive_valid_recursive(t *testing.T) {
-	var prefix, tail string
-	var err error
-	prefix, tail, err = findRecursive("**/*.c")
-	assert.Nil(t, err)
-	assert.Equal(t, "", prefix)
-	assert.Equal(t, "*.c", tail)
+func Test_splitPattern_valid_recursive(t *testing.T) {
+	tests := []struct {glob string; prefix string; tail string} {
+		{"**/*.c", ".", "*.c"},
+		{"**/foo/b?r/*.[ch]", ".", "foo/b?r/*.[ch]"},
+		{"foo/**/*.c", "foo", "*.c"},
+		{"f?o/*/**/?eep/*.[ch]", "f?o/*", "?eep/*.[ch]"},
+	}
 
-	prefix, tail, err = findRecursive("**/foo/b?r/*.[ch]")
-	assert.Nil(t, err)
-	assert.Equal(t, "", prefix)
-	assert.Equal(t, "foo/b?r/*.[ch]", tail)
-
-	prefix, tail, err = findRecursive("foo/**/*.c")
-	assert.Nil(t, err)
-	assert.Equal(t, "foo", prefix)
-	assert.Equal(t, "*.c", tail)
-
-	prefix, tail, err = findRecursive("f?o/*/**/?eep/*.[ch]")
-	assert.Nil(t, err)
-	assert.Equal(t, "f?o/*", prefix)
-	assert.Equal(t, "?eep/*.[ch]", tail)
+	for _, test := range tests {
+		recursive, prefix, tail, err := splitPattern(test.glob)
+		assert.True(t, recursive)
+		assert.Nil(t, err)
+		assert.Equal(t, test.prefix, prefix)
+		assert.Equal(t, test.tail, tail)
+	}
 }
 
-func Test_findRecursive_invalid(t *testing.T) {
+func Test_splitPattern_invalid(t *testing.T) {
 	patterns := []string {
 		"**",
 		"**/",
@@ -106,7 +117,7 @@ func Test_findRecursive_invalid(t *testing.T) {
 	}
 
 	for _, pattern := range patterns {
-		_, _, err := findRecursive(pattern)
+		_, _, _, err := splitPattern(pattern)
 		assert.NotNil(t, err)
 	}
 }
@@ -138,7 +149,7 @@ func Test_FuFileFinder_Expand_empty(t *testing.T) {
 	assertExpand(t, []string {}, ff)
 }
 
-func Test_FuFileFinder_single_include(t *testing.T) {
+func Test_FuFileFinder_Expand_single_include(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
@@ -163,9 +174,58 @@ func Test_FuFileFinder_single_include(t *testing.T) {
 	assertExpand(t, []string {"include/bip.h"}, ff)
 }
 
+func Test_FuFileFinder_Expand_double_recursion(t *testing.T) {
+	// Java programmers love this sort of insanely deep structure, and
+	// Ant supports patterns with multiple occurences of "**" ... so I
+	// guess Fubsy has to support them too!
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	mkdirs(
+		"app1/src/main/org/example/app1/subpkg",
+		"app1/src/test/org/example/app1/subpkg",
+		"misc/app2/src/main/org/example/app2",
+		"misc/app3/src/main/org/example/app3",
+		"misc/app3/src/test/org/example/app3",
+		)
+	touchfiles(
+		"app1/src/main/org/example/app1/App1.java",
+		"app1/src/main/org/example/app1/Util.java",
+		"app1/src/main/org/example/app1/doc.txt",
+		"app1/src/main/org/example/app1/subpkg/Stuff.java",
+		"app1/src/main/org/example/app1/subpkg/MoreStuff.java",
+		"app1/src/test/org/example/app1/StuffTest.java",
+		"misc/app2/src/main/org/example/app2/App2.java",
+		"misc/app3/src/main/org/example/app3/App3.java",
+		"misc/app3/src/main/org/example/app3/Helpers.java",
+		"misc/app3/src/test/org/example/app3/TestHelpers.java",
+		"misc/app3/src/test/org/example/app3/testdata",
+		)
+
+	var ff *FuFileFinder
+	var expect []string
+	ff = NewFileFinder([]string {"**/test/**/*.java"})
+	expect = []string {
+		"app1/src/test/org/example/app1/StuffTest.java",
+		"misc/app3/src/test/org/example/app3/TestHelpers.java",
+	}
+	assertExpand(t, expect, ff)
+
+	ff = NewFileFinder([]string {"**/test/**/*"})
+	expect = []string {
+		"app1/src/test/org/example/app1/StuffTest.java",
+		"misc/app3/src/test/org/example/app3/TestHelpers.java",
+		"misc/app3/src/test/org/example/app3/testdata",
+	}
+	assertExpand(t, expect, ff)
+
+	ff = NewFileFinder([]string {"**/test/**"})
+	assertExpand(t, expect, ff)
+}
+
 func mkdirs(dirs ...string) {
 	for _, dir := range dirs {
-		if err := os.Mkdir(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0755); err != nil {
 			panic(err)
 		}
 	}
