@@ -36,10 +36,14 @@ func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
 		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
 	}
 
-	// uh, what if self.chain is already set?
 	result := NewFileFinder(self.includes)
 	result.excludes = self.excludes
-	result.chain = other
+	result.chain = self.chain
+	prev := result
+	for cur := self.chain; cur != nil; cur = cur.chain {
+		prev = cur
+	}
+	prev.chain = other
 	return result, nil
 }
 

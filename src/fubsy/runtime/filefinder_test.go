@@ -241,6 +241,14 @@ func Test_FileFinder_Add(t *testing.T) {
 	actual, err := sum.Expand(nil)
 	assert.Nil(t, err)
 	assert.Equal(t, expect, actual)
+
+	ff3 := NewFileFinder([]string {"*c*/?o?.h"})
+	expect = append(expect, makeFuList("include/bop.h", "src/foo.h")...)
+	sum, err = sum.Add(ff3)
+	actual, err = sum.Expand(nil)
+	assert.Nil(t, err)
+	assert.Equal(t, expect, actual)
+
 }
 
 func mkdirs(dirs ...string) {
