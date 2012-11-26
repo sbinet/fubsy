@@ -10,8 +10,7 @@ import (
 
 func Test_Runtime_assign(t *testing.T) {
 	// AST for a = "foo"
-	node := dsl.NewASTAssignment(
-		stubtoken{"a"}, stringnode("foo"))
+	node := dsl.NewASTAssignment("a", stringnode("foo"))
 	rt := &Runtime{}
 	ns := NewNamespace()
 
@@ -33,17 +32,17 @@ func Test_Runtime_evaluate_simple(t *testing.T) {
 	// to that string in the local namespace...
 	ns := rt.locals
 	ns["foo"] = expect
-	nnode := dsl.NewASTName(stubtoken{"foo"})
+	nnode := dsl.NewASTName("foo")
 	assertEvaluateOK(t, rt, expect, nnode)
 
 	// ... and to an error if the variable is not defined
-	nnode = dsl.NewASTName(stubtoken{"boo"})
+	nnode = dsl.NewASTName("boo")
 	assertEvaluateFail(t, rt, "undefined variable 'boo'", nnode)
 
 	// expression <*.c blah> evaluates to a FileFinder with two
 	// include patterns
-	patterns := []dsl.Token {stubtoken{"*.c"}, stubtoken{"blah"}}
-	flnode := dsl.NewASTFileList(nil, patterns, nil)
+	patterns := []string {"*.c", "blah"}
+	flnode := dsl.NewASTFileList(patterns)
 	expect = &FuFileFinder{includes: []string {"*.c", "blah"}}
 	assertEvaluateOK(t, rt, expect, flnode)
 }
@@ -51,7 +50,7 @@ func Test_Runtime_evaluate_simple(t *testing.T) {
 func stringnode(value string) *dsl.ASTString {
 	// NewASTString takes a token, which comes quoted
 	value = "\"" + value + "\""
-	return dsl.NewASTString(stubtoken{value})
+	return dsl.NewASTString(value)
 }
 
 func assertIn(t *testing.T, ns Namespace, name string, expect FuObject) {
@@ -91,16 +90,3 @@ func assertEvaluateFail(
 		t.Errorf("expected obj == nil, but got %#v", obj)
 	}
 }
-
-type stubtoken struct {
-	text string
-}
-
-func (tok stubtoken) Location() dsl.Location {
-	return dsl.Location{}
-}
-
-func (tok stubtoken) Text() string {
-	return tok.text
-}
-

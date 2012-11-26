@@ -18,7 +18,7 @@ const BADTOKEN = -1
 	nodelist []ASTNode
 	expr ASTExpression
 	exprlist []ASTExpression
-	tokenlist []Token
+	tokenlist []token
 }
 
 %type <root> script
@@ -44,7 +44,7 @@ const BADTOKEN = -1
 %type <expr> filelist
 %type <tokenlist> patternlist
 
-%token <token> IMPORT PLUGIN INLINE NAME QSTRING FILEPATTERN
+%token <token> IMPORT PLUGIN INLINE NAME QSTRING FILEPATTERN R3BRACE
 %token <token> '(' ')' '<' '>' '{' '}'
 %token EOL EOF PLUGIN L3BRACE R3BRACE
 
@@ -81,7 +81,7 @@ element:
 import:
 	IMPORT dottedname
 	{
-		$$ = NewASTImport($1, $2)
+		$$ = NewASTImport(extractText($2), $1, $2[len($2)-1])
 	}
 
 dottedname:
@@ -91,7 +91,7 @@ dottedname:
 	}
 |	NAME
 	{
-		$$ = []Token {$1}
+		$$ = []token {$1}
 	}
 
 global:
@@ -100,23 +100,23 @@ global:
 inline:
 	PLUGIN NAME L3BRACE INLINE R3BRACE
 	{
-		$$ = NewASTInline($1, $2, $4)
+		$$ = NewASTInline($2.text, $4.text, $1, $5)
 	}
 
 phase:
 	NAME block
 	{
-		$$ = NewASTPhase($1, $2.(*ASTBlock))
+		$$ = NewASTPhase($1.text, $2.(*ASTBlock), $1, $2)
 	}
 
 block:
 	'{' EOL statementlist '}'
 	{
-		$$ = NewASTBlock($1, $3, $4)
+		$$ = NewASTBlock($3, $1, $4)
 	}
 |	'{' '}'
 	{
-		$$ = NewASTBlock($1, []ASTNode {}, $2)
+		$$ = NewASTBlock([]ASTNode {}, $1, $2)
 	}
 
 statementlist:
@@ -137,7 +137,7 @@ statement:
 assignment:
 	NAME '=' expr
 	{
-		$$ = NewASTAssignment($1, $3)
+		$$ = NewASTAssignment($1.text, $3, $1, $3)
 	}
 
 buildrule:
@@ -162,14 +162,14 @@ postfixexpr:
 
 primaryexpr:
 	'(' expr ')'			{ $$ = $2 }
-|	NAME					{ $$ = NewASTName($1) }
-|	QSTRING					{ $$ = NewASTString($1)}
+|	NAME					{ $$ = NewASTName($1.text, $1) }
+|	QSTRING					{ $$ = NewASTString($1.text, $1)}
 |	filelist				{ $$ = $1}
 
 filelist:
 	'<' patternlist '>'
 	{
-		$$ = NewASTFileList($1, $2, $3)
+		$$ = NewASTFileList(extractText($2), $1, $3)
 	}
 
 patternlist:
@@ -179,21 +179,21 @@ patternlist:
 	}
 |	FILEPATTERN
 	{
-		$$ = []Token {$1}
+		$$ = []token {$1}
 	}
 
 functioncall:
 	postfixexpr '(' ')'
 	{
-		$$ = NewASTFunctionCall($1, []ASTExpression {}, $3)
+		$$ = NewASTFunctionCall($1, []ASTExpression {}, $1, $3)
 	}
 |	postfixexpr '(' arglist ')'
 	{
-		$$ = NewASTFunctionCall($1, $3, $4)
+		$$ = NewASTFunctionCall($1, $3, $1, $4)
 	}
 |	postfixexpr '(' arglist ',' ')'
 	{
-		$$ = NewASTFunctionCall($1, $3, $5)
+		$$ = NewASTFunctionCall($1, $3, $1, $5)
 	}
 
 arglist:
@@ -209,7 +209,7 @@ arglist:
 selection:
 	postfixexpr '.' NAME
 	{
-		$$ = NewASTSelection($1, $3)
+		$$ = NewASTSelection($1, $3.text, $1, $3)
 	}
 
 %%
@@ -260,4 +260,12 @@ func (self *Parser) Error(e string) {
 	self.syntaxerror = &SyntaxError{
 		badtoken: &self.tokens[self.next-1],
 		message: e}
+}
+
+func extractText(tokens []token) []string {
+	text := make([]string, len(tokens))
+	for i, token := range tokens {
+		text[i] = token.Text()
+	}
+	return text
 }

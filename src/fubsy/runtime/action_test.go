@@ -17,20 +17,19 @@ func Test_SequenceAction_create(t *testing.T) {
 	assert.Nil(t, action.Execute())
 
 	// action 1 is a bare string: "ls -lR foo/bar"
-	cmd := dsl.NewASTString(stubtoken{"\"ls -lR foo/bar\""})
+	cmd := dsl.NewASTString("\"ls -lR foo/bar\"")
 	action.addCommand(cmd)
 
 	// action 2: a = "foo"
 	assign := dsl.NewASTAssignment(
-		stubtoken{"a"},
-		dsl.NewASTString(stubtoken{"foo"}))
+		"a",
+		dsl.NewASTString("foo"))
 	action.addAssignment(assign)
 
 	// action 3: remove("*.o")
 	fcall := dsl.NewASTFunctionCall(
-		dsl.NewASTString(stubtoken{"remove"}),
-		[]dsl.ASTExpression {dsl.NewASTString(stubtoken{"\"*.c\""})},
-		nil)
+		dsl.NewASTString("remove"),
+		[]dsl.ASTExpression {dsl.NewASTString("\"*.c\"")})
 	action.addFunctionCall(fcall)
 
 	assert.Equal(t, 3, len(action.subactions))

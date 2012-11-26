@@ -50,14 +50,6 @@ type Locatable interface {
 	Location() Location
 }
 
-// something with a Location and text (so this file does not know
-// about token, which is defined in fugrammar.y -- trying to avoid
-// dependency cycles within the package)
-type Token interface {
-	Locatable
-	Text() string
-}
-
 type astbase struct {
 	location Location
 }
@@ -221,12 +213,10 @@ func (self *ASTRoot) FindPhase(name string) *ASTPhase {
 	return nil
 }
 
-func NewASTImport(keyword Locatable, names []Token) *ASTImport {
-	location := mergeLocations(keyword, names[len(names)-1])
-	plugin := extractText(names)
+func NewASTImport(dottedname []string, location ...Locatable) *ASTImport {
 	return &ASTImport{
-		astbase: astbase{location},
-		plugin: plugin}
+		astbase: astLocation(location),
+		plugin: dottedname}
 }
 
 func (self *ASTImport) Dump(writer io.Writer, indent string) {
@@ -240,12 +230,11 @@ func (self *ASTImport) Equal(other_ ASTNode) bool {
 	return false
 }
 
-func NewASTInline(keyword Locatable, lang Token, content Token) *ASTInline {
-	location := mergeLocations(keyword, content)
+func NewASTInline(lang string, content string, location ...Locatable) *ASTInline {
 	return &ASTInline{
-		astbase: astbase{location},
-		lang: lang.Text(),
-		content: content.Text()}
+		astbase: astLocation(location),
+		lang: lang,
+		content: content}
 }
 
 func (self *ASTInline) Dump(writer io.Writer, indent string) {
@@ -272,11 +261,10 @@ func (self *ASTInline) Equal(other_ ASTNode) bool {
 	return false
 }
 
-func NewASTPhase(name Token, block *ASTBlock) *ASTPhase {
-	location := mergeLocations(name, block)
+func NewASTPhase(name string, block *ASTBlock, location ...Locatable) *ASTPhase {
 	return &ASTPhase{
-		astbase: astbase{location},
-		name: name.Text(),
+		astbase: astLocation(location),
+		name: name,
 		children: block.children}
 }
 
@@ -301,10 +289,9 @@ func (self *ASTPhase) Equal(other_ ASTNode) bool {
 	return false
 }
 
-func NewASTBlock(opener Token, children []ASTNode, closer Token) *ASTBlock {
-	location := mergeLocations(opener, closer)
+func NewASTBlock(children []ASTNode, location ...Locatable) *ASTBlock {
 	return &ASTBlock{
-		astbase: astbase{location},
+		astbase: astLocation(location),
 		children: children}
 }
 
@@ -316,11 +303,10 @@ func (self *ASTBlock) Equal(other ASTNode) bool {
 	panic("Equal() not supported for ASTBlock (transient node type)")
 }
 
-func NewASTAssignment(target Token, expr ASTExpression) *ASTAssignment {
-	location := mergeLocations(target, expr)
+func NewASTAssignment(name string, expr ASTExpression, location ...Locatable) *ASTAssignment {
 	return &ASTAssignment{
-		astbase: astbase{location},
-		target: target.Text(),
+		astbase: astLocation(location),
+		target: name,
 		expr: expr}
 }
 
@@ -430,10 +416,9 @@ func (self *ASTAdd) Operands() (ASTExpression, ASTExpression) {
 func NewASTFunctionCall(
 	function ASTExpression,
 	args []ASTExpression,
-	closer Locatable) *ASTFunctionCall {
-	location := mergeLocations(function, closer)
+	location ...Locatable) *ASTFunctionCall {
 	return &ASTFunctionCall{
-		astbase: astbase{location},
+		astbase: astLocation(location),
 		function: function,
 		args: args}
 }
@@ -464,12 +449,11 @@ func (self *ASTFunctionCall) String() string {
 	return fmt.Sprintf("%s(%d args)", self.function, len(self.args))
 }
 
-func NewASTSelection(container ASTExpression, member Token) *ASTSelection {
-	location := mergeLocations(container, member)
+func NewASTSelection(container ASTExpression, member string, location ...Locatable) *ASTSelection {
 	return &ASTSelection{
-		astbase: astbase{location},
+		astbase: astLocation(location),
 		container: container,
-		member: member.Text()}
+		member: member}
 }
 
 func (self *ASTSelection) Dump(writer io.Writer, indent string) {
@@ -490,10 +474,10 @@ func (self *ASTSelection) String() string {
 	return fmt.Sprintf("%s.%s", self.container, self.member)
 }
 
-func NewASTName(tok Token) *ASTName {
+func NewASTName(name string, location ...Locatable) *ASTName {
 	return &ASTName{
-		astbase: astbase{tok.Location()},
-		name: tok.Text()}
+		astbase: astLocation(location),
+		name: name}
 }
 
 func (self *ASTName) Dump(writer io.Writer, indent string) {
@@ -515,15 +499,29 @@ func (self *ASTName) Name() string {
 	return self.name
 }
 
-func NewASTString(value Token) *ASTString {
+func NewASTString(toktext string, location ...Locatable) *ASTString {
 	// strip the quotes: they're preserved by the tokenizer, but not
 	// part of the string value (but note that the node location still
 	// encompasses the quotes!)
-	text := value.Text()
-	text = text[1:len(text)-1]
+	value := toktext[1:len(toktext)-1]
 	return &ASTString{
-		astbase: astbase{value.Location()},
-		value: text}
+		astbase: astLocation(location),
+		value: value}
+}
+
+func astLocation(locations []Locatable) astbase {
+	switch len(locations) {
+	case 0:
+		return astbase{Location{}}
+	case 1:
+		return astbase{locations[0].Location()}
+	case 2:
+		//return astbase{locations[0].merge(locations[1])}
+		return astbase{mergeLocations(locations[0], locations[1])}
+	default:
+		panic("too many Locations passed to AST constructor (max 2)")
+	}
+	panic("unreachable code")
 }
 
 func (self *ASTString) Dump(writer io.Writer, indent string) {
@@ -547,14 +545,10 @@ func (self *ASTString) Value() string {
 	return self.value
 }
 
-func NewASTFileList(
-	opener Token,
-	patterns []Token,
-	closer Token) *ASTFileList {
-	location := mergeLocations(opener, closer)
+func NewASTFileList(patterns []string, location ...Locatable) *ASTFileList {
 	return &ASTFileList{
-		astbase: astbase{location},
-		patterns: extractText(patterns)}
+		astbase: astLocation(location),
+		patterns: patterns}
 }
 
 func (self *ASTFileList) Dump(writer io.Writer, indent string) {
@@ -575,14 +569,6 @@ func (self *ASTFileList) String() string {
 
 func (self *ASTFileList) Patterns() []string {
 	return self.patterns
-}
-
-func extractText(tokens []Token) []string {
-	text := make([]string, len(tokens))
-	for i, token := range tokens {
-		text[i] = token.Text()
-	}
-	return text
 }
 
 func listsEqual(alist []ASTNode, blist []ASTNode) bool {

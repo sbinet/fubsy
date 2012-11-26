@@ -29,6 +29,11 @@ func newLocation(fileinfo *fileinfo) Location {
 	return Location{fileinfo, -1, -1}
 }
 
+// this is so Location implements Locatable, just like Token and ASTNode
+func (self Location) Location() Location {
+	return self
+}
+
 func (self Location) String() string {
 	if self.fileinfo == nil {
 		// don't panic on uninitialized Location object
