@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"fubsy/dsl"
+	"fubsy/dag"
 )
 
 type Namespace map[string] FuObject
@@ -129,17 +130,15 @@ func (self *Runtime) addRule(node *dsl.ASTBuildRule) error {
 	}
 	fmt.Printf("sources = %T %v, err = %v\n", sources, sources, err)
 
-	rule := NewBuildRule(self, targets, sources)
-
-	allactions := NewSequenceAction(rule)
+	allactions := dag.NewSequenceAction()
 	for _, action_ := range node.Actions() {
 		switch action := action_.(type) {
 		case *dsl.ASTString:
-			allactions.addCommand(action)
+			allactions.AddCommand(action)
 		case *dsl.ASTAssignment:
-			allactions.addAssignment(action)
+			allactions.AddAssignment(action)
 		case *dsl.ASTFunctionCall:
-			allactions.addFunctionCall(action)
+			allactions.AddFunctionCall(action)
 		}
 	}
 

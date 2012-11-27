@@ -1,4 +1,4 @@
-package runtime
+package dag
 
 import (
 	"fmt"
@@ -16,8 +16,6 @@ type Action interface {
 }
 
 type actionbase struct {
-	runtime *Runtime
-	rule *BuildRule
 }
 
 // an action that just consists of a list of other actions
@@ -52,9 +50,8 @@ type FunctionCallAction struct {
 	fcall *dsl.ASTFunctionCall
 }
 
-func NewSequenceAction(rule *BuildRule) *SequenceAction {
+func NewSequenceAction() *SequenceAction {
 	result := new(SequenceAction)
-	result.rule = rule
 	return result
 }
 
@@ -69,20 +66,20 @@ func (self *SequenceAction) Execute() error {
 	return nil
 }
 
-func (self *SequenceAction) addAction(action Action) {
+func (self *SequenceAction) AddAction(action Action) {
 	self.subactions = append(self.subactions, action)
 }
 
-func (self *SequenceAction) addCommand(command *dsl.ASTString) {
-	self.addAction(&CommandAction{raw: command.Value()})
+func (self *SequenceAction) AddCommand(command *dsl.ASTString) {
+	self.AddAction(&CommandAction{raw: command.Value()})
 }
 
-func (self *SequenceAction) addAssignment(assignment *dsl.ASTAssignment) {
-	self.addAction(&AssignmentAction{assignment: assignment})
+func (self *SequenceAction) AddAssignment(assignment *dsl.ASTAssignment) {
+	self.AddAction(&AssignmentAction{assignment: assignment})
 }
 
-func (self *SequenceAction) addFunctionCall(fcall *dsl.ASTFunctionCall) {
-	self.addAction(&FunctionCallAction{fcall: fcall})
+func (self *SequenceAction) AddFunctionCall(fcall *dsl.ASTFunctionCall) {
+	self.AddAction(&FunctionCallAction{fcall: fcall})
 }
 
 
