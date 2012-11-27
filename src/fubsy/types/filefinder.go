@@ -1,4 +1,4 @@
-package runtime
+package types
 
 import (
 	"os"
@@ -68,7 +68,7 @@ func (self *FuFileFinder) typename() string {
 // Walk the filesystem for files matching this FileFinder's include
 // patterns. Return the list of matching filenames as a FuList of
 // FuString.
-func (self *FuFileFinder) Expand(runtime *Runtime) (FuObject, error) {
+func (self *FuFileFinder) Expand() (FuObject, error) {
 	result := make(FuList, 0)
 	var matches []string
 	for _, pattern := range self.includes {
@@ -273,10 +273,10 @@ func (self *FuFinderList) Add(other_ FuObject) (FuObject, error) {
 	return result, nil
 }
 
-func (self *FuFinderList) Expand(runtime *Runtime) (FuObject, error) {
+func (self *FuFinderList) Expand() (FuObject, error) {
 	result := make(FuList, 0)
 	for _, element := range self.elements {
-		batch, err := element.Expand(runtime)
+		batch, err := element.Expand()
 		if err != nil {
 			return nil, err
 		}

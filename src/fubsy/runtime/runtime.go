@@ -4,21 +4,17 @@ import (
 	"fmt"
 	"strings"
 	"fubsy/dsl"
+	"fubsy/types"
 	"fubsy/dag"
 )
 
-type Namespace map[string] FuObject
+type Namespace map[string] types.FuObject
 
 type Runtime struct {
 	script string				// filename
 	ast dsl.AST
 
 	locals Namespace
-}
-
-type RuntimeError struct {
-	location dsl.Location
-	message string
 }
 
 func NewNamespace() Namespace {
@@ -72,14 +68,14 @@ func (self *Runtime) assign(node *dsl.ASTAssignment, ns Namespace) error {
 	return nil
 }
 
-func (self *Runtime) evaluate (expr_ dsl.ASTExpression) (FuObject, error) {
+func (self *Runtime) evaluate (expr_ dsl.ASTExpression) (types.FuObject, error) {
 	switch expr := expr_.(type) {
 	case *dsl.ASTString:
-		return FuString(expr.Value()), nil
+		return types.FuString(expr.Value()), nil
 	case *dsl.ASTName:
 		return self.evaluateName(expr)
 	case *dsl.ASTFileList:
-		return NewFileFinder(expr.Patterns()), nil
+		return types.NewFileFinder(expr.Patterns()), nil
 	case *dsl.ASTAdd:
 		return self.evaluateAdd(expr)
 	default:
@@ -88,7 +84,7 @@ func (self *Runtime) evaluate (expr_ dsl.ASTExpression) (FuObject, error) {
 	panic("unreachable code")
 }
 
-func (self *Runtime) evaluateName(expr *dsl.ASTName) (FuObject, error) {
+func (self *Runtime) evaluateName(expr *dsl.ASTName) (types.FuObject, error) {
 	name := expr.Name()
 	if result, ok := self.locals[name]; ok {
 		return result, nil
@@ -100,7 +96,7 @@ func (self *Runtime) evaluateName(expr *dsl.ASTName) (FuObject, error) {
 	return nil, err
 }
 
-func (self *Runtime) evaluateAdd(expr *dsl.ASTAdd) (FuObject, error) {
+func (self *Runtime) evaluateAdd(expr *dsl.ASTAdd) (types.FuObject, error) {
 	op1, op2 := expr.Operands()
 	obj1, err := self.evaluate(op1)
 	if err != nil {
@@ -143,6 +139,13 @@ func (self *Runtime) addRule(node *dsl.ASTBuildRule) error {
 	}
 
 	return nil
+}
+
+// XXX this is identical to TypeError in types/basictypes.go:
+// factor out a common error type?
+type RuntimeError struct {
+	location dsl.Location
+	message string
 }
 
 func (self RuntimeError) Error() string {

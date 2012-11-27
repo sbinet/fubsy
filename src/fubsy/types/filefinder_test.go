@@ -1,4 +1,4 @@
-package runtime
+package types
 
 import (
 	"testing"
@@ -286,7 +286,7 @@ func touchfiles(filenames ...string) {
 }
 
 func assertExpand(t *testing.T, expect []string, obj FuObject) {
-	actual, err := obj.Expand(nil)
+	actual, err := obj.Expand()
 	assert.Nil(t, err)
 
 	expectobj := makeFuList(expect...)

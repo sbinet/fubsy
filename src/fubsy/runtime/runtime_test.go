@@ -6,6 +6,7 @@ import (
 	"github.com/stretchrcom/testify/assert"
 	"fubsy/testutils"
 	"fubsy/dsl"
+	"fubsy/types"
 )
 
 func Test_Runtime_assign(t *testing.T) {
@@ -15,17 +16,17 @@ func Test_Runtime_assign(t *testing.T) {
 	ns := NewNamespace()
 
 	rt.assign(node, ns)
-	expect := FuString("foo")
+	expect := types.FuString("foo")
 	assertIn(t, ns, "a", expect)
 }
 
 // evaluate simple expressions (no operators)
 func Test_Runtime_evaluate_simple(t *testing.T) {
 	// the expression "meep" evaluates to the string "meep"
-	var expect FuObject
+	var expect types.FuObject
 	snode := stringnode("meep")
 	rt := NewRuntime("", nil)
-	expect = FuString("meep")
+	expect = types.FuString("meep")
 	assertEvaluateOK(t, rt, expect, snode)
 
 	// the expression foo evaluates to the string "meep" if foo is set
@@ -43,7 +44,7 @@ func Test_Runtime_evaluate_simple(t *testing.T) {
 	// include patterns
 	patterns := []string {"*.c", "blah"}
 	flnode := dsl.NewASTFileList(patterns)
-	expect = &FuFileFinder{includes: []string {"*.c", "blah"}}
+	expect = types.NewFileFinder([]string {"*.c", "blah"})
 	assertEvaluateOK(t, rt, expect, flnode)
 }
 
@@ -53,7 +54,7 @@ func stringnode(value string) *dsl.ASTString {
 	return dsl.NewASTString(value)
 }
 
-func assertIn(t *testing.T, ns Namespace, name string, expect FuObject) {
+func assertIn(t *testing.T, ns Namespace, name string, expect types.FuObject) {
 	if actual, ok := ns[name]; ok {
 		if actual != expect {
 			t.Errorf("expected %#v, but got %#v", expect, actual)
@@ -66,7 +67,7 @@ func assertIn(t *testing.T, ns Namespace, name string, expect FuObject) {
 func assertEvaluateOK(
 	t *testing.T,
 	rt *Runtime,
-	expect FuObject,
+	expect types.FuObject,
 	input dsl.ASTExpression) {
 
 	obj, err := rt.evaluate(input)

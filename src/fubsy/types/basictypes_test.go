@@ -1,4 +1,4 @@
-package runtime
+package types
 
 import (
 	"testing"
@@ -52,7 +52,7 @@ func Test_FuString_Add_list(t *testing.T) {
 
 func Test_FuString_Expand(t *testing.T) {
 	input := FuString("meep meep!")
-	output, err := input.Expand(nil)
+	output, err := input.Expand()
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
 
@@ -94,7 +94,7 @@ func Test_FuList_Add_string(t *testing.T) {
 
 func Test_FuList_Expand(t *testing.T) {
 	input := makeFuList("gob", "mob")
-	output, err := input.Expand(nil)
+	output, err := input.Expand()
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
 }

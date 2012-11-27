@@ -1,11 +1,12 @@
 // The basic Fubsy type system: defines the FuObject interface and
 // core implementations of it (FuString, FuList).
 
-package runtime
+package types
 
 import (
 	"strings"
 	"fmt"
+	"fubsy/dsl"
 )
 
 type FuObject interface {
@@ -19,7 +20,7 @@ type FuObject interface {
 	// -O2". Expansion can involve conversions within Fubsy's type
 	// system: e.g. expanding a FuFileFinder might result in a FuList
 	// of file nodes.
-	Expand(runtime *Runtime) (FuObject, error)
+	Expand() (FuObject, error)
 
 	// Return a brief, human-readable description of the type of this
 	// object. Used in error messages.
@@ -55,7 +56,7 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 	panic("unreachable code")
 }
 
-func (self FuString) Expand(runtime *Runtime) (FuObject, error) {
+func (self FuString) Expand() (FuObject, error) {
 	// XXX variable expansion!!!
 	return self, nil
 }
@@ -93,11 +94,11 @@ func (self FuList) Add(other_ FuObject) (FuObject, error) {
 	panic("unreachable code")
 }
 
-func (self FuList) Expand(runtime *Runtime) (FuObject, error) {
+func (self FuList) Expand() (FuObject, error) {
 	result := make(FuList, len(self))
 	var err error
 	for i, val := range self {
-		result[i], err = val.Expand(runtime)
+		result[i], err = val.Expand()
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +113,7 @@ func (self FuList) typename() string {
 func unsupportedOperation(self FuObject, other FuObject, detail string) error {
 	message := fmt.Sprintf("unsupported operation: " + detail,
 		other.typename(), self.typename())
-	return RuntimeError{message: message}
+	return TypeError{message: message}
 }
 
 // Convert a variable number of strings to a FuList of FuString.
@@ -122,4 +123,13 @@ func makeFuList(strings ...string) FuList {
 		result[i] = FuString(s)
 	}
 	return result
+}
+
+type TypeError struct {
+	location dsl.Location
+	message string
+}
+
+func (self TypeError) Error() string {
+	return self.location.String() + self.message
 }

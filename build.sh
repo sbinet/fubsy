@@ -22,7 +22,7 @@ go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y
 #benchopt="-test.bench=.*"
 
 # unoptimized (for debugging)
-packages="dsl dag runtime"
+packages="dsl types dag runtime"
 #packages="dsl"
 #packages="runtime"
 for pkg in $packages; do
