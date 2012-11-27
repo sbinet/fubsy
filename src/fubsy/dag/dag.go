@@ -29,7 +29,9 @@ package dag
 // and libstuff.so is a descendant of foo.h.
 
 import (
+	"io"
 	"fmt"
+	"code.google.com/p/go-bit/bit"
 )
 
 // This interface must not betray anything about the filesystem,
@@ -55,6 +57,17 @@ type Node interface {
 
 	// return the child nodes that depend on this node
 	//Children() []Node
+
+	// Set the action that must be executed to build this node from
+	// its parents. (This is a single Action because actions can be
+	// compound: in particular, SequenceAction is an implementation of
+	// Action that is just a sequence of other Actions.)
+	SetAction(action Action)
+
+	// Return the action previously passed to SetAction() (nil if no
+	// action has ever been set, which implies that this is an
+	// original source node).
+	Action() Action
 }
 
 type DAG struct {
@@ -69,6 +82,40 @@ func NewDAG() *DAG {
 	return &DAG{
 		nodes: make([]Node, 0),
 		index: make(map[string] int),
+	}
+}
+
+// Add the same set of parents (source nodes) to many children (target
+// nodes).
+func (self *DAG) AddManyParents(targets, sources []Node) {
+	// This could be optimized to take advantage of bitsets: collapse
+	// sources to a bitmask and OR that onto the parent set of each
+	// target.
+	for _, target := range targets {
+		for _, source := range sources {
+			target.AddParent(source)
+		}
+	}
+}
+
+// Write a compact, human-readable representation of the entire DAG to
+// writer. This faithfully represents the data structure as it exists
+// in memory; it doesn't try to make a fancy recursive tree-like
+// structure.
+func (self *DAG) Dump(writer io.Writer) {
+	for i, node := range self.nodes {
+		action := node.Action()
+		parents := node.Parents()
+		fmt.Fprintf(writer, "%04d: %s\n", i, node.Name())
+		if action != nil {
+			fmt.Fprintf(writer, "  action: %v\n", action)
+		}
+		if len(parents) > 0 {
+			fmt.Fprintf(writer, "  parents:\n")
+			for _, pnode := range parents {
+				fmt.Fprintf(writer, "    %04d: %s\n", pnode.Id(), pnode.Name())
+			}
+		}
 	}
 }
 
@@ -100,4 +147,61 @@ func (self *DAG) addNode(node Node) int {
 // Return the number of nodes in the DAG.
 func (self *DAG) length() int {
 	return len(self.nodes)
+}
+
+// Convenient base type for Node implementations -- provides the
+// basics right out of the box.
+
+type nodebase struct {
+	dag *DAG
+	id int
+	name string
+	parentset bit.Set
+	action Action
+}
+
+func makenodebase(dag *DAG, id int, name string) nodebase {
+	return nodebase{
+		dag: dag,
+		id: id,
+		name: name,
+	}
+}
+
+func (base *nodebase) Id() int {
+	return base.id
+}
+
+func (base *nodebase) Name() string {
+	return base.name
+}
+
+func (base *nodebase) Parents() []Node {
+	result := make([]Node, 0)
+	fetch := func(id int) {
+		result = append(result, base.dag.nodes[id])
+	}
+	base.parentset.Do(fetch)
+	return result
+}
+
+func (base *nodebase) AddParent (node Node) {
+	id := node.Id()
+	if id < 0 || id >= base.dag.length() {
+		panic(fmt.Sprintf(
+			"%v has impossible id %d (should be >= 0 && <= %d)",
+			node, id, base.dag.length() - 1))
+	}
+	if base.parentset.Contains(id) {
+		return
+	}
+	base.parentset.Add(id)
+}
+
+func (base *nodebase) SetAction (action Action) {
+	base.action = action
+}
+
+func (base *nodebase) Action() Action {
+	return base.action
 }

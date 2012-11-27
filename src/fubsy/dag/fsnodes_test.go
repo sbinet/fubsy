@@ -6,39 +6,39 @@ import (
 	"github.com/stretchrcom/testify/assert"
 )
 
-func Test_makeFileNode(t *testing.T) {
+func Test_MakeFileNode(t *testing.T) {
 	dag := NewDAG()
-	node0 := makeFileNode(dag, "foo")
+	node0 := MakeFileNode(dag, "foo")
 	assert.Equal(t, node0.name, "foo")
 	assert.Equal(t, node0.id, 0)
 	assert.True(t, dag.nodes[0] == node0)
 	assert.True(t, dag.index["foo"] == 0)
 
-	node1 := makeFileNode(dag, "bar")
+	node1 := MakeFileNode(dag, "bar")
 	assert.Equal(t, node1.name, "bar")
 	assert.Equal(t, node1.Id(), 1)
 	assert.True(t, dag.nodes[1] == node1)
 	assert.True(t, dag.index["bar"] == 1)
 
-	node0b := makeFileNode(dag, "foo")
+	node0b := MakeFileNode(dag, "foo")
 	assert.True(t, node0 == node0b)
 }
 
 func Test_FileNode_parents(t *testing.T) {
 	dag := NewDAG()
-	node := makeFileNode(dag, "foo/bar/qux")
+	node := MakeFileNode(dag, "foo/bar/qux")
 	expect := []string {}
 	assertParents(t, expect, node)
 
 	// add a single parent in isolation
-	p0 := makeFileNode(dag, "bong")
+	p0 := MakeFileNode(dag, "bong")
 	expect = []string {"bong"}
 	node.AddParent(p0)
 	assertParents(t, expect, node)
 
 	// add a couple more
-	p1 := makeFileNode(dag, "blorp")
-	p2 := makeFileNode(dag, "meep")
+	p1 := MakeFileNode(dag, "blorp")
+	p2 := MakeFileNode(dag, "meep")
 	node.AddParent(p1)
 	node.AddParent(p2)
 	expect = append(expect, "blorp", "meep")
@@ -52,7 +52,7 @@ func Test_FileNode_parents(t *testing.T) {
 
 func Test_FileNode_parents_order(t *testing.T) {
 	dag := NewDAG()
-	node := makeFileNode(dag, "foo")
+	node := MakeFileNode(dag, "foo")
 
 	// test that AddParent() preserves order (highly unlikely that
 	// hash order would preserve the sequence of 100 names by
@@ -62,7 +62,7 @@ func Test_FileNode_parents_order(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		name = fmt.Sprintf("file%02d", i)
 		expect[i] = name
-		node.AddParent(makeFileNode(dag, name))
+		node.AddParent(MakeFileNode(dag, name))
 	}
 	assertParents(t, expect, node)
 
@@ -75,12 +75,21 @@ func Test_FileNode_parents_order(t *testing.T) {
 	// random and not hash order. Asserting that it's ordered by node
 	// ID is a sanity check of the implementation, not part of the
 	// interface.
-	p1 := makeFileNode(dag, "p1")
-	p2 := makeFileNode(dag, "p2")
+	p1 := MakeFileNode(dag, "p1")
+	p2 := MakeFileNode(dag, "p2")
 	node.AddParent(p2)
 	node.AddParent(p1)
 	expect = append(expect, "p1", "p2")
 	assertParents(t, expect, node)
+}
+
+func Test_FileNode_action(t *testing.T) {
+	dag := NewDAG()
+	node := MakeFileNode(dag, "foo")
+
+	action := &CommandAction{raw: "ls -l"}
+	node.SetAction(action)
+	assert.Equal(t, action, node.Action())
 }
 
 func Benchmark_FileNode_AddParent(b *testing.B) {
@@ -88,11 +97,11 @@ func Benchmark_FileNode_AddParent(b *testing.B) {
 	dag := NewDAG()
 	nodes := make([]*FileNode, b.N)
 	for i := range nodes {
-		nodes[i] = makeFileNode(dag, fmt.Sprintf("file%04d", i))
+		nodes[i] = MakeFileNode(dag, fmt.Sprintf("file%04d", i))
 	}
 	b.StartTimer()
 
-	node := makeFileNode(dag, "bop")
+	node := MakeFileNode(dag, "bop")
 	for _, pnode := range nodes {
 		node.AddParent(pnode)
 	}

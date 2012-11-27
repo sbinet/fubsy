@@ -5,12 +5,15 @@ import (
 	"strings"
 	"regexp"
 	"errors"
+	"reflect"
 	"path/filepath"
 )
 
 // file-finding type; another implementation of FuObject, but more
 // elaborate than the basic types in basictypes.go
 type FuFileFinder struct {
+	id int
+
 	// include patterns: e.g. for <*.c foo/*.h>, includes will be
 	// {"*.c", "foo/*.h"}
 	includes []string
@@ -24,19 +27,35 @@ type FuFileFinder struct {
 // evaluates to a FuFinderList with three elements. Expanding
 // the FuFinderList expands each of its elements in turn.
 type FuFinderList struct {
+	id int
 	elements []*FuFileFinder
 }
 
+var ffid int = 0
+
 func NewFileFinder(includes []string) *FuFileFinder {
-	return &FuFileFinder{includes: includes}
+	ff := &FuFileFinder{id: ffid, includes: includes}
+	ffid++
+	return ff
+}
+
+func (self *FuFileFinder) Id() int {
+	return self.id
 }
 
 func (self *FuFileFinder) String() string {
 	return "<" + strings.Join(self.includes, " ") + ">"
 }
 
+func (self *FuFileFinder) Equal(other_ FuObject) bool {
+	other, ok := other_.(*FuFileFinder)
+	return (ok &&
+		reflect.DeepEqual(self.includes, other.includes) &&
+		reflect.DeepEqual(self.excludes, other.excludes))
+}
+
 func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
-	result := &FuFinderList{}
+	result := NewFinderList()
 	result.elements = []*FuFileFinder {self}
 	switch other := other_.(type) {
 	case *FuFileFinder:
@@ -68,6 +87,7 @@ func (self *FuFileFinder) typename() string {
 // Walk the filesystem for files matching this FileFinder's include
 // patterns. Return the list of matching filenames as a FuList of
 // FuString.
+// XXX this has to happen in the main phase, so using Expand() for this purpose is wrong!!!
 func (self *FuFileFinder) Expand() (FuObject, error) {
 	result := make(FuList, 0)
 	var matches []string
@@ -245,6 +265,16 @@ func translateGlob(glob string) (string, error) {
 	return string(re), nil
 }
 
+func NewFinderList() *FuFinderList {
+	fl := &FuFinderList{id: ffid}
+	ffid++
+	return fl
+}
+
+func (self *FuFinderList) Id() int {
+	return self.id
+}
+
 func (self *FuFinderList) typename() string {
 	return "file finder"		// hmmm: ambiguous, but clearer errors?
 }
@@ -255,6 +285,11 @@ func (self *FuFinderList) String() string {
 		result[i] = finder.String()
 	}
 	return strings.Join(result, " + ")
+}
+
+func (self *FuFinderList) Equal(other_ FuObject) bool {
+	other, ok := other_.(*FuFinderList)
+	return ok && reflect.DeepEqual(self.elements, other.elements)
 }
 
 func (self *FuFinderList) Add(other_ FuObject) (FuObject, error) {

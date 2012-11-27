@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"fubsy/dsl"
 	"fubsy/types"
@@ -15,6 +16,7 @@ type Runtime struct {
 	ast dsl.AST
 
 	locals Namespace
+	dag *dag.DAG
 }
 
 func NewNamespace() Namespace {
@@ -26,6 +28,7 @@ func NewRuntime(script string, ast dsl.AST) *Runtime {
 		script: script,
 		ast: ast,
 		locals: NewNamespace(),
+		dag: dag.NewDAG(),
 	}
 }
 
@@ -47,13 +50,19 @@ func (self *Runtime) runStatements(main *dsl.ASTPhase) []error {
 		case *dsl.ASTAssignment:
 			err = self.assign(node, self.locals)
 		case *dsl.ASTBuildRule:
-			err = self.addRule(node)
+			rule, err := self.makeRule(node)
+			if err == nil {
+				self.addRule(rule)
+			}
 		}
 
 		if err != nil {
 			errors = append(errors, err)
 		}
 	}
+	fmt.Println("dag:")
+	self.dag.Dump(os.Stdout)
+
 	return errors
 }
 
@@ -109,7 +118,7 @@ func (self *Runtime) evaluateAdd(expr *dsl.ASTAdd) (types.FuObject, error) {
 	return obj1.Add(obj2)
 }
 
-func (self *Runtime) addRule(node *dsl.ASTBuildRule) error {
+func (self *Runtime) makeRule(node *dsl.ASTBuildRule) (*BuildRule, error) {
 	// Evaluate the target and source lists, so we get one FuObject
 	// each. It might be a string, a list of strings, or a
 	// FuFileFinder... we just need to be able to get one or more
@@ -117,12 +126,12 @@ func (self *Runtime) addRule(node *dsl.ASTBuildRule) error {
 	fmt.Printf("adding build rule\n")
 	targets, err := self.evaluate(node.Targets())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	fmt.Printf("targets = %T %v, err = %v\n", targets, targets, err)
 	sources, err := self.evaluate(node.Sources())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	fmt.Printf("sources = %T %v, err = %v\n", sources, sources, err)
 
@@ -138,7 +147,81 @@ func (self *Runtime) addRule(node *dsl.ASTBuildRule) error {
 		}
 	}
 
+	rule := NewBuildRule(self, targets, sources)
+	rule.action = allactions
+	return rule, nil
+}
+
+func (self *Runtime) addRule(rule *BuildRule) error {
+	// Convert a single FuObject representing the targets (sources) --
+	// could be a single string (filename), list of strings,
+	// FuFileFinder, or FuFinderList -- to a list of Nodes in the DAG.
+	targets := self.nodify(rule.targets)
+	sources := self.nodify(rule.sources)
+
+	// Attach the rule's action to each target node.
+	for _, tnode := range targets {
+		tnode.SetAction(rule.action)
+	}
+
+	// And connect the nodes to each other (every source is a parent
+	// of every target).
+	self.dag.AddManyParents(targets, sources)
+
+	// umm: when can this fail?
 	return nil
+/*
+	// XXX this violates the definition of Expand(): it's supposed to
+	// happen in the build phase, but this code runs in the main phase.
+	targets, err := rule.targets.Expand(self)
+	if err != nil {
+		return err
+	}
+	sources, err := rule.sources.Expand(self)
+	if err != nil {
+		return err
+	}
+
+	// XXX assuming all sources and targets are regular files -- what
+	// if they are directories? symlinks? don't exist anymore (deleted
+	// in the window between Expand() and now)?
+
+	snodes := make([]dag.Node, len(sources))
+	for i, source := range sources {
+		snodes[i] = dag.MakeFileNode(self.dag)
+	}
+	tnodes := make([]dag.Node, len(targets))
+	for i, target := range targets {
+		tnodes[i] = dag.MakeFileNode(self.dag, target)
+		tnodes[i].SetAction(action)
+	}
+
+	self.dag.AddManyParents(tnodes, snodes)
+*/
+}
+
+// Convert a single FuObject (possibly a FuList or FuFinderList) to a
+// list of Nodes in the DAG.
+func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
+	// Blecchh: this limits the extensibility of the type system if we
+	// have handle every type specially here. But I don't want each
+	// type to know how it becomes a node, because then the 'types'
+	// package depends on 'dag', which seems backwards to me. Hmmmm.
+	var result []dag.Node
+	switch targets := targets_.(type) {
+	case types.FuString:
+		result = []dag.Node {dag.MakeFileNode(self.dag, targets.Value())}
+	case types.FuList:
+		filenames := targets.Values()
+		result := make([]dag.Node, len(filenames))
+		for i, fn := range filenames {
+			result[i] = dag.MakeFileNode(self.dag, fn)
+		}
+	case *types.FuFileFinder:
+	case *types.FuFinderList:
+		result = []dag.Node {dag.MakeGlobNode(self.dag, targets_)}
+	}
+	return result
 }
 
 // XXX this is identical to TypeError in types/basictypes.go:

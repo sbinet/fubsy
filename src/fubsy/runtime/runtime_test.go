@@ -2,7 +2,7 @@ package runtime
 
 import (
 	"testing"
-	"reflect"
+	//"reflect"
 	"github.com/stretchrcom/testify/assert"
 	"fubsy/testutils"
 	"fubsy/dsl"
@@ -74,7 +74,8 @@ func assertEvaluateOK(
 	assert.Nil(t, err)
 
 	// need to use DeepEqual() to handle (e.g.) slices inside structs
-	if !reflect.DeepEqual(expect, obj) {
+	//if !reflect.DeepEqual(expect, obj) {
+	if !expect.Equal(obj) {
 		t.Errorf("expected\n%#v\nbut got\n%#v", expect, obj)
 	}
 }

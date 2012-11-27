@@ -2,10 +2,13 @@ package dag
 
 import (
 	"fmt"
+	"strings"
 	"fubsy/dsl"
 )
 
 type Action interface {
+	String() string
+
 	// Perform whatever task this action implies. Return nil on
 	// success, error otherwise. Compound actions always fail on the
 	// first error; they do not continue executing. (The global
@@ -55,6 +58,19 @@ func NewSequenceAction() *SequenceAction {
 	return result
 }
 
+func (self *SequenceAction) String() string {
+	result := make([]string, len(self.subactions))
+	for i, sub := range self.subactions {
+		result[i] = sub.String()
+	}
+	var tail string
+	if len(result) > 3 {
+		result = result[0:3]
+		tail = " && ..."
+	}
+	return strings.Join(result, " && ") + tail
+}
+
 func (self *SequenceAction) Execute() error {
 	var err error
 	for _, sub := range self.subactions {
@@ -83,6 +99,10 @@ func (self *SequenceAction) AddFunctionCall(fcall *dsl.ASTFunctionCall) {
 }
 
 
+func (self *CommandAction) String() string {
+	return self.raw
+}
+
 func (self *CommandAction) Execute() error {
 	fmt.Println("expand:", self.raw)
 	panic("command execution not implemented yet")
@@ -91,8 +111,17 @@ func (self *CommandAction) Execute() error {
 	// fmt.Printf("execute:", self.expanded)
 }
 
+func (self *AssignmentAction) String() string {
+	return self.assignment.Target() + " = ..."
+	//return self.assignment.String()
+}
+
 func (self *AssignmentAction) Execute() error {
 	panic("assignment in build rule not implemented yet")
+}
+
+func (self *FunctionCallAction) String() string {
+	return self.fcall.String() + "(...)"
 }
 
 func (self *FunctionCallAction) Execute() error {

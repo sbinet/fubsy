@@ -6,11 +6,13 @@ package types
 import (
 	"strings"
 	"fmt"
+	"reflect"
 	"fubsy/dsl"
 )
 
 type FuObject interface {
 	String() string
+	Equal(FuObject) bool
 	Add(FuObject) (FuObject, error)
 
 	// Convert an object from its initial form, seen in the main phase
@@ -36,6 +38,15 @@ type FuList []FuObject
 
 
 func (self FuString) String() string {
+	return string(self)
+}
+
+func (self FuString) Equal(other_ FuObject) bool {
+	other, ok := other_.(FuString)
+	return ok && other == self
+}
+
+func (self FuString) Value() string {
 	return string(self)
 }
 
@@ -67,11 +78,20 @@ func (self FuString) typename() string {
 
 
 func (self FuList) String() string {
+	return "[" + strings.Join(self.Values(), ",") + "]"
+}
+
+func (self FuList) Equal(other_ FuObject) bool {
+	other, ok := other_.(FuList)
+	return ok && reflect.DeepEqual(self, other)
+}
+
+func (self FuList) Values() []string {
 	result := make([]string, len(self))
 	for i, obj := range self {
 		result[i] = obj.String()
 	}
-	return "[" + strings.Join(result, ",") + "]"
+	return result
 }
 
 func (self FuList) Add(other_ FuObject) (FuObject, error) {
