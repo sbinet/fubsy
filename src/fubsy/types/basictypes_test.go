@@ -10,6 +10,30 @@ func Test_FuString_String(t *testing.T) {
 	assert.Equal(t, "bip bop", s.String())
 }
 
+func Test_basictypes_Equal(t *testing.T) {
+	s1 := FuString("foo")
+	s2 := FuString("foo")
+	s3 := FuString("bar")
+	l1 := FuList([]FuObject {s1, s3})
+	l2 := FuList([]FuObject {s2, s3})
+	l3 := FuList([]FuObject {s3})
+
+	// FuString.Equal is just like builtin string ==
+	assert.True(t, s1.Equal(s1))
+	assert.True(t, s1.Equal(s2))
+	assert.False(t, s1.Equal(s3))
+
+	// a FuString is never equal to a FuList
+	assert.False(t, s1.Equal(l1))
+	assert.False(t, s3.Equal(l3))
+	assert.False(t, l3.Equal(s3))
+
+	// FuList.Equal() compares list contents
+	assert.True(t, l1.Equal(l1))
+	assert.True(t, l1.Equal(l2))
+	assert.False(t, l1.Equal(l3))
+}
+
 func Test_FuString_Add_strings(t *testing.T) {
 	s1 := FuString("hello")
 	s2 := FuString("world")

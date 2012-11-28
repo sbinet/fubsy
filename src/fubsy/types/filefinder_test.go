@@ -71,23 +71,6 @@ func Test_splitPattern_no_recursive(t *testing.T) {
 		assert.False(t, recursive)
 		assert.Nil(t, err)
 	}
-
-
-
-
-	// var prefix, tail string
-	// var err error
-	// recursive, prefix, tail, err = splitPattern("")
-	// assert.Nil(t, err)
-	// assert.True(t, prefix == "" && tail == "")
-
-	// recursive, prefix, tail, err = splitPattern("foobar")
-	// assert.Nil(t, err)
-	// assert.True(t, prefix == "foobar" && tail == "")
-
-	// recursive, prefix, tail, err = splitPattern("foo/b?r/*/blah/*.[ch]")
-	// assert.Nil(t, err)
-	// assert.True(t, prefix == "foo/b?r/*/blah/*.[ch]" && tail == "")
 }
 
 func Test_splitPattern_valid_recursive(t *testing.T) {
@@ -265,6 +248,26 @@ func Test_FileFinder_Add(t *testing.T) {
 	sum, err = ff2.Add(sum)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
+}
+
+func Test_FinderList_misc(t *testing.T) {
+	ff1 := NewFileFinder([]string {"*.c", "*.h"})
+	ff2 := NewFileFinder([]string {"doc/???.txt"})
+	ff3 := NewFileFinder([]string {})
+
+	sum1, err := ff1.Add(ff2)
+	assert.Nil(t, err)
+	assert.Equal(t, "<*.c *.h> + <doc/???.txt>", sum1.String())
+
+	sum2, err := ff3.Add(sum1)
+	assert.Nil(t, err)
+	assert.Equal(t, "<> + <*.c *.h> + <doc/???.txt>", sum2.String())
+
+	assert.False(t, sum1.Equal(sum2))
+
+	sum2b, err := ff3.Add(sum1)
+	assert.Nil(t, err)
+	assert.True(t, sum2.Equal(sum2b))
 }
 
 func mkdirs(dirs ...string) {
