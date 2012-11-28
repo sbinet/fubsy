@@ -118,6 +118,16 @@ func Test_FuFileFinder_String(t *testing.T) {
 	assert.Equal(t, "<*.c **/*.h>", ff.String())
 }
 
+func Test_FuFileFinder_Equal(t *testing.T) {
+	ff1 := NewFileFinder([]string {"*.c", "*.h"})
+	ff2 := NewFileFinder([]string {"*.c", "*.h"})
+	ff3 := NewFileFinder([]string {"*.h", "*.c"})
+
+	assert.True(t, ff1.Equal(ff1))
+	assert.True(t, ff1.Equal(ff2))
+	assert.False(t, ff1.Equal(ff3))
+}
+
 func Test_FuFileFinder_Expand_empty(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
@@ -238,7 +248,6 @@ func Test_FileFinder_Add(t *testing.T) {
 	//fmt.Printf("ff3 = %v\nnew sum = %v\n", ff3, sum)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
-	return
 
 	// simulate <doc/*.txt> + (<*c*/?o?.h> + <**/*.c>)
 	// (same as before, just different order)
@@ -253,6 +262,11 @@ func Test_FileFinder_Add(t *testing.T) {
 	sum, err = ff2.Add(sum)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
+
+	sum, err = ff1.Add(FuString("urgh"))
+	assert.Equal(t,
+		"unsupported operation: cannot add string to file finder", err.Error())
+	assert.Nil(t, sum)
 }
 
 func Test_FinderList_misc(t *testing.T) {
@@ -273,6 +287,15 @@ func Test_FinderList_misc(t *testing.T) {
 	sum2b, err := ff3.Add(sum1)
 	assert.Nil(t, err)
 	assert.True(t, sum2.Equal(sum2b))
+
+	// This is a silly thing to do, and perhaps we should filter out
+	// the duplicate patterns... but I don't think so. If the user
+	// constructs something silly, we do something silly.
+	sum3, err := sum1.Add(sum2)
+	assert.Nil(t, err)
+	assert.Equal(t,
+		"<*.c *.h> + <doc/???.txt> + <> + <*.c *.h> + <doc/???.txt>",
+		sum3.String())
 }
 
 func mkdirs(dirs ...string) {
