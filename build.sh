@@ -13,6 +13,11 @@ if [ ! -f $golex ]; then
     go install github.com/cznic/golex
 fi
 
+gocov=bin/gocov
+if [ ! -f $gocov ]; then
+    go install github.com/axw/gocov/gocov
+fi
+
 $golex -o src/fubsy/dsl/fulex.go src/fubsy/dsl/fulex.l
 gofmt -w src/fubsy/dsl/fulex.go
 
@@ -21,15 +26,26 @@ go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y
 # uncomment this to run benchmarks
 #benchopt="-test.bench=.*"
 
-# unoptimized (for debugging)
-packages="dsl types dag runtime"
-#packages="dsl"
-#packages="runtime"
+# uncomment this to get test coverage
+#coverage=y
+
+# only explicitly build packages with tests
+packages="fubsy/dsl fubsy/types fubsy/dag fubsy/runtime"
+#packages="fubsy/dsl"
+#packages="fubsy/runtime"
 for pkg in $packages; do
-    go install -v -gcflags "-N -l" fubsy/$pkg
-    go test -v -gcflags "-N -l" -i fubsy/$pkg
-    go test -v -gcflags "-N -l" -c fubsy/$pkg
-    ./$pkg.test -test.v=true $benchopt $tests
+    go install -v -gcflags "-N -l" $pkg
+    go test -v -gcflags "-N -l" -i $pkg
+    if [ "$coverage" ]; then
+        json=coverage-`basename $pkg`.json
+        report=coverage-`basename $pkg`.txt
+        ./bin/gocov test \
+            -exclude fubsy/testutils,github.com/stretchrcom/testify/assert,code.google.com/p/go-bit/bit \
+            $pkg > $json
+        ./bin/gocov report $json > $report
+    else
+        go test -v -gcflags "-N -l" $benchopt $pkg $tests
+    fi
 done
 
 go build -v -gcflags "-N -l"

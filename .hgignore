@@ -7,3 +7,4 @@
 ^src/fubsy/dsl/fu(grammar|lex)\.go$
 ^doc/.*\.html$
 ^examples/.*/classes$
+^coverage-
