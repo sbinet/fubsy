@@ -60,6 +60,11 @@ func Test_translateGlob(t *testing.T) {
 	}
 }
 
+func Test_translateGlob_error(t *testing.T) {
+	_, err := translateGlob("foo[a-f*.c")
+	assert.Equal(t, "unterminated character range", err.Error())
+}
+
 func Test_splitPattern_no_recursive(t *testing.T) {
 	patterns := []string {
 		"",

@@ -252,7 +252,7 @@ func translateGlob(glob string) (string, error) {
 			for ; i < len(glob) && glob[i] != ']'; i++ {
 				re = append(re, glob[i])
 			}
-			if glob[i] == ']' {
+			if i < len(glob) {
 				re = append(re, ']')
 			} else {
 				return "", errors.New("unterminated character range")
