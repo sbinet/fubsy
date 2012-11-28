@@ -4,6 +4,7 @@ import (
 	"testing"
 	"fmt"
 	"github.com/stretchrcom/testify/assert"
+	"fubsy/types"
 )
 
 func Test_MakeFileNode(t *testing.T) {
@@ -22,6 +23,12 @@ func Test_MakeFileNode(t *testing.T) {
 
 	node0b := MakeFileNode(dag, "foo")
 	assert.True(t, node0 == node0b)
+}
+
+func Test_FileNode_string(t *testing.T) {
+	node := &FileNode{nodebase: nodebase{name: "foo/bar/baz"}}
+	assert.Equal(t, "foo/bar/baz", node.Name())
+	assert.Equal(t, "foo/bar/baz", node.String())
 }
 
 func Test_FileNode_parents(t *testing.T) {
@@ -105,6 +112,32 @@ func Benchmark_FileNode_AddParent(b *testing.B) {
 	for _, pnode := range nodes {
 		node.AddParent(pnode)
 	}
+}
+
+func Test_GlobNode_basics(t *testing.T) {
+	dag := NewDAG()
+	glob0 := types.NewFileFinder([]string {"**/*.java"})
+	glob1 := types.NewFileFinder([]string {"doc/*/*.html"})
+	glob2, err := glob0.Add(glob1)			   // it's a FuFinderList
+	assert.Nil(t, err)
+
+	node0 := MakeGlobNode(dag, glob0)
+	node1 := MakeGlobNode(dag, glob1)
+	node2 := MakeGlobNode(dag, glob2)
+
+	assert.Equal(t, "<**/*.java>", node0.String())
+	assert.Equal(t, "<doc/*/*.html>", node1.String())
+	assert.Equal(t, "<**/*.java> + <doc/*/*.html>", node2.String())
+
+	assert.True(t, node0.Equal(node0))
+	assert.False(t, node0.Equal(node1))
+	assert.False(t, node0.Equal(node2))
+
+	glob2b, err := glob0.Add(glob1)
+	assert.Nil(t, err)
+	assert.True(t, glob2b.Equal(glob2))
+	node2b := MakeGlobNode(dag, glob2b)
+	assert.True(t, node2b.Equal(node2))
 }
 
 func assertParents(t *testing.T, expect []string, node Node) {

@@ -15,6 +15,7 @@ type FileNode struct {
 type GlobNode struct {
 	// name: arbitrary unique string
 	nodebase
+	glob types.FuObject			// likely FuFileFinder or FuFinderList
 }
 
 // Lookup and return the named file node in dag. If it doesn't exist,
@@ -33,10 +34,8 @@ func MakeFileNode(dag *DAG, name string) *FileNode {
 }
 
 func (self *FileNode) Equal(other_ Node) bool {
-	if other, ok := other_.(*FileNode); ok {
-		return other.name == self.name
-	}
-	return false
+	other, ok := other_.(*FileNode)
+	return ok && other.name == self.name
 }
 
 func MakeGlobNode(dag *DAG, glob_ types.FuObject) *GlobNode {
@@ -56,6 +55,7 @@ func MakeGlobNode(dag *DAG, glob_ types.FuObject) *GlobNode {
 	if node == nil {
 		gnode := &GlobNode{
 			nodebase: makenodebase(dag, -1, name),
+			glob: glob_,
 		}
 		gnode.id = dag.addNode(gnode)
 		node = gnode
@@ -63,9 +63,11 @@ func MakeGlobNode(dag *DAG, glob_ types.FuObject) *GlobNode {
 	return node.(*GlobNode)		// panic on unexpected type
 }
 
+func (self *GlobNode) String() string {
+	return self.glob.String()
+}
+
 func (self *GlobNode) Equal(other_ Node) bool {
-	if other, ok := other_.(*GlobNode); ok {
-		return other.name == self.name
-	}
-	return false
+	other, ok := other_.(*GlobNode)
+	return ok && self.glob.Equal(other.glob)
 }

@@ -38,9 +38,16 @@ import (
 // otherwise we'll have no hope of making non-file nodes. (They're not
 // needed often, but when you need them you *really* need them.)
 type Node interface {
-	// human-readable string representation of this node (must be
-	// unique in this graph)
+	// brief human-readable string representation of this node (must
+	// be unique in this graph)
 	Name() string
+
+	// human-readable string representation of this node that is not
+	// necessarily unique; it's perfectly reasonable for String() and
+	// Name() to return the same thing, but some Node types have to
+	// resort to cryptic unique IDs Name(), so String() can be helpful
+	// in presenting those nodes to the user
+	String() string
 
 	// unique integer identifier for this node
 	Id() int
@@ -106,7 +113,12 @@ func (self *DAG) Dump(writer io.Writer) {
 	for i, node := range self.nodes {
 		action := node.Action()
 		parents := node.Parents()
-		fmt.Fprintf(writer, "%04d: %s\n", i, node.Name())
+		desc := node.Name()
+		detail := node.String()
+		if detail != desc {
+			desc += " (" + detail + ")"
+		}
+		fmt.Fprintf(writer, "%04d: %s\n", i, desc)
 		if action != nil {
 			fmt.Fprintf(writer, "  action: %v\n", action)
 		}
@@ -173,6 +185,10 @@ func (base *nodebase) Id() int {
 }
 
 func (base *nodebase) Name() string {
+	return base.name
+}
+
+func (base *nodebase) String() string {
 	return base.name
 }
 

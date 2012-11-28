@@ -32,6 +32,7 @@ go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y
 # only explicitly build packages with tests
 packages="fubsy/dsl fubsy/types fubsy/dag fubsy/runtime"
 #packages="fubsy/dsl"
+#packages="fubsy/dag"
 #packages="fubsy/runtime"
 for pkg in $packages; do
     go install -v -gcflags "-N -l" $pkg
