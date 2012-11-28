@@ -56,6 +56,9 @@ type Node interface {
 	// (should be sufficient to compare names)
 	Equal(other Node) bool
 
+	// return the set of node IDs for the nodes that this node depends on
+	ParentSet() NodeSet
+
 	// return the parent nodes that this node depends on
 	Parents() []Node
 
@@ -84,6 +87,12 @@ type DAG struct {
 	// map node name to index (offset into nodes)
 	index map[string] int
 }
+
+// an opaque set of integer node IDs (this type deliberately has no
+// methods; it just exists so code in the 'runtime' package can get
+// node sets out of the DAG to pass back to other DAG methods that
+// then do further processing)
+type NodeSet *bit.Set
 
 func NewDAG() *DAG {
 	return &DAG{
@@ -129,6 +138,26 @@ func (self *DAG) Dump(writer io.Writer) {
 			}
 		}
 	}
+}
+
+// Return the set of nodes in this graph with no children.
+func (self *DAG) FindFinalTargets() NodeSet {
+	var targets *bit.Set = bit.New()
+	targets.AddRange(0, self.length())
+	for _, node := range self.nodes {
+		parents := (*bit.Set)(node.ParentSet())
+		targets.SetAndNot(targets, parents)
+	}
+	return NodeSet(targets)
+}
+
+// Walk the graph starting from each node in goal to find the set of
+// original source nodes, i.e. nodes with no parents that are
+// ancestors of any node in goal. Return that set along with the set
+// of relevant nodes, i.e. all nodes that are ancestors of any node in
+// goal (sources is a subset of relevant).
+func (self *DAG) FindOriginalSources(goal NodeSet) (sources, relevant NodeSet) {
+	return
 }
 
 // Return the node with the specified name, or nil if no such node.
@@ -190,6 +219,10 @@ func (base *nodebase) Name() string {
 
 func (base *nodebase) String() string {
 	return base.name
+}
+
+func (base *nodebase) ParentSet() NodeSet {
+	return NodeSet(&base.parentset)
 }
 
 func (base *nodebase) Parents() []Node {

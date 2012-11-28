@@ -38,10 +38,18 @@ func (self *Runtime) RunScript() []error {
 	}
 	main := self.ast.FindPhase("main")
 	errors := self.runStatements(main)
+	if len(errors) > 0 {
+		return errors
+	}
 
+	errors = self.buildTargets()
 	return errors
 }
 
+// Run all the statements in the main phase of this build script.
+// Update self with the results: variable assignments, build rules,
+// etc. Most importantly, on return self.dag will contain the
+// dependency graph ready to hand over to the build phase.
 func (self *Runtime) runStatements(main *dsl.ASTPhase) []error {
 	errors := make([]error, 0)
 	for _, node_ := range main.Children() {
@@ -222,6 +230,28 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 		result = []dag.Node {dag.MakeGlobNode(self.dag, targets_)}
 	}
 	return result
+}
+
+// Build user's requested targets according to the dependency graph in
+// self.dag (as constructed by runStatements()).
+func (self *Runtime) buildTargets() []error {
+	// eventually we should use the command line to figure out the
+	// user's desired targets... but the default will always be to
+	// build all final targets, so let's just handle that case for now
+	goal := self.dag.FindFinalTargets()
+	sources, relevant := self.dag.FindOriginalSources(goal)
+	rebuild := self.initialRebuildSet(sources, relevant)
+	errors := self.rebuild(relevant, rebuild)
+	return errors
+}
+
+func (self *Runtime) initialRebuildSet(sources, relevant dag.NodeSet) dag.NodeSet {
+	var result dag.NodeSet
+	return result
+}
+
+func (self *Runtime) rebuild(relevant, rebuild dag.NodeSet) []error {
+	return nil
 }
 
 // XXX this is identical to TypeError in types/basictypes.go:
