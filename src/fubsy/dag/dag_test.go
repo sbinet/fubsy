@@ -44,22 +44,99 @@ func Test_DAG_add_lookup(t *testing.T) {
 }
 
 func Test_DAG_FindFinalTargets(t *testing.T) {
-	// graph:
-	//   node3: {node2, node1}
-	//   node2: {node1}
-	//   node0: {node2}
-	// thus final targets = {node3, node0}
-	// original sources = {node1}
-	dag := NewDAG()
-	node0 := makestubnode(dag, "node0")
-	node1 := makestubnode(dag, "node1")
-	node2 := makestubnode(dag, "node2")
-	node3 := makestubnode(dag, "node3")
-	node3.AddParent(node2)
-	node3.AddParent(node1)
-	node2.AddParent(node1)
-	node0.AddParent(node1)
-
+	dag := makeSimpleGraph()
 	targets := (*bit.Set)(dag.FindFinalTargets())
-	assert.Equal(t, "{0, 3}", targets.String())
+	assert.Equal(t, "{0, 1}", targets.String())
+}
+
+func Test_DAG_FindOriginalSources(t *testing.T) {
+	dag := makeSimpleGraph()
+	goal := bit.New(0, 1)		// all final targets: tool1, tool2
+	sources, relevant := dag.FindOriginalSources(NodeSet(goal))
+	assert.Equal(t, "{6..11}", (*bit.Set)(sources).String())
+	assert.Equal(t, "{0..11}", (*bit.Set)(relevant).String())
+
+	// goal = {tool1} ==>
+	// sources = {tool1.c, misc.h, misc.c, util.h, util.c}
+	goal = bit.New(0)
+	sources, relevant = dag.FindOriginalSources(NodeSet(goal))
+	assert.Equal(t, "{6..10}", (*bit.Set)(sources).String())
+	assert.Equal(t, "{0, 2..4, 6..10}", (*bit.Set)(relevant).String())
+
+	// goal = {tool2} ==>
+	// sources = {util.h, util.c, tool2.c}
+	goal = bit.New(1)
+	sources, relevant = dag.FindOriginalSources(NodeSet(goal))
+	assert.Equal(t, "{9..11}", (*bit.Set)(sources).String())
+	assert.Equal(t, "{1, 4, 5, 9..11}", (*bit.Set)(relevant).String())
+}
+
+func Test_DAG_FindOriginalSources_cycle(t *testing.T) {
+	dag := makeSimpleGraph()
+	dag.lookup("misc.h").AddParent(dag.lookup("tool1"))
+
+	// goal = {tool2} ==> no cycle, since we don't visit those nodes
+	// (this simply tests that FindOriginalSources() doesn't panic)
+	goal := NodeSet(bit.New(1))
+	_, _ = dag.FindOriginalSources(goal)
+
+	// goal = {tool1} ==> cycle!
+	// (disabled because FindOriginalSources() currently panics on cycle)
+	return
+	goal = NodeSet(bit.New(0))
+	_, _ = dag.FindOriginalSources(goal)
+}
+
+func makeSimpleGraph() *DAG {
+	// dependency graph for a C project with two executables as the
+	// final targets:
+	//   tool1:		{tool1.o, misc.o, util.o}
+	//   tool2:		{tool2.o, util.o}
+	//   tool1.o:	{tool1.c, misc.h, util.h}
+	//   misc.o:	{misc.h, misc.c}
+	//   util.o:	{util.h, util.c}
+	//   tool2.o:	{tool2.c, util.h}
+	//   tool1.c:	{}
+	//   misc.h:	{}
+	//   misc.c:	{}
+	//   util.h:	{}
+	//   util.c:	{}
+	//   tool2.c:	{}
+	// final targets: {tool1, tool2} (node IDs 0, 1)
+	// original sources: {tool1.c, misc.h, misc.c, util.h, util.c, tool2.c}
+	//   (node IDs 6, 7, 8, 9, 10, 11)
+
+	nodes := make([]string, 0)
+	parents := make(map[string] []string)
+	add := func(name string, parent ...string) {
+		nodes = append(nodes, name)
+		parents[name] = parent
+	}
+	finish := func() *DAG {
+		dag := NewDAG()
+		for _, name := range nodes {
+			makestubnode(dag, name)
+		}
+		for _, name := range nodes {
+			node := dag.lookup(name)
+			for _, pname := range parents[name] {
+				node.AddParent(dag.lookup(pname))
+			}
+		}
+		return dag
+	}
+
+	add("tool1", "tool1.o", "misc.o", "util.o")
+	add("tool2", "tool2.o", "util.o")
+	add("tool1.o", "tool1.c", "misc.h", "util.h")
+	add("misc.o", "misc.h", "misc.c")
+	add("util.o", "util.h", "util.c")
+	add("tool2.o", "tool2.c", "util.h")
+	add("tool1.c")
+	add("misc.h")
+	add("misc.c")
+	add("util.h")
+	add("util.c")
+	add("tool2.c")
+	return finish()
 }

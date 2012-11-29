@@ -48,6 +48,15 @@ type DAG struct {
 // then do further processing)
 type NodeSet *bit.Set
 
+// graph-walking state: a white node is one we haven't visited yet,
+// grey is one we're currently processing, and black is one we're done
+// with
+const (
+	WHITE = iota
+	GREY
+	BLACK
+)
+
 func NewDAG() *DAG {
 	return &DAG{
 		nodes: make([]Node, 0),
@@ -110,8 +119,40 @@ func (self *DAG) FindFinalTargets() NodeSet {
 // ancestors of any node in goal. Return that set along with the set
 // of relevant nodes, i.e. all nodes that are ancestors of any node in
 // goal (sources is a subset of relevant).
-func (self *DAG) FindOriginalSources(goal NodeSet) (sources, relevant NodeSet) {
-	return
+func (self *DAG) FindOriginalSources(goal NodeSet) (NodeSet, NodeSet) {
+	colour := make([]byte, len(self.nodes))
+	sources := bit.New()
+	relevant := bit.New()
+
+	var visit func(id int)
+	visit = func(id int) {
+		//fmt.Printf("visiting node %d (%s)\n", id, self.nodes[id])
+		relevant.Add(id)
+		parents := (*bit.Set)(self.nodes[id].ParentSet())
+		parents.Do(func(parent int) {
+			if colour[parent] == GREY {
+				// we can do a better job of reporting this!
+				panic(fmt.Sprintf("dependency cycle! (..., %s, %s)",
+					self.nodes[id], self.nodes[parent]))
+			}
+			if colour[parent] == WHITE {
+				colour[parent] = GREY
+				visit(parent)
+			}
+		})
+		if parents.IsEmpty() {
+			sources.Add(id)
+		}
+		colour[id] = BLACK
+	}
+
+	(*bit.Set)(goal).Do(func(id int) {
+		if colour[id] == WHITE {
+			colour[id] = GREY
+			visit(id)
+		}
+	})
+	return NodeSet(sources), NodeSet(relevant)
 }
 
 // Return the node with the specified name, or nil if no such node.
