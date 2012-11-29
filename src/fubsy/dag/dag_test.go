@@ -4,6 +4,8 @@ import (
 	"testing"
 	"reflect"
 	"bytes"
+	//"fmt"
+	//"os"
 	//"os/exec"
 	"github.com/stretchrcom/testify/assert"
 	"code.google.com/p/go-bit/bit"
@@ -163,6 +165,9 @@ func Test_DAG_Expand(t *testing.T) {
 	node2.AddParent(node0)
 	assert.Equal(t, 3, dag2.length())
 
+	// fmt.Println("dag2 before expansion:")
+	// dag2.Dump(os.Stdout)
+
 	// relevant = {0} so we only expand the first GlobNode
 	relevant = bit.New(0)
 	dag2.Expand(relevant)
@@ -173,6 +178,9 @@ func Test_DAG_Expand(t *testing.T) {
 	assert.Equal(t, "util.c", dag2.nodes[3].(*FileNode).name)
 	assert.Equal(t, "util.h", dag2.nodes[4].(*FileNode).name)
 	buf := new(bytes.Buffer)
+
+	// fmt.Println("\ndag2 after expansion #1:")
+	// dag2.Dump(os.Stdout)
 
 	// node2's parents correctly adjusted
 	parents := node2.Parents()
@@ -283,8 +291,8 @@ func makeSimpleGraph() *DAG {
 
 func touchSourceFiles(dag *DAG) {
 	filenames := []string {}
-	for _, node := range dag.nodes {
-		if (*bit.Set)(node.ParentSet()).IsEmpty() {
+	for id, node := range dag.nodes {
+		if dag.parents[id].IsEmpty() {
 			filenames = append(filenames, node.Name())
 		}
 	}

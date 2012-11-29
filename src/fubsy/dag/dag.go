@@ -40,6 +40,9 @@ type DAG struct {
 
 	// map node name to index (offset into nodes)
 	index map[string] int
+
+	// the parents of every node
+	parents []*bit.Set
 }
 
 type BuildState struct {
@@ -111,7 +114,6 @@ func (self *DAG) Dump(writer io.Writer) {
 			continue
 		}
 		action := node.Action()
-		parents := node.Parents()
 		desc := node.Name()
 		detail := node.String()
 		if detail != desc {
@@ -121,11 +123,13 @@ func (self *DAG) Dump(writer io.Writer) {
 		if action != nil {
 			fmt.Fprintf(writer, "  action: %v\n", action)
 		}
-		if len(parents) > 0 {
+		parents := self.parents[id]
+		if !parents.IsEmpty() {
 			fmt.Fprintf(writer, "  parents:\n")
-			for _, pnode := range parents {
+			parents.Do(func (parentid int) {
+				pnode := self.nodes[parentid]
 				fmt.Fprintf(writer, "    %04d: %s\n", pnode.Id(), pnode.Name())
-			}
+			})
 		}
 	}
 }
@@ -134,8 +138,7 @@ func (self *DAG) Dump(writer io.Writer) {
 func (self *DAG) FindFinalTargets() NodeSet {
 	var targets *bit.Set = bit.New()
 	targets.AddRange(0, self.length())
-	for _, node := range self.nodes {
-		parents := (*bit.Set)(node.ParentSet())
+	for _, parents := range self.parents {
 		targets.SetAndNot(targets, parents)
 	}
 	return NodeSet(targets)
@@ -186,7 +189,7 @@ func (self *BuildState) FindOriginalSources() {
 		node := nodes[id]
 		//fmt.Printf("visiting node %d (%s)\n", id, node)
 		self.children[id] = bit.New()
-		parents := (*bit.Set)(node.ParentSet())
+		parents := self.dag.parents[id]
 		parents.Do(func(parent int) {
 			if colour[parent] == GREY {
 				// we can do a better job of reporting this!
@@ -265,22 +268,55 @@ func (self *DAG) addNode(node Node) int {
 		panic(fmt.Sprintf("node '%s' has id %d: is it already in the DAG?",
 			name, node.Id()))
 	}
+	if len(self.nodes) != len(self.parents) {
+		panic(fmt.Sprintf(
+			"inconsistent DAG: len(nodes) = %d, len(parents) = %d",
+			len(self.nodes), len(self.parents)))
+	}
+
 	id := len(self.nodes)
 	self.nodes = append(self.nodes, node)
+	self.parents = append(self.parents, bit.New())
 	self.index[name] = id
 	return id
 }
 
+func (self *DAG) parentNodes(id int) []Node {
+	result := make([]Node, 0)
+	self.parents[id].Do(func (parentid int) {
+		pnode := self.nodes[parentid]
+		if pnode == nil {
+			// parents were not correctly adjusted by replaceNode()
+			panic(fmt.Sprintf(
+				"dag.parents[%d] includes nil node pointer (%d)", id, parentid))
+		}
+		result = append(result, pnode)
+	})
+	return result
+}
+
+func (self *DAG) addParent(childid int, parent Node) {
+	parentid := parent.Id()
+	if parentid < 0 || parentid >= self.length() {
+		panic(fmt.Sprintf(
+			"%v has impossible id %d (should be >= 0 && <= %d)",
+			parent, parentid, self.length() - 1))
+	}
+	if !self.parents[childid].Contains(parentid) {
+		self.parents[childid].Add(parentid)
+	}
+}
+
 // Remove the specified node from the DAG, updating references to it
 // with replacements. Panic if it's not in the DAG.
-func (self *DAG) replaceNode(node Node, replacements []Node) {
-	id := node.Id()
-	name := node.Name()
-	match := self.nodes[id]
-	if match != node {
+func (self *DAG) replaceNode(remove Node, replacements []Node) {
+	removeid := remove.Id()
+	name := remove.Name()
+	match := self.nodes[removeid]
+	if match != remove {
 		panic(fmt.Sprintf(
 			"cannot remove node %v from the DAG (slot %d is used by %v)",
-			node, id, match))
+			remove, removeid, match))
 	}
 
 	// replace any occurences of node in any other node's parent set
@@ -289,23 +325,19 @@ func (self *DAG) replaceNode(node Node, replacements []Node) {
 	for _, node := range replacements {
 		replacementset.Add(node.Id())
 	}
-	for _, curnode := range self.nodes {
-		// ugh: assuming we can mutate the result of ParentSet() is
-		// assuming a lot about Node implementations: perhaps we
-		// should just move all knowledge about parent/child
-		// relationships into the DAG proper...
-		if curnode == nil {
+	for _, parents := range self.parents {
+		if parents == nil {
 			continue
 		}
-		parents := (*bit.Set)(curnode.ParentSet())
-		if parents.Contains(id) {
-			parents.Remove(id)
+		if parents.Contains(removeid) {
+			parents.Remove(removeid)
 			parents.SetOr(parents, replacementset)
 		}
 	}
 
 	// and remove node from the DAG (leaving a hole)
-	self.nodes[id] = nil
+	self.nodes[removeid] = nil
+	self.parents[removeid] = nil
 	delete(self.index, name)
 }
 

@@ -1,8 +1,6 @@
 package dag
 
 import (
-	"fmt"
-	"code.google.com/p/go-bit/bit"
 )
 
 type NodeState byte
@@ -35,9 +33,6 @@ type Node interface {
 	// return true if this node and other describe the same resource
 	// (should be sufficient to compare names)
 	Equal(other Node) bool
-
-	// return the set of node IDs for the nodes that this node depends on
-	ParentSet() NodeSet
 
 	// return the parent nodes that this node depends on
 	Parents() []Node
@@ -83,7 +78,6 @@ type nodebase struct {
 	dag *DAG
 	id int
 	name string
-	parentset bit.Set
 	action Action
 	state NodeState
 }
@@ -108,34 +102,12 @@ func (self *nodebase) String() string {
 	return self.name
 }
 
-// hmmm: all this business with parents knows a lot about self.dag,
-// bitsets, and so forth... maybe all node relationships should be
-// stored in the DAG object???
-
-func (self *nodebase) ParentSet() NodeSet {
-	return NodeSet(&self.parentset)
-}
-
 func (self *nodebase) Parents() []Node {
-	result := make([]Node, 0)
-	fetch := func(id int) {
-		result = append(result, self.dag.nodes[id])
-	}
-	self.parentset.Do(fetch)
-	return result
+	return self.dag.parentNodes(self.id)
 }
 
 func (self *nodebase) AddParent(node Node) {
-	id := node.Id()
-	if id < 0 || id >= self.dag.length() {
-		panic(fmt.Sprintf(
-			"%v has impossible id %d (should be >= 0 && <= %d)",
-			node, id, self.dag.length() - 1))
-	}
-	if self.parentset.Contains(id) {
-		return
-	}
-	self.parentset.Add(id)
+	self.dag.addParent(self.id, node)
 }
 
 func (self *nodebase) SetAction(action Action) {
