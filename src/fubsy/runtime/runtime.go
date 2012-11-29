@@ -68,9 +68,6 @@ func (self *Runtime) runStatements(main *dsl.ASTPhase) []error {
 			errors = append(errors, err)
 		}
 	}
-	fmt.Println("dag:")
-	self.dag.Dump(os.Stdout)
-
 	return errors
 }
 
@@ -235,6 +232,11 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 // Build user's requested targets according to the dependency graph in
 // self.dag (as constructed by runStatements()).
 func (self *Runtime) buildTargets() []error {
+	var errors []error
+
+	fmt.Println("\ninitial dag:")
+	self.dag.Dump(os.Stdout)
+
 	// eventually we should use the command line to figure out the
 	// user's desired targets... but the default will always be to
 	// build all final targets, so let's just handle that case for now
@@ -242,7 +244,15 @@ func (self *Runtime) buildTargets() []error {
 	goal := self.dag.FindFinalTargets()
 	bstate.SetGoal(goal)
 	bstate.FindOriginalSources()
-	errors := bstate.FindStaleTargets()
+
+	errors = bstate.ExpandDAG()
+	if len(errors) > 0 {
+		return errors
+	}
+	fmt.Println("\nexpanded dag:")
+	self.dag.Dump(os.Stdout)
+
+	errors = bstate.FindStaleTargets()
 	if len(errors) > 0 {
 		return errors
 	}

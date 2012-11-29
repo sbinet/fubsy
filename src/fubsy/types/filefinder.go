@@ -80,6 +80,12 @@ func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
 	// return result, nil
 }
 
+func (self *FuFileFinder) List() []FuObject {
+	// tempting to return a list of self.includes... but what about
+	// self.excludes?
+	return []FuObject {self}
+}
+
 func (self *FuFileFinder) typename() string {
 	return "file finder"
 }
@@ -87,7 +93,6 @@ func (self *FuFileFinder) typename() string {
 // Walk the filesystem for files matching this FileFinder's include
 // patterns. Return the list of matching filenames as a FuList of
 // FuString.
-// XXX this has to happen in the main phase, so using Expand() for this purpose is wrong!!!
 func (self *FuFileFinder) Expand() (FuObject, error) {
 	result := make(FuList, 0)
 	var matches []string
@@ -306,6 +311,14 @@ func (self *FuFinderList) Add(other_ FuObject) (FuObject, error) {
 		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
 	}
 	return result, nil
+}
+
+func (self *FuFinderList) List() []FuObject {
+	result := make([]FuObject, len(self.elements))
+	for i, finder := range self.elements {
+		result[i] = finder
+	}
+	return result
 }
 
 func (self *FuFinderList) Expand() (FuObject, error) {

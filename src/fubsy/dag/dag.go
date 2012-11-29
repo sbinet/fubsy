@@ -106,7 +106,10 @@ func (self *DAG) AddManyParents(targets, sources []Node) {
 // in memory; it doesn't try to make a fancy recursive tree-like
 // structure.
 func (self *DAG) Dump(writer io.Writer) {
-	for i, node := range self.nodes {
+	for id, node := range self.nodes {
+		if node == nil {
+			continue
+		}
 		action := node.Action()
 		parents := node.Parents()
 		desc := node.Name()
@@ -114,7 +117,7 @@ func (self *DAG) Dump(writer io.Writer) {
 		if detail != desc {
 			desc += " (" + detail + ")"
 		}
-		fmt.Fprintf(writer, "%04d: %s\n", i, desc)
+		fmt.Fprintf(writer, "%04d: %s\n", id, desc)
 		if action != nil {
 			fmt.Fprintf(writer, "  action: %v\n", action)
 		}
@@ -140,6 +143,26 @@ func (self *DAG) FindFinalTargets() NodeSet {
 
 func (self *DAG) NewBuildState() *BuildState {
 	return &BuildState{dag: self}
+}
+
+// Iterate over the graph, expanding all relevant expandable nodes.
+// That is, for each expandable node that is a member of relevant, add
+// zero or more nodes that represent the same resource(s), but more
+// concretely. The original node is typically removed. The canonical
+// use case for this is that each GlobNode is replaced by FileNodes
+// for the files matching the glob's patterns.
+func (self *DAG) Expand(relevant *bit.Set) []error {
+	var errors []error
+	var err error
+	for id, node := range self.nodes {
+		if node != nil && relevant.Contains(id) {
+			err = node.Expand()
+			if err != nil {
+				errors = append(errors, err)
+			}
+		}
+	}
+	return errors
 }
 
 func (self *BuildState) SetGoal(goal NodeSet) {
@@ -191,6 +214,10 @@ func (self *BuildState) FindOriginalSources() {
 	})
 }
 
+func (self *BuildState) ExpandDAG() []error {
+	return self.dag.Expand(self.relevant)
+}
+
 // Compute the initial rebuild set, i.e. nodes that are 1) children of
 // the original sources, 2) relevant (ancestors of a goal node), and
 // 3) stale.
@@ -199,6 +226,9 @@ func (self *BuildState) FindStaleTargets() []error {
 	self.rebuild = bit.New()
 	self.sources.Do(func (id int) {
 		node := self.dag.nodes[id]
+		if node == nil {
+			return
+		}
 		changed, err := node.Changed()
 		if err != nil {
 			errors = append(errors, err)
@@ -239,6 +269,44 @@ func (self *DAG) addNode(node Node) int {
 	self.nodes = append(self.nodes, node)
 	self.index[name] = id
 	return id
+}
+
+// Remove the specified node from the DAG, updating references to it
+// with replacements. Panic if it's not in the DAG.
+func (self *DAG) replaceNode(node Node, replacements []Node) {
+	id := node.Id()
+	name := node.Name()
+	match := self.nodes[id]
+	if match != node {
+		panic(fmt.Sprintf(
+			"cannot remove node %v from the DAG (slot %d is used by %v)",
+			node, id, match))
+	}
+
+	// replace any occurences of node in any other node's parent set
+	// with replacements
+	replacementset := bit.New()
+	for _, node := range replacements {
+		replacementset.Add(node.Id())
+	}
+	for _, curnode := range self.nodes {
+		// ugh: assuming we can mutate the result of ParentSet() is
+		// assuming a lot about Node implementations: perhaps we
+		// should just move all knowledge about parent/child
+		// relationships into the DAG proper...
+		if curnode == nil {
+			continue
+		}
+		parents := (*bit.Set)(curnode.ParentSet())
+		if parents.Contains(id) {
+			parents.Remove(id)
+			parents.SetOr(parents, replacementset)
+		}
+	}
+
+	// and remove node from the DAG (leaving a hole)
+	self.nodes[id] = nil
+	delete(self.index, name)
 }
 
 // Return the number of nodes in the DAG.

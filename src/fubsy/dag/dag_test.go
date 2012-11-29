@@ -2,8 +2,14 @@ package dag
 
 import (
 	"testing"
+	"reflect"
+	"bytes"
+	//"os/exec"
 	"github.com/stretchrcom/testify/assert"
 	"code.google.com/p/go-bit/bit"
+
+	"fubsy/types"
+	"fubsy/testutils"
 )
 
 type stubnode struct {
@@ -45,6 +51,26 @@ func Test_DAG_add_lookup(t *testing.T) {
 	assert.True(t, outnode.(*stubnode) == innode)
 
 	assert.Nil(t, dag.lookup("bar"))
+}
+
+func Test_DAG_replaceNode(t *testing.T) {
+	dag := NewDAG()
+	node0 := makestubnode(dag, "foo")
+	node1 := makestubnode(dag, "bar")
+	node2 := makestubnode(dag, "qux")
+
+	dag.replaceNode(node1, []Node {})
+	assert.Nil(t, dag.nodes[1])
+	assert.Nil(t, dag.lookup("bar"))
+
+	// XXX not testing parent replacement
+	// (to be fair, it is tested by Test_DAG_Expand())
+	assert.Equal(t, node2, dag.lookup("qux"))
+	dag.replaceNode(node2, []Node {})
+	assert.Nil(t, dag.nodes[2])
+	assert.Nil(t, dag.lookup("qux"))
+
+	assert.Equal(t, node0, dag.lookup("foo"))
 }
 
 func Test_DAG_FindFinalTargets(t *testing.T) {
@@ -106,6 +132,66 @@ func Test_DAG_FindOriginalSources_cycle(t *testing.T) {
 	return
 	bstate.goal = bit.New(0)
 	bstate.FindOriginalSources()
+}
+
+func Test_DAG_Expand(t *testing.T) {
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	// this just gives us a known set of filenames for GlobNode to search
+	dag1 := makeSimpleGraph()
+	touchSourceFiles(dag1)
+	// fmt.Println("after touchSourceFiles: pwd && ls -lR")
+	// cmd := exec.Command("/bin/sh", "-c", "pwd && ls -lR")
+	// output, err := cmd.CombinedOutput()
+	// _ = err
+	// fmt.Print(string(output))
+
+	// dag1.Expand() is a no-op, because it consists entirely of
+	// FileNodes -- nothing to expand here
+	relevant := bit.New()
+	relevant.AddRange(0, len(dag1.nodes))
+	orig := make([]Node, len(dag1.nodes))
+	copy(orig, dag1.nodes)
+	dag1.Expand(relevant)
+	assert.True(t, reflect.DeepEqual(orig, dag1.nodes))
+
+	dag2 := NewDAG()
+	node0 := MakeGlobNode(dag2, types.NewFileFinder([]string {"**/util.[ch]"}))
+	node1 := MakeGlobNode(dag2, types.NewFileFinder([]string {"*.h"}))
+	node2 := MakeFileNode(dag2, "util.o")
+	node2.AddParent(node0)
+	assert.Equal(t, 3, dag2.length())
+
+	// relevant = {0} so we only expand the first GlobNode
+	relevant = bit.New(0)
+	dag2.Expand(relevant)
+	assert.Equal(t, 5, len(dag2.nodes))
+	assert.Nil(t, dag2.nodes[0])
+	assert.Equal(t, node1, dag2.nodes[1])
+	assert.Equal(t, node2, dag2.nodes[2])
+	assert.Equal(t, "util.c", dag2.nodes[3].(*FileNode).name)
+	assert.Equal(t, "util.h", dag2.nodes[4].(*FileNode).name)
+	buf := new(bytes.Buffer)
+
+	// node2's parents correctly adjusted
+	parents := node2.Parents()
+	assert.Equal(t, 2, len(parents))
+	assert.Equal(t, "util.c", parents[0].Name())
+	assert.Equal(t, "util.h", parents[1].Name())
+
+	dag2.Dump(buf)				// no panic on nil nodes
+
+	// all nodes are relevant, so the second GlobNode will be expanded
+	relevant.AddRange(0, len(dag2.nodes))
+	dag2.Expand(relevant)
+
+	assert.Equal(t, 6, len(dag2.nodes))
+	assert.Nil(t, dag2.nodes[0])
+	assert.Nil(t, dag2.nodes[1])
+	assert.Equal(t, "util.c", dag2.nodes[3].(*FileNode).name)
+	assert.Equal(t, "util.h", dag2.nodes[4].(*FileNode).name)
+	assert.Equal(t, "misc.h", dag2.nodes[5].(*FileNode).name)
 }
 
 func Test_DAG_FindStaleTargets(t *testing.T) {
@@ -193,4 +279,14 @@ func makeSimpleGraph() *DAG {
 	add("util.c")
 	add("tool2.c")
 	return finish()
+}
+
+func touchSourceFiles(dag *DAG) {
+	filenames := []string {}
+	for _, node := range dag.nodes {
+		if (*bit.Set)(node.ParentSet()).IsEmpty() {
+			filenames = append(filenames, node.Name())
+		}
+	}
+	testutils.TouchFiles(filenames...)
 }

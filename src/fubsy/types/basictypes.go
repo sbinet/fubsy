@@ -15,6 +15,13 @@ type FuObject interface {
 	Equal(FuObject) bool
 	Add(FuObject) (FuObject, error)
 
+	// Return a slice of FuObjects that you can loop over; intended
+	// for easy access to the elements of compounts types like FuList.
+	// Scalar types (e.g. FuString) should just return themselves in a
+	// one-element slice. Callers must not mutate the returned slice,
+	// since that might (or might not) affect the original object.
+	List() []FuObject
+
 	// Convert an object from its initial form, seen in the main phase
 	// (the result of evaluating an expression in the AST), to the
 	// final form seen in the build phase. For example, expansion
@@ -67,6 +74,10 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 	panic("unreachable code")
 }
 
+func (self FuString) List() []FuObject {
+	return []FuObject {self}
+}
+
 func (self FuString) Expand() (FuObject, error) {
 	// XXX variable expansion!!!
 	return self, nil
@@ -112,6 +123,10 @@ func (self FuList) Add(other_ FuObject) (FuObject, error) {
 		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
 	}
 	panic("unreachable code")
+}
+
+func (self FuList) List() []FuObject {
+	return self
 }
 
 func (self FuList) Expand() (FuObject, error) {

@@ -3,7 +3,6 @@ package types
 import (
 	"testing"
 	//"fmt"
-	"os"
 	"reflect"
 	"regexp"
 	"github.com/stretchrcom/testify/assert"
@@ -142,8 +141,7 @@ func Test_FuFileFinder_Expand_empty(t *testing.T) {
 
 	// no patterns, some files: still nothing
 	ff.includes = ff.includes[0:0]
-	mkdirs("lib1", "lib1/sub", "lib2", "include")
-	touchfiles(
+	testutils.TouchFiles(
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
 	assertExpand(t, []string {}, ff)
 }
@@ -152,8 +150,7 @@ func Test_FuFileFinder_Expand_single_include(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
-	mkdirs("lib1", "lib1/sub", "lib2", "include")
-	touchfiles(
+	testutils.TouchFiles(
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
 
 	ff := &FuFileFinder{includes: []string {"*/*.c"}}
@@ -180,14 +177,7 @@ func Test_FuFileFinder_Expand_double_recursion(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
-	mkdirs(
-		"app1/src/main/org/example/app1/subpkg",
-		"app1/src/test/org/example/app1/subpkg",
-		"misc/app2/src/main/org/example/app2",
-		"misc/app3/src/main/org/example/app3",
-		"misc/app3/src/test/org/example/app3",
-		)
-	touchfiles(
+	testutils.TouchFiles(
 		"app1/src/main/org/example/app1/App1.java",
 		"app1/src/main/org/example/app1/Util.java",
 		"app1/src/main/org/example/app1/doc.txt",
@@ -225,8 +215,7 @@ func Test_FuFileFinder_Expand_double_recursion(t *testing.T) {
 func Test_FileFinder_Add(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
-	mkdirs("src", "include", "doc")
-	touchfiles(
+	testutils.TouchFiles(
 		"src/foo.c", "src/foo.h", "main.c", "include/bop.h",
 		"doc.txt", "doc/stuff.txt", "doc/blahblah.rst")
 
@@ -296,24 +285,6 @@ func Test_FinderList_misc(t *testing.T) {
 	assert.Equal(t,
 		"<*.c *.h> + <doc/???.txt> + <> + <*.c *.h> + <doc/???.txt>",
 		sum3.String())
-}
-
-func mkdirs(dirs ...string) {
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			panic(err)
-		}
-	}
-}
-
-func touchfiles(filenames ...string) {
-	for _, fn := range filenames {
-		file, err := os.Create(fn)
-		if err != nil {
-			panic(err)
-		}
-		file.Close()
-	}
 }
 
 func assertExpand(t *testing.T, expect []string, obj FuObject) {

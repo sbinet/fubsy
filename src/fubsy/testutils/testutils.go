@@ -3,7 +3,7 @@ package testutils
 import (
 	"testing"
 	"os"
-	"path"
+	"path/filepath"
 	"io/ioutil"
 )
 
@@ -67,10 +67,35 @@ func Chtemp() (goback func()) {
 
 // Create a file in tmpdir and write data to it. Panics on any error.
 func Mkfile(tmpdir string, basename string, data string) string {
-	fn := path.Join(tmpdir, basename)
+	fn := filepath.Join(tmpdir, basename)
 	err := ioutil.WriteFile(fn, []byte(data), 0644)
 	if err != nil {
 		panic(err)
 	}
 	return fn
+}
+
+// Create many empty files. Panics on any error.
+func TouchFiles(filenames ...string) {
+	for _, fn := range filenames {
+		err := os.MkdirAll(filepath.Dir(fn), 0755)
+		if err != nil {
+			panic(err)
+		}
+		file, err := os.Create(fn)
+		if err != nil {
+			panic(err)
+		}
+		file.Close()
+	}
+}
+
+// Create many directories. Panics on any error.
+// XXX currently unused: if still unused by 2013-06-30, delete it.
+func Mkdirs(dirs ...string) {
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			panic(err)
+		}
+	}
 }

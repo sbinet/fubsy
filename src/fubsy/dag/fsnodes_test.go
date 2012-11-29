@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchrcom/testify/assert"
 	"fubsy/types"
+	"fubsy/testutils"
 )
 
 func Test_MakeFileNode(t *testing.T) {
@@ -138,6 +139,29 @@ func Test_GlobNode_basics(t *testing.T) {
 	assert.True(t, glob2b.Equal(glob2))
 	node2b := MakeGlobNode(dag, glob2b)
 	assert.True(t, node2b.Equal(node2))
+}
+
+func Test_GlobNode_Expand(t *testing.T) {
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	testutils.TouchFiles(
+		"src/util.c",
+		"src/util.h",
+		"src/util-test.c",
+		"doc/README.txt",
+		"main.c",
+		)
+	dag := NewDAG()
+	node0 := MakeGlobNode(dag, types.NewFileFinder([]string {"*.c", "**/*.h"}))
+	node1 := MakeGlobNode(dag, types.NewFileFinder([]string {"**/*.java"}))
+	_ = node1
+
+	node0.Expand()
+	assert.Nil(t, dag.nodes[0])
+	assert.Equal(t, 4, len(dag.nodes))
+	assert.Equal(t, "main.c", dag.nodes[2].(*FileNode).name)
+	assert.Equal(t, "src/util.h", dag.nodes[3].(*FileNode).name)
 }
 
 func assertParents(t *testing.T, expect []string, node Node) {

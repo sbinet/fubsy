@@ -59,6 +59,13 @@ type Node interface {
 	// original source node).
 	Action() Action
 
+	// Augment the graph that this node belongs to by generating new
+	// nodes that represent the same resources as this node, adding
+	// them to the graph, and possibly removing this node from the
+	// graph. Canonical use case: expanding wildcards by replacing one
+	// GlobNode with zero or more FileNodes.
+	Expand() error
+
 	// return true if this node has changed since the last build where
 	// it was relevant
 	Changed() (bool, error)
@@ -101,6 +108,10 @@ func (self *nodebase) String() string {
 	return self.name
 }
 
+// hmmm: all this business with parents knows a lot about self.dag,
+// bitsets, and so forth... maybe all node relationships should be
+// stored in the DAG object???
+
 func (self *nodebase) ParentSet() NodeSet {
 	return NodeSet(&self.parentset)
 }
@@ -133,6 +144,10 @@ func (self *nodebase) SetAction(action Action) {
 
 func (self *nodebase) Action() Action {
 	return self.action
+}
+
+func (self *nodebase) Expand() error {
+	return nil
 }
 
 func (self *nodebase) SetState(state NodeState) {

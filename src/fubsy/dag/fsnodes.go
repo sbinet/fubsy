@@ -77,6 +77,23 @@ func (self *GlobNode) Equal(other_ Node) bool {
 	return ok && self.glob.Equal(other.glob)
 }
 
+func (self *GlobNode) Expand() error {
+	filenames, err := self.glob.Expand()
+	if err != nil {
+		return err
+	}
+	newnodes := []Node {}
+	for _, fnobj := range filenames.List() {
+		// fnobj had better be a FuString -- panic if not
+		fn := fnobj.(types.FuString).Value()
+		node := MakeFileNode(self.dag, fn)
+		newnodes = append(newnodes, node)
+	}
+	//self.dag.removeNode(self)
+	self.dag.replaceNode(self, newnodes)
+	return nil
+}
+
 func (self *GlobNode) Changed() (bool, error) {
 	panic("Changed() should never be called on a GlobNode " +
 		"(graph should have been expanded by this point)")
