@@ -62,7 +62,7 @@ type BuildState struct {
 	// build proceeds)
 	rebuild *bit.Set
 
-	// the children of all relevant nodes
+	// the relevant children of all relevant nodes
 	children map[int] *bit.Set
 }
 
@@ -156,21 +156,25 @@ func (self *BuildState) FindOriginalSources() {
 
 	self.relevant = bit.New()
 	self.sources = bit.New()
+	self.children = make(map[int] *bit.Set)
 
 	var visit func(id int)
 	visit = func(id int) {
-		//fmt.Printf("visiting node %d (%s)\n", id, nodes[id])
-		parents := (*bit.Set)(nodes[id].ParentSet())
+		node := nodes[id]
+		//fmt.Printf("visiting node %d (%s)\n", id, node)
+		self.children[id] = bit.New()
+		parents := (*bit.Set)(node.ParentSet())
 		parents.Do(func(parent int) {
 			if colour[parent] == GREY {
 				// we can do a better job of reporting this!
 				panic(fmt.Sprintf("dependency cycle! (..., %s, %s)",
-					nodes[id], nodes[parent]))
+					node, nodes[parent]))
 			}
 			if colour[parent] == WHITE {
 				colour[parent] = GREY
 				visit(parent)
 			}
+			self.children[parent].Add(id)
 		})
 		self.relevant.Add(id)
 		if parents.IsEmpty() {
@@ -191,11 +195,21 @@ func (self *BuildState) FindOriginalSources() {
 // the original sources, 2) relevant (ancestors of a goal node), and
 // 3) stale.
 func (self *BuildState) FindStaleTargets() []error {
+	errors := make([]error, 0)
+	self.rebuild = bit.New()
 	self.sources.Do(func (id int) {
 		node := self.dag.nodes[id]
-		_ = node
+		changed, err := node.Changed()
+		if err != nil {
+			errors = append(errors, err)
+		} else if changed  {
+			self.children[id].Do(func (child int) {
+				self.rebuild.Add(child)
+				self.dag.nodes[child].SetState(STALE)
+			})
+		}
 	})
-	return nil
+	return errors
 }
 
 func (self *BuildState) BuildStaleTargets() []error {

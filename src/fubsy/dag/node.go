@@ -5,6 +5,15 @@ import (
 	"code.google.com/p/go-bit/bit"
 )
 
+type NodeState byte
+
+const (
+	UNKNOWN NodeState = iota
+	STALE
+	BUILDING
+	BUILT
+)
+
 // This interface must not betray anything about the filesystem,
 // otherwise we'll have no hope of making non-file nodes. (They're not
 // needed often, but when you need them you *really* need them.)
@@ -49,6 +58,14 @@ type Node interface {
 	// action has ever been set, which implies that this is an
 	// original source node).
 	Action() Action
+
+	// return true if this node has changed since the last build where
+	// it was relevant
+	Changed() (bool, error)
+
+	SetState(state NodeState)
+
+	State() NodeState
 }
 
 
@@ -61,6 +78,7 @@ type nodebase struct {
 	name string
 	parentset bit.Set
 	action Action
+	state NodeState
 }
 
 func makenodebase(dag *DAG, id int, name string) nodebase {
@@ -96,7 +114,7 @@ func (self *nodebase) Parents() []Node {
 	return result
 }
 
-func (self *nodebase) AddParent (node Node) {
+func (self *nodebase) AddParent(node Node) {
 	id := node.Id()
 	if id < 0 || id >= self.dag.length() {
 		panic(fmt.Sprintf(
@@ -109,10 +127,18 @@ func (self *nodebase) AddParent (node Node) {
 	self.parentset.Add(id)
 }
 
-func (self *nodebase) SetAction (action Action) {
+func (self *nodebase) SetAction(action Action) {
 	self.action = action
 }
 
 func (self *nodebase) Action() Action {
 	return self.action
+}
+
+func (self *nodebase) SetState(state NodeState) {
+	self.state = state
+}
+
+func (self *nodebase) State() NodeState {
+	return self.state
 }

@@ -38,6 +38,11 @@ func (self *FileNode) Equal(other_ Node) bool {
 	return ok && other.name == self.name
 }
 
+func (self *FileNode) Changed() (bool, error) {
+	// placeholder until we have persistent build state
+	return true, nil
+}
+
 func MakeGlobNode(dag *DAG, glob_ types.FuObject) *GlobNode {
 	var name string
 	var globid int
@@ -70,4 +75,9 @@ func (self *GlobNode) String() string {
 func (self *GlobNode) Equal(other_ Node) bool {
 	other, ok := other_.(*GlobNode)
 	return ok && self.glob.Equal(other.glob)
+}
+
+func (self *GlobNode) Changed() (bool, error) {
+	panic("Changed() should never be called on a GlobNode " +
+		"(graph should have been expanded by this point)")
 }
