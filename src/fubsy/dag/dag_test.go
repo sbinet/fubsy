@@ -51,40 +51,42 @@ func Test_DAG_FindFinalTargets(t *testing.T) {
 
 func Test_DAG_FindOriginalSources(t *testing.T) {
 	dag := makeSimpleGraph()
-	goal := bit.New(0, 1)		// all final targets: tool1, tool2
-	sources, relevant := dag.FindOriginalSources(NodeSet(goal))
-	assert.Equal(t, "{6..11}", (*bit.Set)(sources).String())
-	assert.Equal(t, "{0..11}", (*bit.Set)(relevant).String())
+	bstate := dag.NewBuildState()
+	bstate.goal = bit.New(0, 1)		// all final targets: tool1, tool2
+	bstate.FindOriginalSources()
+	assert.Equal(t, "{6..11}", bstate.sources.String())
+	assert.Equal(t, "{0..11}", bstate.relevant.String())
 
 	// goal = {tool1} ==>
 	// sources = {tool1.c, misc.h, misc.c, util.h, util.c}
-	goal = bit.New(0)
-	sources, relevant = dag.FindOriginalSources(NodeSet(goal))
-	assert.Equal(t, "{6..10}", (*bit.Set)(sources).String())
-	assert.Equal(t, "{0, 2..4, 6..10}", (*bit.Set)(relevant).String())
+	bstate.goal = bit.New(0)
+	bstate.FindOriginalSources()
+	assert.Equal(t, "{6..10}", bstate.sources.String())
+	assert.Equal(t, "{0, 2..4, 6..10}", bstate.relevant.String())
 
 	// goal = {tool2} ==>
 	// sources = {util.h, util.c, tool2.c}
-	goal = bit.New(1)
-	sources, relevant = dag.FindOriginalSources(NodeSet(goal))
-	assert.Equal(t, "{9..11}", (*bit.Set)(sources).String())
-	assert.Equal(t, "{1, 4, 5, 9..11}", (*bit.Set)(relevant).String())
+	bstate.goal = bit.New(1)
+	bstate.FindOriginalSources()
+	assert.Equal(t, "{9..11}", bstate.sources.String())
+	assert.Equal(t, "{1, 4, 5, 9..11}", bstate.relevant.String())
 }
 
 func Test_DAG_FindOriginalSources_cycle(t *testing.T) {
 	dag := makeSimpleGraph()
 	dag.lookup("misc.h").AddParent(dag.lookup("tool1"))
+	bstate := dag.NewBuildState()
 
 	// goal = {tool2} ==> no cycle, since we don't visit those nodes
 	// (this simply tests that FindOriginalSources() doesn't panic)
-	goal := NodeSet(bit.New(1))
-	_, _ = dag.FindOriginalSources(goal)
+	bstate.goal = bit.New(1)
+	bstate.FindOriginalSources()
 
 	// goal = {tool1} ==> cycle!
 	// (disabled because FindOriginalSources() currently panics on cycle)
 	return
-	goal = NodeSet(bit.New(0))
-	_, _ = dag.FindOriginalSources(goal)
+	bstate.goal = bit.New(0)
+	bstate.FindOriginalSources()
 }
 
 func makeSimpleGraph() *DAG {

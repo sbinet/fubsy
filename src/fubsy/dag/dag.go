@@ -42,6 +42,30 @@ type DAG struct {
 	index map[string] int
 }
 
+type BuildState struct {
+	// establishes the meaning of the integer node IDs in all the
+	// other fields
+	dag *DAG
+
+	// the target nodes requested by the user (default: all final targets)
+	goal *bit.Set
+
+	// the original sources for goal, i.e. the set of ancestors of
+	// goal that have no parents
+	sources *bit.Set
+
+	// the set of all ancestors of goal (relevant contains both goal
+	// and source)
+	relevant *bit.Set
+
+	// the set of all nodes that need to be rebuilt (changes as a
+	// build proceeds)
+	rebuild *bit.Set
+
+	// the children of all relevant nodes
+	children map[int] *bit.Set
+}
+
 // an opaque set of integer node IDs (this type deliberately has no
 // methods; it just exists so code in the 'runtime' package can get
 // node sets out of the DAG to pass back to other DAG methods that
@@ -114,45 +138,68 @@ func (self *DAG) FindFinalTargets() NodeSet {
 	return NodeSet(targets)
 }
 
+func (self *DAG) NewBuildState() *BuildState {
+	return &BuildState{dag: self}
+}
+
+func (self *BuildState) SetGoal(goal NodeSet) {
+	self.goal = (*bit.Set)(goal)
+}
+
 // Walk the graph starting from each node in goal to find the set of
 // original source nodes, i.e. nodes with no parents that are
-// ancestors of any node in goal. Return that set along with the set
-// of relevant nodes, i.e. all nodes that are ancestors of any node in
-// goal (sources is a subset of relevant).
-func (self *DAG) FindOriginalSources(goal NodeSet) (NodeSet, NodeSet) {
-	colour := make([]byte, len(self.nodes))
-	sources := bit.New()
-	relevant := bit.New()
+// ancestors of any node in goal. Store that set (along with some
+// other useful information discovered in the graph walk) in self.
+func (self *BuildState) FindOriginalSources() {
+	nodes := self.dag.nodes
+	colour := make([]byte, len(nodes))
+
+	self.relevant = bit.New()
+	self.sources = bit.New()
 
 	var visit func(id int)
 	visit = func(id int) {
-		//fmt.Printf("visiting node %d (%s)\n", id, self.nodes[id])
-		relevant.Add(id)
-		parents := (*bit.Set)(self.nodes[id].ParentSet())
+		//fmt.Printf("visiting node %d (%s)\n", id, nodes[id])
+		parents := (*bit.Set)(nodes[id].ParentSet())
 		parents.Do(func(parent int) {
 			if colour[parent] == GREY {
 				// we can do a better job of reporting this!
 				panic(fmt.Sprintf("dependency cycle! (..., %s, %s)",
-					self.nodes[id], self.nodes[parent]))
+					nodes[id], nodes[parent]))
 			}
 			if colour[parent] == WHITE {
 				colour[parent] = GREY
 				visit(parent)
 			}
 		})
+		self.relevant.Add(id)
 		if parents.IsEmpty() {
-			sources.Add(id)
+			self.sources.Add(id)
 		}
 		colour[id] = BLACK
 	}
 
-	(*bit.Set)(goal).Do(func(id int) {
+	self.goal.Do(func(id int) {
 		if colour[id] == WHITE {
 			colour[id] = GREY
 			visit(id)
 		}
 	})
-	return NodeSet(sources), NodeSet(relevant)
+}
+
+// Compute the initial rebuild set, i.e. nodes that are 1) children of
+// the original sources, 2) relevant (ancestors of a goal node), and
+// 3) stale.
+func (self *BuildState) FindStaleTargets() []error {
+	self.sources.Do(func (id int) {
+		node := self.dag.nodes[id]
+		_ = node
+	})
+	return nil
+}
+
+func (self *BuildState) BuildStaleTargets() []error {
+	return nil
 }
 
 // Return the node with the specified name, or nil if no such node.

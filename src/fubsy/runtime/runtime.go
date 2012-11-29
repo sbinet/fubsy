@@ -238,20 +238,16 @@ func (self *Runtime) buildTargets() []error {
 	// eventually we should use the command line to figure out the
 	// user's desired targets... but the default will always be to
 	// build all final targets, so let's just handle that case for now
+	bstate := self.dag.NewBuildState()
 	goal := self.dag.FindFinalTargets()
-	sources, relevant := self.dag.FindOriginalSources(goal)
-	rebuild := self.initialRebuildSet(sources, relevant)
-	errors := self.rebuild(relevant, rebuild)
+	bstate.SetGoal(goal)
+	bstate.FindOriginalSources()
+	errors := bstate.FindStaleTargets()
+	if len(errors) > 0 {
+		return errors
+	}
+	errors = bstate.BuildStaleTargets()
 	return errors
-}
-
-func (self *Runtime) initialRebuildSet(sources, relevant dag.NodeSet) dag.NodeSet {
-	var result dag.NodeSet
-	return result
-}
-
-func (self *Runtime) rebuild(relevant, rebuild dag.NodeSet) []error {
-	return nil
 }
 
 // XXX this is identical to TypeError in types/basictypes.go:
