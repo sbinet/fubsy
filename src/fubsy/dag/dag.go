@@ -112,11 +112,18 @@ func (self *DAG) Dump(writer io.Writer) {
 
 // Return the set of nodes in this graph with no children.
 func (self *DAG) FindFinalTargets() NodeSet {
+	fmt.Println("FindFinalTargets():")
 	var targets *bit.Set = bit.New()
 	targets.AddRange(0, self.length())
-	for _, parents := range self.parents {
-		targets.SetAndNot(targets, parents)
+	for id, parents := range self.parents {
+		//fmt.Printf("  %d: node=%v, parents=%v\n", id, self.nodes[id], parents)
+		if parents == nil {
+			targets.Remove(id)
+		} else {
+			targets.SetAndNot(targets, parents)
+		}
 	}
+	fmt.Printf("  -> targets = %v\n", targets)
 	return NodeSet(targets)
 }
 

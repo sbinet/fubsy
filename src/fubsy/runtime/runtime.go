@@ -252,6 +252,15 @@ func (self *Runtime) buildTargets() []error {
 	fmt.Println("\nexpanded dag:")
 	self.dag.Dump(os.Stdout)
 
+	// Now that we've expanded the DAG, rediscover targets, sources,
+	// etc. Hmmm: this could be smarter/faster, by adjusting all those
+	// sets during ExpandDAG(). But this is *easy. But what are we
+	// going to do when we have a DAG that mutates as we build?
+	goal = self.dag.FindFinalTargets()
+	fmt.Printf("goal (v2) = %v\n", goal)
+	bstate.SetGoal(goal)
+	bstate.FindOriginalSources()
+
 	errors = bstate.FindStaleTargets()
 	if len(errors) > 0 {
 		return errors

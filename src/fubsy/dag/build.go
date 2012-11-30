@@ -50,7 +50,7 @@ func (self *BuildState) FindOriginalSources() {
 	var visit func(id int)
 	visit = func(id int) {
 		node := nodes[id]
-		//fmt.Printf("visiting node %d (%s)\n", id, node)
+		//fmt.Printf("visiting node %d: %s\n", id, node)
 		self.children[id] = bit.New()
 		parents := self.dag.parents[id]
 		parents.Do(func(parent int) {
@@ -78,6 +78,13 @@ func (self *BuildState) FindOriginalSources() {
 			visit(id)
 		}
 	})
+
+	// fmt.Printf(
+	// 	"FindOriginalSources:\n" +
+	// 	"  relevant = %v\n" +
+	// 	"  sources = %v\n" +
+	// 	"  children = %v\n",
+	// 	self.relevant, self.sources, self.children)
 }
 
 func (self *BuildState) ExpandDAG() []error {
@@ -100,6 +107,7 @@ func (self *BuildState) FindStaleTargets() []error {
 			errors = append(errors, err)
 		}
 	})
+	//fmt.Printf("initial rebuild set = %v\n", self.rebuild)
 	return errors
 }
 
