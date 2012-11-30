@@ -34,19 +34,21 @@ packages="fubsy/dsl fubsy/types fubsy/dag fubsy/runtime"
 #packages="fubsy/dsl"
 #packages="fubsy/dag"
 #packages="fubsy/runtime"
-for pkg in $packages; do
-    go install -v -gcflags "-N -l" $pkg
-    go test -v -gcflags "-N -l" -i $pkg
-    if [ "$coverage" ]; then
+
+go install -v -gcflags "-N -l" $packages
+go test -v -gcflags "-N -l" -i $packages
+
+if [ "$coverage" ]; then
+    for pkg in $packages; do
         json=coverage-`basename $pkg`.json
         report=coverage-`basename $pkg`.txt
         ./bin/gocov test \
             -exclude fubsy/testutils,github.com/stretchrcom/testify/assert,code.google.com/p/go-bit/bit \
             $pkg > $json
         ./bin/gocov report $json > $report
-    else
-        go test -v -gcflags "-N -l" $benchopt $pkg $tests
-    fi
-done
+    done
+else
+    go test -v -gcflags "-N -l" $benchopt $packages $tests
+fi
 
 go build -v -gcflags "-N -l"
