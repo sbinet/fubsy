@@ -12,9 +12,8 @@ type Action interface {
 	// Perform whatever task this action implies. Return nil on
 	// success, error otherwise. Compound actions always fail on the
 	// first error; they do not continue executing. (The global
-	// "--keep-going" option is irrelevant this deep in the build
-	// system; it's used higher up, walking the graph of dependencies
-	// and executing the action of each stale target.)
+	// "--keep-going" option is irrelevant at this level; the caller
+	// of Execute() is responsible for respecting that option.)
 	Execute() error
 }
 

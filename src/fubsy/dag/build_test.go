@@ -95,3 +95,22 @@ func Test_BuildState_FindStaleTargets(t *testing.T) {
 	assert.Equal(t, "{2..5}", bstate.rebuild.String())
 }
 
+func Test_joinNodes(t *testing.T) {
+	dag := NewDAG()
+	nodes := []Node {
+		makestubnode(dag, "blargh"),
+		makestubnode(dag, "merp"),
+		makestubnode(dag, "whoosh"),
+		makestubnode(dag, "fwob"),
+		makestubnode(dag, "whee"),
+	}
+
+	assert.Equal(t,
+		"blargh, merp, whoosh, fwob, whee", joinNodes(", ", 10, nodes))
+	assert.Equal(t,
+		"blargh, merp, whoosh, fwob, whee", joinNodes(", ", 5, nodes))
+	assert.Equal(t,
+		"blargh, merp, whoosh, ...", joinNodes(", ", 4, nodes))
+	assert.Equal(t,
+		"blargh!*!merp!*!...", joinNodes("!*!", 3, nodes))
+}

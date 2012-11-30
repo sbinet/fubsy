@@ -9,6 +9,7 @@ const (
 	UNKNOWN NodeState = iota
 	STALE
 	BUILDING
+	FAILED
 	BUILT
 )
 

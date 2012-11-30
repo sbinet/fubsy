@@ -256,8 +256,11 @@ func (self *Runtime) buildTargets() []error {
 	if len(errors) > 0 {
 		return errors
 	}
-	errors = bstate.BuildStaleTargets()
-	return errors
+	err := bstate.BuildStaleTargets()
+	if err != nil {
+		return []error {err}
+	}
+	return nil
 }
 
 // XXX this is identical to TypeError in types/basictypes.go:
