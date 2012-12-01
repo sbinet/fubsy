@@ -39,20 +39,20 @@ func Test_FileNode_parents(t *testing.T) {
 	// add a single parent in isolation
 	p0 := MakeFileNode(dag, "bong")
 	expect = []string {"bong"}
-	node.addParent(p0)
+	dag.addParent(node, p0)
 	assertParents(t, expect, dag, node)
 
 	// add a couple more
 	p1 := MakeFileNode(dag, "blorp")
 	p2 := MakeFileNode(dag, "meep")
-	node.addParent(p1)
-	node.addParent(p2)
+	dag.addParent(node, p1)
+	dag.addParent(node, p2)
 	expect = append(expect, "blorp", "meep")
 	assertParents(t, expect, dag, node)
 
 	// ensure that duplicates are not re-added
-	node.addParent(p2)
-	node.addParent(p0)
+	dag.addParent(node, p2)
+	dag.addParent(node, p0)
 	assertParents(t, expect, dag, node)
 }
 
@@ -68,7 +68,7 @@ func Test_FileNode_parents_order(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		name = fmt.Sprintf("file%02d", i)
 		expect[i] = name
-		node.addParent(MakeFileNode(dag, name))
+		dag.addParent(node, MakeFileNode(dag, name))
 	}
 	assertParents(t, expect, dag, node)
 
@@ -83,8 +83,8 @@ func Test_FileNode_parents_order(t *testing.T) {
 	// interface.
 	p1 := MakeFileNode(dag, "p1")
 	p2 := MakeFileNode(dag, "p2")
-	node.addParent(p2)
-	node.addParent(p1)
+	dag.addParent(node, p2)
+	dag.addParent(node, p1)
 	expect = append(expect, "p1", "p2")
 	assertParents(t, expect, dag, node)
 }
@@ -109,7 +109,7 @@ func Benchmark_FileNode_AddParent(b *testing.B) {
 
 	node := MakeFileNode(dag, "bop")
 	for _, pnode := range nodes {
-		node.addParent(pnode)
+		dag.addParent(node, pnode)
 	}
 }
 
@@ -160,7 +160,7 @@ func Test_GlobNode_Expand(t *testing.T) {
 	node1 := MakeGlobNode(dag, types.NewFileFinder([]string {"**/*.java"}))
 	_ = node1
 
-	node0.Expand()
+	node0.Expand(dag)
 	assert.Nil(t, dag.nodes[0])
 	assert.Equal(t, 4, len(dag.nodes))
 	assert.Equal(t, "main.c", dag.nodes[2].(*FileNode).name)

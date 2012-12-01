@@ -32,10 +32,6 @@ type Node interface {
 	// (should be sufficient to compare names)
 	Equal(other Node) bool
 
-	// Add node to this node's parent list (do nothing if it's already there).
-	// Private because it's only used by test code (but it sure is handy there).
-	addParent(parent Node)
-
 	// return the child nodes that depend on this node
 	//Children() []Node
 
@@ -50,12 +46,12 @@ type Node interface {
 	// original source node).
 	Action() Action
 
-	// Augment the graph that this node belongs to by generating new
-	// nodes that represent the same resources as this node, adding
-	// them to the graph, and possibly removing this node from the
-	// graph. Canonical use case: expanding wildcards by replacing one
-	// GlobNode with zero or more FileNodes.
-	Expand() error
+	// Augment dag by generating new nodes that represent the same
+	// resources as this node, adding them to the graph, and possibly
+	// removing this node from the graph. Canonical use case:
+	// expanding wildcards by replacing one GlobNode with zero or more
+	// FileNodes.
+	Expand(dag *DAG) error
 
 	// return true if this node has changed since the last build where
 	// it was relevant
@@ -71,15 +67,13 @@ type Node interface {
 // basics right out of the box.
 
 type nodebase struct {
-	dag *DAG
 	name string
 	action Action
 	state NodeState
 }
 
-func makenodebase(dag *DAG, name string) nodebase {
+func makenodebase(name string) nodebase {
 	return nodebase{
-		dag: dag,
 		name: name,
 	}
 }
@@ -100,7 +94,7 @@ func (self *nodebase) Action() Action {
 	return self.action
 }
 
-func (self *nodebase) Expand() error {
+func (self *nodebase) Expand(dag *DAG) error {
 	return nil
 }
 

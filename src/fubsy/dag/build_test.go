@@ -46,7 +46,7 @@ func Test_BuildState_FindOriginalSources(t *testing.T) {
 
 func Test_BuildState_FindOriginalSources_cycle(t *testing.T) {
 	dag := makeSimpleGraph()
-	dag.lookup("misc.h").addParent(dag.lookup("tool1"))
+	dag.addParent(dag.lookup("misc.h"), dag.lookup("tool1"))
 	bstate := dag.NewBuildState()
 
 	// goal = {tool2} ==> no cycle, since we don't visit those nodes

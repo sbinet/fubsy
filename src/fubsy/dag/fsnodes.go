@@ -25,15 +25,15 @@ type GlobNode struct {
 func MakeFileNode(dag *DAG, name string) *FileNode {
 	node := dag.lookup(name)
 	if node == nil {
-		node := newFileNode(dag, name)
+		node := newFileNode(name)
 		dag.addNode(node)
 		return node
 	}
 	return node.(*FileNode)		// panic on unexpected type
 }
 
-func newFileNode(dag *DAG, name string) *FileNode {
-	return &FileNode{nodebase: makenodebase(dag, name)}
+func newFileNode(name string) *FileNode {
+	return &FileNode{nodebase: makenodebase(name)}
 }
 
 func (self *FileNode) Equal(other_ Node) bool {
@@ -46,10 +46,6 @@ func (self *FileNode) Changed() (bool, error) {
 	return true, nil
 }
 
-func (self *FileNode) addParent(parent Node) {
-	self.dag.addParent(self, parent)
-}
-
 func MakeGlobNode(dag *DAG, glob types.FuObject) *GlobNode {
 	// get the address of the underlying struct; panics if glob is not
 	// a pointer (roughly speaking), i.e. we are passed an
@@ -58,16 +54,16 @@ func MakeGlobNode(dag *DAG, glob types.FuObject) *GlobNode {
 	name := fmt.Sprintf("glob:%x", ptr)
 	node := dag.lookup(name)
 	if node == nil {
-		node := newGlobNode(dag, name, glob)
+		node := newGlobNode(name, glob)
 		dag.addNode(node)
 		return node
 	}
 	return node.(*GlobNode)		// panic on unexpected type
 }
 
-func newGlobNode(dag *DAG, name string, glob types.FuObject) *GlobNode {
+func newGlobNode(name string, glob types.FuObject) *GlobNode {
 	return &GlobNode{
-		nodebase: makenodebase(dag, name),
+		nodebase: makenodebase(name),
 		glob: glob,
 	}
 }
@@ -81,7 +77,7 @@ func (self *GlobNode) Equal(other_ Node) bool {
 	return ok && self.glob.Equal(other.glob)
 }
 
-func (self *GlobNode) Expand() error {
+func (self *GlobNode) Expand(dag *DAG) error {
 	filenames, err := self.glob.Expand()
 	if err != nil {
 		return err
@@ -90,19 +86,14 @@ func (self *GlobNode) Expand() error {
 	for _, fnobj := range filenames.List() {
 		// fnobj had better be a FuString -- panic if not
 		fn := fnobj.(types.FuString).Value()
-		node := MakeFileNode(self.dag, fn)
+		node := MakeFileNode(dag, fn)
 		newnodes = append(newnodes, node)
 	}
-	//self.dag.removeNode(self)
-	self.dag.replaceNode(self, newnodes)
+	dag.replaceNode(self, newnodes)
 	return nil
 }
 
 func (self *GlobNode) Changed() (bool, error) {
 	panic("Changed() should never be called on a GlobNode " +
 		"(graph should have been expanded by this point)")
-}
-
-func (self *GlobNode) addParent(parent Node) {
-	self.dag.addParent(self, parent)
 }

@@ -143,7 +143,7 @@ func (self *DAG) Expand(relevant *bit.Set) []error {
 	var err error
 	for id, node := range self.nodes {
 		if node != nil && relevant.Contains(id) {
-			err = node.Expand()
+			err = node.Expand(self)
 			if err != nil {
 				errors = append(errors, err)
 			}
