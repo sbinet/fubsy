@@ -102,7 +102,7 @@ func (self *BuildState) FindStaleTargets() []error {
 		if node == nil {
 			return
 		}
-		err := self.checkChanged(node)
+		err := self.checkChanged(id, node)
 		if err != nil {
 			errors = append(errors, err)
 		}
@@ -137,7 +137,7 @@ func (self *BuildState) BuildStaleTargets() error {
 			}
 
 			node.SetState(BUILT)
-			err = self.checkChanged(node)
+			err = self.checkChanged(id, node)
 			if err != nil {
 				// weird, pathological failure: e.g. a compiler wrote
 				// an output file and made it unreadable, or did not
@@ -195,12 +195,12 @@ func (self *BuildState) reportError(err error) {
 	fmt.Fprintf(os.Stderr, "build failure: %s\n", err)
 }
 
-func (self *BuildState) checkChanged(node Node) error {
+func (self *BuildState) checkChanged(id int, node Node) error {
 	changed, err := node.Changed()
 	if err != nil {
 		return err
 	} else if changed  {
-		self.children[node.Id()].Do(func (child int) {
+		self.children[id].Do(func (child int) {
 			self.rebuild.Add(child)
 			self.dag.nodes[child].SetState(STALE)
 		})

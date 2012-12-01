@@ -28,18 +28,13 @@ type Node interface {
 	// in presenting those nodes to the user
 	String() string
 
-	// unique integer identifier for this node
-	Id() int
-
 	// return true if this node and other describe the same resource
 	// (should be sufficient to compare names)
 	Equal(other Node) bool
 
-	// return the parent nodes that this node depends on
-	Parents() []Node
-
-	// add node to this node's parent list (do nothing if it's already there)
-	AddParent(node Node)
+	// Add node to this node's parent list (do nothing if it's already there).
+	// Private because it's only used by test code (but it sure is handy there).
+	addParent(parent Node)
 
 	// return the child nodes that depend on this node
 	//Children() []Node
@@ -77,22 +72,16 @@ type Node interface {
 
 type nodebase struct {
 	dag *DAG
-	id int
 	name string
 	action Action
 	state NodeState
 }
 
-func makenodebase(dag *DAG, id int, name string) nodebase {
+func makenodebase(dag *DAG, name string) nodebase {
 	return nodebase{
 		dag: dag,
-		id: id,
 		name: name,
 	}
-}
-
-func (self *nodebase) Id() int {
-	return self.id
 }
 
 func (self *nodebase) Name() string {
@@ -101,14 +90,6 @@ func (self *nodebase) Name() string {
 
 func (self *nodebase) String() string {
 	return self.name
-}
-
-func (self *nodebase) Parents() []Node {
-	return self.dag.parentNodes(self.id)
-}
-
-func (self *nodebase) AddParent(node Node) {
-	self.dag.addParent(self.id, node)
 }
 
 func (self *nodebase) SetAction(action Action) {

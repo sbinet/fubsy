@@ -27,13 +27,17 @@ func (self *stubnode) Changed() (bool, error) {
 	return true, nil
 }
 
+func (self *stubnode) addParent(parent Node) {
+	self.dag.addParent(self, parent)
+}
+
 func makestubnode(dag *DAG, name string) *stubnode {
 	node := dag.lookup(name)
 	if node == nil {
 		node := &stubnode{
-			nodebase: makenodebase(dag, -1, name),
+			nodebase: makenodebase(dag, name),
 		}
-		node.id = dag.addNode(node)
+		dag.addNode(node)
 		return node
 	}
 	return node.(*stubnode)
@@ -44,7 +48,7 @@ func Test_DAG_add_lookup(t *testing.T) {
 	outnode := dag.lookup("foo")
 	assert.Nil(t, outnode)
 
-	innode := &stubnode{nodebase: makenodebase(dag, -1, "foo")}
+	innode := &stubnode{nodebase: makenodebase(dag, "foo")}
 	id := dag.addNode(innode)
 	assert.Equal(t, 0, id)
 	assert.True(t, innode == dag.nodes[0].(*stubnode))
@@ -107,7 +111,7 @@ func Test_DAG_Expand(t *testing.T) {
 	node0 := MakeGlobNode(dag2, types.NewFileFinder([]string {"**/util.[ch]"}))
 	node1 := MakeGlobNode(dag2, types.NewFileFinder([]string {"*.h"}))
 	node2 := MakeFileNode(dag2, "util.o")
-	node2.AddParent(node0)
+	dag2.addParent(node2, node0)
 	assert.Equal(t, 3, dag2.length())
 
 	// fmt.Println("dag2 before expansion:")
@@ -128,7 +132,7 @@ func Test_DAG_Expand(t *testing.T) {
 	// dag2.Dump(os.Stdout)
 
 	// node2's parents correctly adjusted
-	parents := node2.Parents()
+	parents := dag2.parentNodes(node2)
 	assert.Equal(t, 2, len(parents))
 	assert.Equal(t, "util.c", parents[0].Name())
 	assert.Equal(t, "util.h", parents[1].Name())
@@ -179,7 +183,7 @@ func makeSimpleGraph() *DAG {
 		for _, name := range nodes {
 			node := dag.lookup(name)
 			for _, pname := range parents[name] {
-				node.AddParent(dag.lookup(pname))
+				dag.addParent(node, dag.lookup(pname))
 			}
 		}
 		return dag

@@ -70,13 +70,14 @@ func NewDAG() *DAG {
 // Add the same set of parents (source nodes) to many children (target
 // nodes).
 func (self *DAG) AddManyParents(targets, sources []Node) {
-	// This could be optimized to take advantage of bitsets: collapse
-	// sources to a bitmask and OR that onto the parent set of each
-	// target.
-	for _, target := range targets {
-		for _, source := range sources {
-			target.AddParent(source)
-		}
+	sourceset := bit.New()
+	for _, snode := range sources {
+		sourceset.Add(self.lookupId(snode))
+	}
+
+	for _, tnode := range targets {
+		tid := self.lookupId(tnode)
+		self.parents[tid].SetOr(self.parents[tid], sourceset)
 	}
 }
 
@@ -104,7 +105,7 @@ func (self *DAG) Dump(writer io.Writer) {
 			fmt.Fprintf(writer, "  parents:\n")
 			parents.Do(func (parentid int) {
 				pnode := self.nodes[parentid]
-				fmt.Fprintf(writer, "    %04d: %s\n", pnode.Id(), pnode.Name())
+				fmt.Fprintf(writer, "    %04d: %s\n", parentid, pnode.Name())
 			})
 		}
 	}
@@ -159,16 +160,20 @@ func (self *DAG) lookup(name string) Node {
 	return nil
 }
 
+// Return the ID of node, or -1 if node is not in the DAG.
+func (self *DAG) lookupId(node Node) int {
+	if idx, ok := self.index[node.Name()]; ok {
+		return idx
+	}
+	return -1
+}
+
 // Add the specified node to the DAG. Return the node ID. Panic if a
 // node with the same name already exists.
 func (self *DAG) addNode(node Node) int {
 	name := node.Name()
 	if _, ok := self.index[name]; ok {
 		panic(fmt.Sprintf("node with name '%s' already exists", name))
-	}
-	if node.Id() != -1 {
-		panic(fmt.Sprintf("node '%s' has id %d: is it already in the DAG?",
-			name, node.Id()))
 	}
 	if len(self.nodes) != len(self.parents) {
 		panic(fmt.Sprintf(
@@ -183,7 +188,8 @@ func (self *DAG) addNode(node Node) int {
 	return id
 }
 
-func (self *DAG) parentNodes(id int) []Node {
+func (self *DAG) parentNodes(node Node) []Node {
+	id := self.lookupId(node)
 	result := make([]Node, 0)
 	self.parents[id].Do(func (parentid int) {
 		pnode := self.nodes[parentid]
@@ -197,22 +203,16 @@ func (self *DAG) parentNodes(id int) []Node {
 	return result
 }
 
-func (self *DAG) addParent(childid int, parent Node) {
-	parentid := parent.Id()
-	if parentid < 0 || parentid >= self.length() {
-		panic(fmt.Sprintf(
-			"%v has impossible id %d (should be >= 0 && <= %d)",
-			parent, parentid, self.length() - 1))
-	}
-	if !self.parents[childid].Contains(parentid) {
-		self.parents[childid].Add(parentid)
-	}
+func (self *DAG) addParent(child Node, parent Node) {
+	childid := self.lookupId(child)
+	parentid := self.lookupId(parent)
+	self.parents[childid].Add(parentid)
 }
 
 // Remove the specified node from the DAG, updating references to it
 // with replacements. Panic if it's not in the DAG.
 func (self *DAG) replaceNode(remove Node, replacements []Node) {
-	removeid := remove.Id()
+	removeid := self.lookupId(remove)
 	name := remove.Name()
 	match := self.nodes[removeid]
 	if match != remove {
@@ -225,7 +225,7 @@ func (self *DAG) replaceNode(remove Node, replacements []Node) {
 	// with replacements
 	replacementset := bit.New()
 	for _, node := range replacements {
-		replacementset.Add(node.Id())
+		replacementset.Add(self.lookupId(node))
 	}
 	for _, parents := range self.parents {
 		if parents == nil {
