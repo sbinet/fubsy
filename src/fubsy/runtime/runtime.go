@@ -224,7 +224,7 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 		}
 	case *types.FuFileFinder:
 	case *types.FuFinderList:
-		result = []dag.Node {dag.MakeGlobNode(self.dag, targets_)}
+		result = []dag.Node {dag.MakeGlobNode(self.dag, targets)}
 	}
 	return result
 }

@@ -12,8 +12,6 @@ import (
 // file-finding type; another implementation of FuObject, but more
 // elaborate than the basic types in basictypes.go
 type FuFileFinder struct {
-	id int
-
 	// include patterns: e.g. for <*.c foo/*.h>, includes will be
 	// {"*.c", "foo/*.h"}
 	includes []string
@@ -27,20 +25,11 @@ type FuFileFinder struct {
 // evaluates to a FuFinderList with three elements. Expanding
 // the FuFinderList expands each of its elements in turn.
 type FuFinderList struct {
-	id int
 	elements []*FuFileFinder
 }
 
-var ffid int = 0
-
 func NewFileFinder(includes []string) *FuFileFinder {
-	ff := &FuFileFinder{id: ffid, includes: includes}
-	ffid++
-	return ff
-}
-
-func (self *FuFileFinder) Id() int {
-	return self.id
+	return &FuFileFinder{includes: includes}
 }
 
 func (self *FuFileFinder) String() string {
@@ -271,13 +260,7 @@ func translateGlob(glob string) (string, error) {
 }
 
 func NewFinderList() *FuFinderList {
-	fl := &FuFinderList{id: ffid}
-	ffid++
-	return fl
-}
-
-func (self *FuFinderList) Id() int {
-	return self.id
+	return &FuFinderList{}
 }
 
 func (self *FuFinderList) typename() string {

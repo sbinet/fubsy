@@ -4,6 +4,7 @@ package dag
 
 import (
 	"fmt"
+	"reflect"
 	"fubsy/types"
 )
 
@@ -24,13 +25,15 @@ type GlobNode struct {
 func MakeFileNode(dag *DAG, name string) *FileNode {
 	node := dag.lookup(name)
 	if node == nil {
-		fnode := &FileNode{
-			nodebase: makenodebase(dag, name),
-		}
-		dag.addNode(fnode)
-		node = fnode
+		node := newFileNode(dag, name)
+		dag.addNode(node)
+		return node
 	}
 	return node.(*FileNode)		// panic on unexpected type
+}
+
+func newFileNode(dag *DAG, name string) *FileNode {
+	return &FileNode{nodebase: makenodebase(dag, name)}
 }
 
 func (self *FileNode) Equal(other_ Node) bool {
@@ -47,29 +50,26 @@ func (self *FileNode) addParent(parent Node) {
 	self.dag.addParent(self, parent)
 }
 
-func MakeGlobNode(dag *DAG, glob_ types.FuObject) *GlobNode {
-	var name string
-	var globid int
-	switch glob :=  glob_.(type) {
-	case *types.FuFileFinder:
-		globid = glob.Id()
-	case *types.FuFinderList:
-		globid = glob.Id()
-	default:
-		panic(fmt.Sprintf("cannot make GlobNode from %T object", glob))
-	}
-	name = fmt.Sprintf("glob%04d", globid)
-
+func MakeGlobNode(dag *DAG, glob types.FuObject) *GlobNode {
+	// get the address of the underlying struct; panics if glob is not
+	// a pointer (roughly speaking), i.e. we are passed an
+	// implementation of FuObject that we can't get the address of
+	ptr := reflect.ValueOf(glob).Pointer()
+	name := fmt.Sprintf("glob:%x", ptr)
 	node := dag.lookup(name)
 	if node == nil {
-		gnode := &GlobNode{
-			nodebase: makenodebase(dag, name),
-			glob: glob_,
-		}
-		dag.addNode(gnode)
-		node = gnode
+		node := newGlobNode(dag, name, glob)
+		dag.addNode(node)
+		return node
 	}
 	return node.(*GlobNode)		// panic on unexpected type
+}
+
+func newGlobNode(dag *DAG, name string, glob types.FuObject) *GlobNode {
+	return &GlobNode{
+		nodebase: makenodebase(dag, name),
+		glob: glob,
+	}
 }
 
 func (self *GlobNode) String() string {

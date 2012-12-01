@@ -124,6 +124,11 @@ func Test_GlobNode_basics(t *testing.T) {
 	node1 := MakeGlobNode(dag, glob1)
 	node2 := MakeGlobNode(dag, glob2)
 
+	// correctly reuse existing entries
+	assert.Equal(t, dag.nodes[0], MakeGlobNode(dag, glob0))
+	var obj types.FuObject = glob0
+	assert.Equal(t, dag.nodes[0], MakeGlobNode(dag, obj))
+
 	assert.Equal(t, "<**/*.java>", node0.String())
 	assert.Equal(t, "<doc/*/*.html>", node1.String())
 	assert.Equal(t, "<**/*.java> + <doc/*/*.html>", node2.String())
