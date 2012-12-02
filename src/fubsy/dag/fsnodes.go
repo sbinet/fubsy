@@ -23,13 +23,7 @@ type GlobNode struct {
 // create a new FileNode, add it to dag, and return it. If it does
 // exist but isn't a FileNode, panic.
 func MakeFileNode(dag *DAG, name string) *FileNode {
-	node := dag.lookup(name)
-	if node == nil {
-		node := newFileNode(name)
-		dag.addNode(node)
-		return node
-	}
-	return node.(*FileNode)		// panic on unexpected type
+	return dag.addNode(newFileNode(name)).(*FileNode)
 }
 
 func newFileNode(name string) *FileNode {
@@ -52,13 +46,7 @@ func MakeGlobNode(dag *DAG, glob types.FuObject) *GlobNode {
 	// implementation of FuObject that we can't get the address of
 	ptr := reflect.ValueOf(glob).Pointer()
 	name := fmt.Sprintf("glob:%x", ptr)
-	node := dag.lookup(name)
-	if node == nil {
-		node := newGlobNode(name, glob)
-		dag.addNode(node)
-		return node
-	}
-	return node.(*GlobNode)		// panic on unexpected type
+	return dag.addNode(newGlobNode(name, glob)).(*GlobNode)
 }
 
 func newGlobNode(name string, glob types.FuObject) *GlobNode {

@@ -28,15 +28,10 @@ func (self *stubnode) Changed() (bool, error) {
 }
 
 func makestubnode(dag *DAG, name string) *stubnode {
-	node := dag.lookup(name)
-	if node == nil {
-		node := &stubnode{
-			nodebase: makenodebase(name),
-		}
-		dag.addNode(node)
-		return node
+	node := &stubnode{
+		nodebase: makenodebase(name),
 	}
-	return node.(*stubnode)
+	return dag.addNode(node).(*stubnode)
 }
 
 func Test_DAG_add_lookup(t *testing.T) {
@@ -45,8 +40,8 @@ func Test_DAG_add_lookup(t *testing.T) {
 	assert.Nil(t, outnode)
 
 	innode := &stubnode{nodebase: makenodebase("foo")}
-	id := dag.addNode(innode)
-	assert.Equal(t, 0, id)
+	outnode = dag.addNode(innode)
+	assert.True(t, outnode == innode)
 	assert.True(t, innode == dag.nodes[0].(*stubnode))
 
 	outnode = dag.lookup("foo")

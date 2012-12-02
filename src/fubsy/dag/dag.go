@@ -31,6 +31,7 @@ package dag
 import (
 	"io"
 	"fmt"
+	"reflect"
 	"code.google.com/p/go-bit/bit"
 )
 
@@ -168,12 +169,26 @@ func (self *DAG) lookupId(node Node) int {
 	return -1
 }
 
-// Add the specified node to the DAG. Return the node ID. Panic if a
-// node with the same name already exists.
-func (self *DAG) addNode(node Node) int {
+// Either add node to the DAG, or ensure that another node just like
+// it is already there. Specifically: if there is already a node with
+// the same name and type as node, do nothing; if there is no node
+// with the same name, add node; if there is a same-named node but it
+// has different type, panic. (Thus, while the static return type of
+// this method is Node, the runtime type of the return value is
+// guaranteed to be the same runtime type as the node passed in.)
+func (self *DAG) addNode(node Node) Node {
 	name := node.Name()
-	if _, ok := self.index[name]; ok {
-		panic(fmt.Sprintf("node with name '%s' already exists", name))
+	if id, ok := self.index[name]; ok {
+		existing := self.nodes[id]
+		newtype := reflect.TypeOf(node)
+		oldtype := reflect.TypeOf(existing)
+		if newtype != oldtype {
+			panic(fmt.Sprintf(
+				"cannot add node '%s' (type %s): there is already a node " +
+				"with that name, but its type is %s",
+				name, newtype, oldtype))
+		}
+		return existing
 	}
 	if len(self.nodes) != len(self.parents) {
 		panic(fmt.Sprintf(
@@ -185,7 +200,7 @@ func (self *DAG) addNode(node Node) int {
 	self.nodes = append(self.nodes, node)
 	self.parents = append(self.parents, bit.New())
 	self.index[name] = id
-	return id
+	return node
 }
 
 func (self *DAG) parentNodes(node Node) []Node {
