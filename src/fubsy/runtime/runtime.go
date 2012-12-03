@@ -241,7 +241,7 @@ func (self *Runtime) buildTargets() []error {
 	// user's desired targets... but the default will always be to
 	// build all final targets, so let's just handle that case for now
 	goal := self.dag.FindFinalTargets()
-	relevant := dag.FindRelevantNodes(self.dag, goal)
+	relevant := self.dag.FindRelevantNodes(goal)
 
 	self.dag, errors = self.dag.Rebuild(relevant)
 	if len(errors) > 0 {
@@ -250,13 +250,8 @@ func (self *Runtime) buildTargets() []error {
 	fmt.Println("\nrebuilt dag:")
 	self.dag.Dump(os.Stdout)
 
-	// Now that we've expanded the DAG, rediscover targets, sources,
-	// etc.
 	self.dag.ComputeChildren()
 	bstate := self.dag.NewBuildState()
-	// goal = self.dag.FindFinalTargets()
-	// fmt.Printf("goal (v2) = %v\n", goal)
-	// relevant = dag.FindRelevantNodes(self.dag, goal)
 
 	stale, errors := dag.FindStaleTargets(self.dag)
 	if len(errors) > 0 {

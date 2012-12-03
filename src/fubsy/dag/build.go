@@ -8,57 +8,18 @@ import (
 )
 
 type BuildState struct {
-	// establishes the meaning of the integer node IDs in all the
-	// other fields
 	dag *DAG
-}
 
-// Walk the graph starting from each node in goal to find the set of
-// original source nodes, i.e. nodes with no parents that are
-// ancestors of any node in goal. Store that set (along with some
-// other useful information discovered in the graph walk) in self.
-func FindRelevantNodes(dag *DAG, goal NodeSet) NodeSet {
-	nodes := dag.nodes
-	colour := make([]byte, len(nodes))
-
-	relevant := bit.New()
-
-	var visit func(id int)
-	visit = func(id int) {
-		node := nodes[id]
-		//fmt.Printf("visiting node %d: %s\n", id, node)
-		parents := dag.parents[id]
-		parents.Do(func(parent int) {
-			if colour[parent] == GREY {
-				// we can do a better job of reporting this!
-				panic(fmt.Sprintf("dependency cycle! (..., %s, %s)",
-					node, nodes[parent]))
-			}
-			if colour[parent] == WHITE {
-				colour[parent] = GREY
-				visit(parent)
-			}
-		})
-		relevant.Add(id)
-		colour[id] = BLACK
-	}
-
-	(*bit.Set)(goal).Do(func(id int) {
-		if colour[id] == WHITE {
-			colour[id] = GREY
-			visit(id)
-		}
-	})
-
-	fmt.Printf("FindRelevantNodes: %v\n", relevant)
-	return NodeSet(relevant)
+	// not much else here now, but at some point we're going to need a
+	// place to put user options -- how do we transfer "--keep-going"
+	// from the command line to keepGoing() below?
 }
 
 // Compute the initial rebuild set, i.e. nodes that are 1) children of
 // the original sources, 2) relevant (ancestors of a goal node), and
 // 3) stale.
 func FindStaleTargets(dag *DAG) (NodeSet, []error) {
-	fmt.Printf("FindStaleTargets():\n")
+	//fmt.Printf("FindStaleTargets():\n")
 	if dag.children == nil {
 		panic("dag.children == nil: did you forget to call dag.ComputeChildren()?")
 	}
@@ -76,14 +37,7 @@ func FindStaleTargets(dag *DAG) (NodeSet, []error) {
 		}
 	}
 
-	// (*bit.Set)(sources).Do(func (id int) {
-	// 	node := self.dag.nodes[id]
-	// 	err := self.checkChanged(id, node)
-	// 	if err != nil {
-	// 		errors = append(errors, err)
-	// 	}
-	// })
-	fmt.Printf("FindStaleTargets(): initial stale set = %v\n", stale)
+	//fmt.Printf("FindStaleTargets(): initial stale set = %v\n", stale)
 	return NodeSet(stale), errors
 }
 

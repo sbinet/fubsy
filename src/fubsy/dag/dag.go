@@ -127,6 +127,45 @@ func (self *DAG) FindFinalTargets() NodeSet {
 	return NodeSet(targets)
 }
 
+// Walk the graph starting from each node in goal to find the set of
+// original source nodes, i.e. nodes with no parents that are
+// ancestors of any node in goal. Store that set (along with some
+// other useful information discovered in the graph walk) in self.
+func (self *DAG) FindRelevantNodes(goal NodeSet) NodeSet {
+	colour := make([]byte, len(self.nodes))
+	relevant := bit.New()
+
+	var visit func(id int)
+	visit = func(id int) {
+		node := self.nodes[id]
+		//fmt.Printf("visiting node %d: %s\n", id, node)
+		parents := self.parents[id]
+		parents.Do(func(parent int) {
+			if colour[parent] == GREY {
+				// we can do a better job of reporting this!
+				panic(fmt.Sprintf("dependency cycle! (..., %s, %s)",
+					node, self.nodes[parent]))
+			}
+			if colour[parent] == WHITE {
+				colour[parent] = GREY
+				visit(parent)
+			}
+		})
+		relevant.Add(id)
+		colour[id] = BLACK
+	}
+
+	(*bit.Set)(goal).Do(func(id int) {
+		if colour[id] == WHITE {
+			colour[id] = GREY
+			visit(id)
+		}
+	})
+
+	//fmt.Printf("FindRelevantNodes: %v\n", relevant)
+	return NodeSet(relevant)
+}
+
 func (self *DAG) NewBuildState() *BuildState {
 	return &BuildState{dag: self}
 }

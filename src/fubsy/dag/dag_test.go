@@ -55,6 +55,41 @@ func Test_DAG_FindFinalTargets(t *testing.T) {
 	assert.Equal(t, "{0, 1}", targets.String())
 }
 
+func Test_DAG_FindRelevantNodes(t *testing.T) {
+	dag := makeSimpleGraph()
+	goal := bit.New(0, 1)		// all final targets: tool1, tool2
+	relevant := dag.FindRelevantNodes(NodeSet(goal))
+	assert.Equal(t, "{0,1,2,3,4,5,6,7,8,9,10,11}", setToString(relevant))
+
+	// goal = {tool1} ==>
+	// sources = {tool1.c, misc.h, misc.c, util.h, util.c}
+	goal = bit.New(0)
+	relevant = dag.FindRelevantNodes(NodeSet(goal))
+	assert.Equal(t, "{0,2,3,4,6,7,8,9,10}", setToString(relevant))
+
+	// goal = {tool2} ==>
+	// sources = {util.h, util.c, tool2.c}
+	goal = bit.New(1)
+	relevant = dag.FindRelevantNodes(NodeSet(goal))
+	assert.Equal(t, "{1,4,5,9,10,11}", setToString(relevant))
+}
+
+func Test_DAG_FindRelevantNodes_cycle(t *testing.T) {
+	dag := makeSimpleGraph()
+	dag.addParent(dag.lookup("misc.h"), dag.lookup("tool1"))
+
+	// goal = {tool2} ==> no cycle, since we don't visit those nodes
+	// (this simply tests that FindRelevantNodes() doesn't panic)
+	goal := bit.New(1)
+	dag.FindRelevantNodes(NodeSet(goal))
+
+	// goal = {tool1} ==> cycle!
+	// (disabled because FindRelevantNodes() currently panics on cycle)
+	return
+	goal = bit.New(0)
+	dag.FindRelevantNodes(NodeSet(goal))
+}
+
 func Test_DAG_Rebuild_simple(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
