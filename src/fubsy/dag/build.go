@@ -15,37 +15,14 @@ type BuildState struct {
 	// from the command line to keepGoing() below?
 }
 
-// Compute the initial rebuild set, i.e. nodes that are 1) children of
-// the original sources, 2) relevant (ancestors of a goal node), and
-// 3) stale.
-func FindStaleTargets(dag *DAG) (NodeSet, []error) {
-	//fmt.Printf("FindStaleTargets():\n")
-	if dag.children == nil {
-		panic("dag.children == nil: did you forget to call dag.ComputeChildren()?")
+// The heart of Fubsy: find the initial set of stale targets, then
+// keep building stale targets until all are built (or failed).
+func (self *BuildState) BuildStaleTargets() []error {
+	stale, errors := self.findStaleTargets()
+	if errors != nil {
+		return errors
 	}
 
-	errors := make([]error, 0)
-	stale := bit.New()
-	for id, node := range dag.nodes {
-		if !dag.parents[id].IsEmpty() {
-			// node has parents, so it's not an original source
-			continue
-		}
-		err := checkChanged(dag, id, node, stale)
-		if err != nil {
-			errors = append(errors, err)
-		}
-	}
-
-	//fmt.Printf("FindStaleTargets(): initial stale set = %v\n", stale)
-	return NodeSet(stale), errors
-}
-
-// The heart of Fubsy: keep building stale targets until all relevant
-// targets are built (or failed).
-func (self *BuildState) BuildStaleTargets(stale_ NodeSet) error {
-
-	stale := (*bit.Set)(stale_)
 	attempted := 0				// number of targets we tried to build
 	failed := []Node {}			// targets that failed to build
 
@@ -73,23 +50,64 @@ func (self *BuildState) BuildStaleTargets(stale_ NodeSet) error {
 				// weird, pathological failure: e.g. a compiler wrote
 				// an output file and made it unreadable, or did not
 				// write the file it was supposed to write
-				return err
+				return []error {err}
 			}
 		}
 	}
 
-	if len(failed) > 0 {
-		if self.keepGoing() {
-			targets := joinNodes(", ", 10, failed)
-			return fmt.Errorf("failed to build %d of %d targets: %s",
-				len(failed), attempted, targets)
-		} else {
-			// attempted is meaningless if !keepGoing(), because we
-			// broke out of the loop early
-			return fmt.Errorf("failed to build target %s", failed[0])
-		}
+	// Collapse possibly many build failures down to a single error
+	// object, because build failure are reported as they happen. At
+	// this point we just need a single error object to summarize the
+	// whole failure and make the process terminate soon.
+	err := self.explainFailures(attempted, failed) // nil if no failures
+	if err != nil {
+		return []error {err}
 	}
 	return nil
+}
+
+// Compute the initial set set of stale nodes, i.e. nodes that are 1)
+// children of the original sources, 2) relevant (ancestors of a goal
+// node), and 3) stale.
+func (self *BuildState) findStaleTargets() (*bit.Set, []error) {
+	//fmt.Printf("FindStaleTargets():\n")
+	if self.dag.children == nil {
+		panic("dag.children == nil: did you forget to call dag.ComputeChildren()?")
+	}
+
+	var errors []error
+	stale := bit.New()
+	for id, node := range self.dag.nodes {
+		if !self.dag.parents[id].IsEmpty() {
+			// node has parents, so it's not an original source
+			continue
+		}
+		err := checkChanged(self.dag, id, node, stale)
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
+
+	//fmt.Printf("FindStaleTargets(): initial stale set = %v\n", stale)
+	return stale, errors
+}
+
+func (self *BuildState) explainFailures(attempted int, failed []Node) error {
+	if len(failed) == 0 {
+		return nil
+	}
+
+	var err error
+	if self.keepGoing() {
+		targets := joinNodes(", ", 10, failed)
+		err = fmt.Errorf("failed to build %d of %d targets: %s",
+			len(failed), attempted, targets)
+	} else {
+		// attempted is meaningless if !keepGoing(), because we
+		// broke out of the main loop early
+		err = fmt.Errorf("failed to build target %s", failed[0])
+	}
+	return err
 }
 
 // (hopefully) temporary, pending acceptance of my patches to go-bit

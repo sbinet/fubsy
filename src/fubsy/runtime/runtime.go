@@ -252,16 +252,7 @@ func (self *Runtime) buildTargets() []error {
 
 	self.dag.ComputeChildren()
 	bstate := self.dag.NewBuildState()
-
-	stale, errors := dag.FindStaleTargets(self.dag)
-	if len(errors) > 0 {
-		return errors
-	}
-	err := bstate.BuildStaleTargets(stale)
-	if err != nil {
-		return []error {err}
-	}
-	return nil
+	return bstate.BuildStaleTargets()
 }
 
 // XXX this is identical to TypeError in types/basictypes.go:

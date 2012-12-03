@@ -6,22 +6,16 @@ import (
 	"code.google.com/p/go-bit/bit"
 )
 
-func Test_BuildState_FindStaleTargets(t *testing.T) {
+func Test_BuildState_findStaleTargets(t *testing.T) {
 	dag := makeSimpleGraph()
 	dag.ComputeChildren()
-	//sources := newNodeSet(
-
-	//	dag, "tool1.c", "misc.h", "misc.c", "util.h", "util.c")
+	bstate := dag.NewBuildState()
 
 	// goal = {tool1, tool2}
 	// sources = {tool1.c, misc.h, misc.c, util.h, util.c, tool2.c}
 	// initial rebuild = {tool1.o, misc.o, util.o, tool2.o}
-	//goal = bit.New(0, 1)
-	//relevant = FindRelevantNodes(dag, NodeSet(goal))
-	//sources = newNodeSet(
-	//	dag, "tool1.c", "misc.h", "misc.c", "util.h", "util.c", "tool2.c")
 	expect := []string {"tool1.o", "misc.o", "util.o", "tool2.o"}
-	stale, errors := FindStaleTargets(dag)
+	stale, errors := bstate.findStaleTargets()
 	assert.Equal(t, 0, len(errors))
 	names := setToNames(dag, stale)
 	assert.Equal(t, expect, names)
@@ -34,13 +28,13 @@ func Test_BuildState_FindStaleTargets(t *testing.T) {
 	rdag, errors := dag.Rebuild(relevant)
 	assert.Equal(t, 0, len(errors))
 	rdag.ComputeChildren()
+	bstate = rdag.NewBuildState()
 
 	expect = []string {"tool1.o", "misc.o", "util.o"}
-	stale, errors = FindStaleTargets(rdag)
+	stale, errors = bstate.findStaleTargets()
 	names = setToNames(rdag, stale)
 	assert.Equal(t, 0, len(errors))
 	assert.Equal(t, expect, names)
-	//assert.Equal(t, "{2,3,4}", setToString(stale))
 
 	// goal = {tool2}
 	// sources = {tool2.c, util.h, util.c}
@@ -50,13 +44,13 @@ func Test_BuildState_FindStaleTargets(t *testing.T) {
 	rdag, errors = dag.Rebuild(relevant)
 	assert.Equal(t, 0, len(errors))
 	rdag.ComputeChildren()
+	bstate = rdag.NewBuildState()
 
 	expect = []string {"util.o", "tool2.o"}
-	stale, errors = FindStaleTargets(rdag)
+	stale, errors = bstate.findStaleTargets()
 	names = setToNames(rdag, stale)
 	assert.Equal(t, 0, len(errors))
 	assert.Equal(t, expect, names)
-	//assert.Equal(t, "{4,5}", setToString(stale))
 }
 
 func Test_joinNodes(t *testing.T) {
