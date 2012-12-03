@@ -44,11 +44,16 @@ type DAG struct {
 
 	// the parents of every node
 	parents []*bit.Set
+
+	// the children of every node (not set in the initial DAG; this is
+	// left unset until we rebuild the DAG and are about to start
+	// building targets)
+	children []*bit.Set
 }
 
-// an opaque set of integer node IDs (this type deliberately has no
-// methods; it just exists so code in the 'runtime' package can get
-// node sets out of the DAG to pass back to other DAG methods that
+// an opaque set of integer node IDs (this type deliberately has very
+// few methods; it just exists so code in the 'runtime' package can
+// get node sets out of the DAG to pass back to other DAG methods that
 // then do further processing)
 type NodeSet *bit.Set
 
@@ -174,6 +179,20 @@ func (self *DAG) Rebuild(relevant *bit.Set) (*DAG, []error) {
 	}
 
 	return newdag, errors
+}
+
+// Iterate over the DAG and compute the child set of each node.
+func (self *DAG) ComputeChildren() {
+	children := make([]*bit.Set, len(self.nodes))
+	for id := range self.nodes {
+		children[id] = bit.New()
+	}
+	for id := range self.nodes {
+		self.parents[id].Do(func(parentid int) {
+			children[parentid].Add(id)
+		})
+	}
+	self.children = children
 }
 
 // Return the node with the specified name, or nil if no such node.

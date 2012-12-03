@@ -4,6 +4,7 @@ import (
 	"testing"
 	"reflect"
 	"bytes"
+	"strconv"
 	//"fmt"
 	//"os"
 	//"os/exec"
@@ -134,6 +135,36 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	assert.Equal(t, "util.h", parents[1].Name())
 }
 
+func Test_DAG_ComputeChildren(t *testing.T) {
+	dag := makeSimpleGraph()
+	dag.ComputeChildren()
+	assert.True(t, dag.children[0].IsEmpty()) // final target tool1
+	assert.True(t, dag.children[1].IsEmpty()) // final target tool2
+
+	// children(tool1.o) = {tool1}
+	assert.Equal(t, "{0}", dag.children[2].String())
+
+	// children(util.o) = {tool1, tool2}
+	assert.Equal(t, "{0, 1}", dag.children[4].String())
+
+	// children(misc.h) = {tool1.o, misc.o}
+	assert.Equal(t, "{2, 3}", dag.children[7].String())
+
+	// children(util.c) = {util.o}
+	assert.Equal(t, "{4}", dag.children[10].String())
+}
+
+// func Test_NodeSet_String(t *testing.T) {
+// 	var empty NodeSet
+// 	assert.Equal(t, "{}", empty.String())
+
+// 	empty = NodeSet(bit.New())
+// 	assert.Equal(t, "{}", empty.String())
+
+// 	s := bit.new(0)
+// 	assert.Equal(t, "{0}", NodeSet(s).String())
+// }
+
 func makeSimpleGraph() *DAG {
 	// dependency graph for a simple C project
 	//    0: tool1:		{tool1.o, misc.o, util.o}
@@ -195,4 +226,41 @@ func touchSourceFiles(dag *DAG) {
 		}
 	}
 	testutils.TouchFiles(filenames...)
+}
+
+func newNodeSet(dag *DAG, names ...string) NodeSet {
+	set := bit.New()
+	for _, name := range names {
+		if id, ok := dag.index[name]; ok {
+			set.Add(id)
+		} else {
+			panic("no such node in DAG: " + name)
+		}
+	}
+	return NodeSet(set)
+}
+
+// test-friendly way to formatting a NodeSet as a string
+func setToString(set_ NodeSet) string {
+	set := (*bit.Set)(set_)
+	result := make([]byte, 1, set.Size() * 3)
+	result[0] = '{'
+	set.Do(func(n int) {
+		result = strconv.AppendInt(result, int64(n), 10)
+		result = append(result, ',')
+	})
+	result[len(result)-1] = '}'
+	return string(result)
+}
+
+// Return the list of node names corresponding the nodes in set.
+func setToNames(dag *DAG, set_ NodeSet) []string {
+	set := (*bit.Set)(set_)
+	result := make([]string, set.Size())
+	i := 0
+	set.Do(func(id int) {
+		result[i] = dag.nodes[id].Name()
+		i++
+	})
+	return result
 }

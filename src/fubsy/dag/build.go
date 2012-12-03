@@ -11,41 +11,23 @@ type BuildState struct {
 	// establishes the meaning of the integer node IDs in all the
 	// other fields
 	dag *DAG
-
-	// the original sources for goal, i.e. the set of ancestors of
-	// goal that have no parents
-	sources *bit.Set
-
-	// the set of all ancestors of goal (relevant contains both goal
-	// and source)
-	relevant *bit.Set
-
-	// the set of all nodes that need to be rebuilt (changes as a
-	// build proceeds)
-	rebuild *bit.Set
-
-	// the relevant children of all relevant nodes
-	children map[int] *bit.Set
 }
 
 // Walk the graph starting from each node in goal to find the set of
 // original source nodes, i.e. nodes with no parents that are
 // ancestors of any node in goal. Store that set (along with some
 // other useful information discovered in the graph walk) in self.
-func (self *BuildState) FindOriginalSources(goal NodeSet) {
-	nodes := self.dag.nodes
+func FindRelevantNodes(dag *DAG, goal NodeSet) NodeSet {
+	nodes := dag.nodes
 	colour := make([]byte, len(nodes))
 
-	self.relevant = bit.New()
-	self.sources = bit.New()
-	self.children = make(map[int] *bit.Set)
+	relevant := bit.New()
 
 	var visit func(id int)
 	visit = func(id int) {
 		node := nodes[id]
 		//fmt.Printf("visiting node %d: %s\n", id, node)
-		self.children[id] = bit.New()
-		parents := self.dag.parents[id]
+		parents := dag.parents[id]
 		parents.Do(func(parent int) {
 			if colour[parent] == GREY {
 				// we can do a better job of reporting this!
@@ -56,12 +38,8 @@ func (self *BuildState) FindOriginalSources(goal NodeSet) {
 				colour[parent] = GREY
 				visit(parent)
 			}
-			self.children[parent].Add(id)
 		})
-		self.relevant.Add(id)
-		if parents.IsEmpty() {
-			self.sources.Add(id)
-		}
+		relevant.Add(id)
 		colour[id] = BLACK
 	}
 
@@ -72,49 +50,58 @@ func (self *BuildState) FindOriginalSources(goal NodeSet) {
 		}
 	})
 
-	// fmt.Printf(
-	// 	"FindOriginalSources:\n" +
-	// 	"  relevant = %v\n" +
-	// 	"  sources = %v\n" +
-	// 	"  children = %v\n",
-	// 	self.relevant, self.sources, self.children)
-}
-
-func (self *BuildState) RebuildDAG() (*DAG, []error) {
-	return self.dag.Rebuild(self.relevant)
+	fmt.Printf("FindRelevantNodes: %v\n", relevant)
+	return NodeSet(relevant)
 }
 
 // Compute the initial rebuild set, i.e. nodes that are 1) children of
 // the original sources, 2) relevant (ancestors of a goal node), and
 // 3) stale.
-func (self *BuildState) FindStaleTargets() []error {
+func FindStaleTargets(dag *DAG) (NodeSet, []error) {
+	fmt.Printf("FindStaleTargets():\n")
+	if dag.children == nil {
+		panic("dag.children == nil: did you forget to call dag.ComputeChildren()?")
+	}
+
 	errors := make([]error, 0)
-	self.rebuild = bit.New()
-	self.sources.Do(func (id int) {
-		node := self.dag.nodes[id]
-		err := self.checkChanged(id, node)
+	stale := bit.New()
+	for id, node := range dag.nodes {
+		if !dag.parents[id].IsEmpty() {
+			// node has parents, so it's not an original source
+			continue
+		}
+		err := checkChanged(dag, id, node, stale)
 		if err != nil {
 			errors = append(errors, err)
 		}
-	})
-	//fmt.Printf("initial rebuild set = %v\n", self.rebuild)
-	return errors
+	}
+
+	// (*bit.Set)(sources).Do(func (id int) {
+	// 	node := self.dag.nodes[id]
+	// 	err := self.checkChanged(id, node)
+	// 	if err != nil {
+	// 		errors = append(errors, err)
+	// 	}
+	// })
+	fmt.Printf("FindStaleTargets(): initial stale set = %v\n", stale)
+	return NodeSet(stale), errors
 }
 
 // The heart of Fubsy: keep building stale targets until all relevant
 // targets are built (or failed).
-func (self *BuildState) BuildStaleTargets() error {
+func (self *BuildState) BuildStaleTargets(stale_ NodeSet) error {
 
-	numtargets := 0				// total number of rebuilt targets
+	stale := (*bit.Set)(stale_)
+	attempted := 0				// number of targets we tried to build
 	failed := []Node {}			// targets that failed to build
 
-	for !self.rebuild.IsEmpty() {
-		for _, id := range setToSlice(self.rebuild) {
-			numtargets++
+	for !stale.IsEmpty() {
+		for _, id := range setToSlice(stale) {
+			attempted++
 			node := self.dag.nodes[id]
 			node.SetState(BUILDING)
 			err := node.Action().Execute()
-			self.rebuild.Remove(id)
+			stale.Remove(id)
 
 			if err != nil {
 				// normal, everyday build failure
@@ -127,7 +114,7 @@ func (self *BuildState) BuildStaleTargets() error {
 			}
 
 			node.SetState(BUILT)
-			err = self.checkChanged(id, node)
+			err = checkChanged(self.dag, id, node, stale)
 			if err != nil {
 				// weird, pathological failure: e.g. a compiler wrote
 				// an output file and made it unreadable, or did not
@@ -141,9 +128,9 @@ func (self *BuildState) BuildStaleTargets() error {
 		if self.keepGoing() {
 			targets := joinNodes(", ", 10, failed)
 			return fmt.Errorf("failed to build %d of %d targets: %s",
-				len(failed), numtargets, targets)
+				len(failed), attempted, targets)
 		} else {
-			// numtargets is meaningless if !keepGoing(), because we
+			// attempted is meaningless if !keepGoing(), because we
 			// broke out of the loop early
 			return fmt.Errorf("failed to build target %s", failed[0])
 		}
@@ -185,14 +172,21 @@ func (self *BuildState) reportError(err error) {
 	fmt.Fprintf(os.Stderr, "build failure: %s\n", err)
 }
 
-func (self *BuildState) checkChanged(id int, node Node) error {
+func checkChanged(
+	dag *DAG, id int, node Node, stale *bit.Set) error {
+
 	changed, err := node.Changed()
 	if err != nil {
 		return err
 	} else if changed  {
-		self.children[id].Do(func (child int) {
-			self.rebuild.Add(child)
-			self.dag.nodes[child].SetState(STALE)
+		if dag.children[id] == nil {
+			// temporary, until dag.ComputeChildren() implemented
+			panic(fmt.Sprintf(
+				"BuildState: no children known for node %d (%v)", id, node))
+		}
+		dag.children[id].Do(func (childid int) {
+			stale.Add(childid)
+			dag.nodes[childid].SetState(STALE)
 		})
 	}
 	return nil
