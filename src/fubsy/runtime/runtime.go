@@ -242,8 +242,7 @@ func (self *Runtime) buildTargets() []error {
 	// build all final targets, so let's just handle that case for now
 	bstate := self.dag.NewBuildState()
 	goal := self.dag.FindFinalTargets()
-	bstate.SetGoal(goal)
-	bstate.FindOriginalSources()
+	bstate.FindOriginalSources(goal)
 
 	self.dag, errors = bstate.RebuildDAG()
 	if len(errors) > 0 {
@@ -257,8 +256,7 @@ func (self *Runtime) buildTargets() []error {
 	bstate = self.dag.NewBuildState()
 	goal = self.dag.FindFinalTargets()
 	fmt.Printf("goal (v2) = %v\n", goal)
-	bstate.SetGoal(goal)
-	bstate.FindOriginalSources()
+	bstate.FindOriginalSources(goal)
 
 	errors = bstate.FindStaleTargets()
 	if len(errors) > 0 {

@@ -12,9 +12,6 @@ type BuildState struct {
 	// other fields
 	dag *DAG
 
-	// the target nodes requested by the user (default: all final targets)
-	goal *bit.Set
-
 	// the original sources for goal, i.e. the set of ancestors of
 	// goal that have no parents
 	sources *bit.Set
@@ -31,15 +28,11 @@ type BuildState struct {
 	children map[int] *bit.Set
 }
 
-func (self *BuildState) SetGoal(goal NodeSet) {
-	self.goal = (*bit.Set)(goal)
-}
-
 // Walk the graph starting from each node in goal to find the set of
 // original source nodes, i.e. nodes with no parents that are
 // ancestors of any node in goal. Store that set (along with some
 // other useful information discovered in the graph walk) in self.
-func (self *BuildState) FindOriginalSources() {
+func (self *BuildState) FindOriginalSources(goal NodeSet) {
 	nodes := self.dag.nodes
 	colour := make([]byte, len(nodes))
 
@@ -72,7 +65,7 @@ func (self *BuildState) FindOriginalSources() {
 		colour[id] = BLACK
 	}
 
-	self.goal.Do(func(id int) {
+	(*bit.Set)(goal).Do(func(id int) {
 		if colour[id] == WHITE {
 			colour[id] = GREY
 			visit(id)
