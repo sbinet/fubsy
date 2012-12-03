@@ -87,8 +87,8 @@ func (self *BuildState) FindOriginalSources() {
 	// 	self.relevant, self.sources, self.children)
 }
 
-func (self *BuildState) ExpandDAG() []error {
-	return self.dag.Expand(self.relevant)
+func (self *BuildState) RebuildDAG() (*DAG, []error) {
+	return self.dag.Rebuild(self.relevant)
 }
 
 // Compute the initial rebuild set, i.e. nodes that are 1) children of
@@ -99,9 +99,6 @@ func (self *BuildState) FindStaleTargets() []error {
 	self.rebuild = bit.New()
 	self.sources.Do(func (id int) {
 		node := self.dag.nodes[id]
-		if node == nil {
-			return
-		}
 		err := self.checkChanged(id, node)
 		if err != nil {
 			errors = append(errors, err)

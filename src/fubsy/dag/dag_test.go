@@ -28,10 +28,8 @@ func (self *stubnode) Changed() (bool, error) {
 }
 
 func makestubnode(dag *DAG, name string) *stubnode {
-	node := &stubnode{
-		nodebase: makenodebase(name),
-	}
-	return dag.addNode(node).(*stubnode)
+	_, node := dag.addNode(&stubnode{nodebase: makenodebase(name)})
+	return node.(*stubnode)
 }
 
 func Test_DAG_add_lookup(t *testing.T) {
@@ -40,7 +38,7 @@ func Test_DAG_add_lookup(t *testing.T) {
 	assert.Nil(t, outnode)
 
 	innode := &stubnode{nodebase: makenodebase("foo")}
-	outnode = dag.addNode(innode)
+	_, outnode = dag.addNode(innode)
 	assert.True(t, outnode == innode)
 	assert.True(t, innode == dag.nodes[0].(*stubnode))
 
@@ -50,96 +48,90 @@ func Test_DAG_add_lookup(t *testing.T) {
 	assert.Nil(t, dag.lookup("bar"))
 }
 
-func Test_DAG_replaceNode(t *testing.T) {
-	dag := NewDAG()
-	node0 := makestubnode(dag, "foo")
-	node1 := makestubnode(dag, "bar")
-	node2 := makestubnode(dag, "qux")
-
-	dag.replaceNode(node1, []Node {})
-	assert.Nil(t, dag.nodes[1])
-	assert.Nil(t, dag.lookup("bar"))
-
-	// XXX not testing parent replacement
-	// (to be fair, it is tested by Test_DAG_Expand())
-	assert.Equal(t, node2, dag.lookup("qux"))
-	dag.replaceNode(node2, []Node {})
-	assert.Nil(t, dag.nodes[2])
-	assert.Nil(t, dag.lookup("qux"))
-
-	assert.Equal(t, node0, dag.lookup("foo"))
-}
-
 func Test_DAG_FindFinalTargets(t *testing.T) {
 	dag := makeSimpleGraph()
 	targets := (*bit.Set)(dag.FindFinalTargets())
 	assert.Equal(t, "{0, 1}", targets.String())
 }
 
-func Test_DAG_Expand(t *testing.T) {
+func Test_DAG_Rebuild_simple(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
 	// this just gives us a known set of filenames for GlobNode to search
-	dag1 := makeSimpleGraph()
-	touchSourceFiles(dag1)
+	dag := makeSimpleGraph()
+	touchSourceFiles(dag)
 	// fmt.Println("after touchSourceFiles: pwd && ls -lR")
 	// cmd := exec.Command("/bin/sh", "-c", "pwd && ls -lR")
 	// output, err := cmd.CombinedOutput()
 	// _ = err
 	// fmt.Print(string(output))
 
-	// dag1.Expand() is a no-op, because it consists entirely of
-	// FileNodes -- nothing to expand here
+	// dag.Rebuild() just copies the DAG, because it consists
+	// entirely of FileNodes -- nothing to expand here
 	relevant := bit.New()
-	relevant.AddRange(0, len(dag1.nodes))
-	orig := make([]Node, len(dag1.nodes))
-	copy(orig, dag1.nodes)
-	dag1.Expand(relevant)
-	assert.True(t, reflect.DeepEqual(orig, dag1.nodes))
+	relevant.AddRange(0, len(dag.nodes))
+	rdag, err := dag.Rebuild(relevant)
 
-	dag2 := NewDAG()
-	node0 := MakeGlobNode(dag2, types.NewFileFinder([]string {"**/util.[ch]"}))
-	node1 := MakeGlobNode(dag2, types.NewFileFinder([]string {"*.h"}))
-	node2 := MakeFileNode(dag2, "util.o")
-	dag2.addParent(node2, node0)
-	assert.Equal(t, 3, dag2.length())
+	assert.Nil(t, err)
+	assert.False(t, &dag.nodes == &rdag.nodes)
+	assert.True(t, reflect.DeepEqual(dag.nodes, rdag.nodes))
+}
 
-	// fmt.Println("dag2 before expansion:")
-	// dag2.Dump(os.Stdout)
+func Test_DAG_Rebuild_globs(t *testing.T) {
+	// same setup as Test_DAG_Rebuild_simple()
+	cleanup := testutils.Chtemp()
+	defer cleanup()
 
-	// relevant = {0} so we only expand the first GlobNode
-	relevant = bit.New(0)
-	dag2.Expand(relevant)
-	assert.Equal(t, 5, len(dag2.nodes))
-	assert.Nil(t, dag2.nodes[0])
-	assert.Equal(t, node1, dag2.nodes[1])
-	assert.Equal(t, node2, dag2.nodes[2])
-	assert.Equal(t, "util.c", dag2.nodes[3].(*FileNode).name)
-	assert.Equal(t, "util.h", dag2.nodes[4].(*FileNode).name)
+	dag := makeSimpleGraph()
+	touchSourceFiles(dag)
+
+	dag = NewDAG()
+	node0 := MakeGlobNode(dag, types.NewFileFinder([]string {"**/util.[ch]"}))
+	node1 := MakeGlobNode(dag, types.NewFileFinder([]string {"*.h"}))
+	node2 := MakeFileNode(dag, "util.o")
+	_ = node1
+	dag.addParent(node2, node0)
+	assert.Equal(t, 3, dag.length())
+
+	//fmt.Println("dag before rebuild:")
+	//dag.Dump(os.Stdout)
+
+	// relevant = {0} so we only expand the first GlobNode, and the
+	// new DAG contains only nodes derived from that expansion
+	relevant := bit.New(0)
+	rdag, err := dag.Rebuild(relevant)
+
+	//fmt.Println("rebuild #1:")
+	//rdag.Dump(os.Stdout)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(rdag.nodes))
+	assert.Equal(t, "util.c", rdag.nodes[0].(*FileNode).name)
+	assert.Equal(t, "util.h", rdag.nodes[1].(*FileNode).name)
+
 	buf := new(bytes.Buffer)
+	dag.Dump(buf)				// no panic
 
-	// fmt.Println("\ndag2 after expansion #1:")
-	// dag2.Dump(os.Stdout)
+	// all nodes are relevant, so the second GlobNode will be expanded
+	relevant.AddRange(0, len(dag.nodes))
+	rdag, err = dag.Rebuild(relevant)
+	assert.Nil(t, err)
+
+	//fmt.Println("rebuild #2:")
+	//dag.Dump(os.Stdout)
+
+	assert.Equal(t, 4, len(rdag.nodes))
+	assert.Equal(t, "util.c", rdag.nodes[0].(*FileNode).name)
+	assert.Equal(t, "util.h", rdag.nodes[1].(*FileNode).name)
+	assert.Equal(t, "misc.h", rdag.nodes[2].(*FileNode).name)
+	assert.Equal(t, "util.o", rdag.nodes[3].(*FileNode).name)
 
 	// node2's parents correctly adjusted
-	parents := dag2.parentNodes(node2)
+	parents := rdag.parentNodes(node2)
 	assert.Equal(t, 2, len(parents))
 	assert.Equal(t, "util.c", parents[0].Name())
 	assert.Equal(t, "util.h", parents[1].Name())
-
-	dag2.Dump(buf)				// no panic on nil nodes
-
-	// all nodes are relevant, so the second GlobNode will be expanded
-	relevant.AddRange(0, len(dag2.nodes))
-	dag2.Expand(relevant)
-
-	assert.Equal(t, 6, len(dag2.nodes))
-	assert.Nil(t, dag2.nodes[0])
-	assert.Nil(t, dag2.nodes[1])
-	assert.Equal(t, "util.c", dag2.nodes[3].(*FileNode).name)
-	assert.Equal(t, "util.h", dag2.nodes[4].(*FileNode).name)
-	assert.Equal(t, "misc.h", dag2.nodes[5].(*FileNode).name)
 }
 
 func makeSimpleGraph() *DAG {

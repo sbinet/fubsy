@@ -23,7 +23,8 @@ type GlobNode struct {
 // create a new FileNode, add it to dag, and return it. If it does
 // exist but isn't a FileNode, panic.
 func MakeFileNode(dag *DAG, name string) *FileNode {
-	return dag.addNode(newFileNode(name)).(*FileNode)
+	_, node := dag.addNode(newFileNode(name))
+	return node.(*FileNode)
 }
 
 func newFileNode(name string) *FileNode {
@@ -46,7 +47,8 @@ func MakeGlobNode(dag *DAG, glob types.FuObject) *GlobNode {
 	// implementation of FuObject that we can't get the address of
 	ptr := reflect.ValueOf(glob).Pointer()
 	name := fmt.Sprintf("glob:%x", ptr)
-	return dag.addNode(newGlobNode(name, glob)).(*GlobNode)
+	_, node := dag.addNode(newGlobNode(name, glob))
+	return node.(*GlobNode)
 }
 
 func newGlobNode(name string, glob types.FuObject) *GlobNode {
@@ -65,23 +67,21 @@ func (self *GlobNode) Equal(other_ Node) bool {
 	return ok && self.glob.Equal(other.glob)
 }
 
-func (self *GlobNode) Expand(dag *DAG) error {
+func (self *GlobNode) Expand(dag *DAG) ([]Node, error) {
 	filenames, err := self.glob.Expand()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	newnodes := []Node {}
 	for _, fnobj := range filenames.List() {
-		// fnobj had better be a FuString -- panic if not
+		// fnobj must be a FuString -- panic if not
 		fn := fnobj.(types.FuString).Value()
-		node := MakeFileNode(dag, fn)
-		newnodes = append(newnodes, node)
+		newnodes = append(newnodes, newFileNode(fn))
 	}
-	dag.replaceNode(self, newnodes)
-	return nil
+	return newnodes, nil
 }
 
 func (self *GlobNode) Changed() (bool, error) {
 	panic("Changed() should never be called on a GlobNode " +
-		"(graph should have been expanded by this point)")
+		"(graph should have been rebuilt by this point)")
 }

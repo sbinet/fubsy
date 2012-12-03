@@ -88,16 +88,13 @@ func (self *DAG) AddManyParents(targets, sources []Node) {
 // structure.
 func (self *DAG) Dump(writer io.Writer) {
 	for id, node := range self.nodes {
-		if node == nil {
-			continue
-		}
 		action := node.Action()
 		desc := node.Name()
 		detail := node.String()
 		if detail != desc {
 			desc += " (" + detail + ")"
 		}
-		fmt.Fprintf(writer, "%04d: %s\n", id, desc)
+		fmt.Fprintf(writer, "%04d: %s (%T)\n", id, desc, node)
 		if action != nil {
 			fmt.Fprintf(writer, "  action: %v\n", action)
 		}
@@ -114,18 +111,14 @@ func (self *DAG) Dump(writer io.Writer) {
 
 // Return the set of nodes in this graph with no children.
 func (self *DAG) FindFinalTargets() NodeSet {
-	fmt.Println("FindFinalTargets():")
+	//fmt.Println("FindFinalTargets():")
 	var targets *bit.Set = bit.New()
 	targets.AddRange(0, self.length())
-	for id, parents := range self.parents {
+	for _, parents := range self.parents {
 		//fmt.Printf("  %d: node=%v, parents=%v\n", id, self.nodes[id], parents)
-		if parents == nil {
-			targets.Remove(id)
-		} else {
-			targets.SetAndNot(targets, parents)
-		}
+		targets.SetAndNot(targets, parents)
 	}
-	fmt.Printf("  -> targets = %v\n", targets)
+	//fmt.Printf("  -> targets = %v\n", targets)
 	return NodeSet(targets)
 }
 
@@ -133,24 +126,54 @@ func (self *DAG) NewBuildState() *BuildState {
 	return &BuildState{dag: self}
 }
 
-// Iterate over the graph, expanding all relevant expandable nodes.
-// That is, for each expandable node that is a member of relevant, add
-// zero or more nodes that represent the same resource(s), but more
-// concretely. The original node is typically removed. The canonical
-// use case for this is that each GlobNode is replaced by FileNodes
-// for the files matching the glob's patterns.
-func (self *DAG) Expand(relevant *bit.Set) []error {
+// Build a new DAG that is ready to start building targets. The new
+// DAG preserves only relevant nodes and expands all expandable nodes
+// in the current DAG (e.g each GlobNode is replaced by FileNodes for
+// the files matching the glob's patterns). Any BuildState or NodeSet
+// objects derived from the old DAG are invalid with the new DAG:
+// throw them away and start over again.
+func (self *DAG) Rebuild(relevant *bit.Set) (*DAG, []error) {
 	var errors []error
-	var err error
+	replacements := make(map[int] *bit.Set)
+	newdag := NewDAG()
 	for id, node := range self.nodes {
-		if node != nil && relevant.Contains(id) {
-			err = node.Expand(self)
-			if err != nil {
-				errors = append(errors, err)
+		if !relevant.Contains(id) {
+			continue
+		}
+		expansion, err := node.Expand(self)
+		if err != nil {
+			errors = append(errors, err)
+		} else if expansion != nil {
+			repl := bit.New()
+			for _, expnode := range expansion {
+				newid, _ := newdag.addNode(expnode)
+				repl.Add(newid)
 			}
+			replacements[id] = repl
+		} else {
+			newid, _ := newdag.addNode(node)
+			replacements[id] = bit.New(newid)
 		}
 	}
-	return errors
+
+	// Second loop to rebuild parent info in the new DAG.
+	for oldid := range self.nodes {
+		newids := replacements[oldid]
+		if newids == nil {		// node not relevant (not preserved in new DAG)
+			continue
+		}
+
+		oldparents := self.parents[oldid]
+		newparents := bit.New()
+		oldparents.Do(func(oldpid int) {
+			newparents.SetOr(newparents, replacements[oldpid])
+		})
+		newids.Do(func(newid int) {
+			newdag.parents[newid] = newparents
+		})
+	}
+
+	return newdag, errors
 }
 
 // Return the node with the specified name, or nil if no such node.
@@ -176,7 +199,7 @@ func (self *DAG) lookupId(node Node) int {
 // has different type, panic. (Thus, while the static return type of
 // this method is Node, the runtime type of the return value is
 // guaranteed to be the same runtime type as the node passed in.)
-func (self *DAG) addNode(node Node) Node {
+func (self *DAG) addNode(node Node) (int, Node) {
 	name := node.Name()
 	if id, ok := self.index[name]; ok {
 		existing := self.nodes[id]
@@ -188,7 +211,7 @@ func (self *DAG) addNode(node Node) Node {
 				"with that name, but its type is %s",
 				name, newtype, oldtype))
 		}
-		return existing
+		return id, existing
 	}
 	if len(self.nodes) != len(self.parents) {
 		panic(fmt.Sprintf(
@@ -200,20 +223,17 @@ func (self *DAG) addNode(node Node) Node {
 	self.nodes = append(self.nodes, node)
 	self.parents = append(self.parents, bit.New())
 	self.index[name] = id
-	return node
+	return id, node
 }
 
 func (self *DAG) parentNodes(node Node) []Node {
 	id := self.lookupId(node)
+	if id == -1 {
+		panic(fmt.Sprintf("node %v not in this DAG", node))
+	}
 	result := make([]Node, 0)
 	self.parents[id].Do(func (parentid int) {
-		pnode := self.nodes[parentid]
-		if pnode == nil {
-			// parents were not correctly adjusted by replaceNode()
-			panic(fmt.Sprintf(
-				"dag.parents[%d] includes nil node pointer (%d)", id, parentid))
-		}
-		result = append(result, pnode)
+		result = append(result, self.nodes[parentid])
 	})
 	return result
 }
@@ -222,40 +242,6 @@ func (self *DAG) addParent(child Node, parent Node) {
 	childid := self.lookupId(child)
 	parentid := self.lookupId(parent)
 	self.parents[childid].Add(parentid)
-}
-
-// Remove the specified node from the DAG, updating references to it
-// with replacements. Panic if it's not in the DAG.
-func (self *DAG) replaceNode(remove Node, replacements []Node) {
-	removeid := self.lookupId(remove)
-	name := remove.Name()
-	match := self.nodes[removeid]
-	if match != remove {
-		panic(fmt.Sprintf(
-			"cannot remove node %v from the DAG (slot %d is used by %v)",
-			remove, removeid, match))
-	}
-
-	// replace any occurences of node in any other node's parent set
-	// with replacements
-	replacementset := bit.New()
-	for _, node := range replacements {
-		replacementset.Add(self.lookupId(node))
-	}
-	for _, parents := range self.parents {
-		if parents == nil {
-			continue
-		}
-		if parents.Contains(removeid) {
-			parents.Remove(removeid)
-			parents.SetOr(parents, replacementset)
-		}
-	}
-
-	// and remove node from the DAG (leaving a hole)
-	self.nodes[removeid] = nil
-	self.parents[removeid] = nil
-	delete(self.index, name)
 }
 
 // Return the number of nodes in the DAG.

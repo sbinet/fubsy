@@ -160,11 +160,11 @@ func Test_GlobNode_Expand(t *testing.T) {
 	node1 := MakeGlobNode(dag, types.NewFileFinder([]string {"**/*.java"}))
 	_ = node1
 
-	node0.Expand(dag)
-	assert.Nil(t, dag.nodes[0])
-	assert.Equal(t, 4, len(dag.nodes))
-	assert.Equal(t, "main.c", dag.nodes[2].(*FileNode).name)
-	assert.Equal(t, "src/util.h", dag.nodes[3].(*FileNode).name)
+	expnodes, err := node0.Expand(dag)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(expnodes))
+	assert.Equal(t, "main.c", expnodes[0].(*FileNode).name)
+	assert.Equal(t, "src/util.h", expnodes[1].(*FileNode).name)
 }
 
 func assertParents(t *testing.T, expect []string, dag *DAG, node Node) {

@@ -46,12 +46,18 @@ type Node interface {
 	// original source node).
 	Action() Action
 
-	// Augment dag by generating new nodes that represent the same
-	// resources as this node, adding them to the graph, and possibly
-	// removing this node from the graph. Canonical use case:
-	// expanding wildcards by replacing one GlobNode with zero or more
-	// FileNodes.
-	Expand(dag *DAG) error
+	// Generate new nodes that represent the same resources as this
+	// node, only more concretely. Return nil if no expansion is
+	// necessary (the normal case). Canonical use case: expanding
+	// wildcards by replacing one GlobNode with zero or more
+	// FileNodes. Note that Node.Expand() implementations are
+	// responsible for creating new Node objects and thereby adding
+	// them to the DAG, but not for rewiring existing parent/child
+	// relationships. That happens in DAG.Rebuild(). Also, the
+	// existing node is dropped by default; implemenations that want
+	// to preserve themselves must include self in the return list of
+	// replacement Nodes.
+	Expand(dag *DAG) ([]Node, error)
 
 	// return true if this node has changed since the last build where
 	// it was relevant
@@ -94,8 +100,8 @@ func (self *nodebase) Action() Action {
 	return self.action
 }
 
-func (self *nodebase) Expand(dag *DAG) error {
-	return nil
+func (self *nodebase) Expand(dag *DAG) ([]Node, error) {
+	return nil, nil
 }
 
 func (self *nodebase) SetState(state NodeState) {
