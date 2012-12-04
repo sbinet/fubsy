@@ -6,10 +6,24 @@ import (
 type NodeState byte
 
 const (
+	// the default state for all nodes
 	UNKNOWN NodeState = iota
+
+	// this node needs to be rebuilt, i.e. one of its parents has
+	// changed since the last build
 	STALE
+
+	// this node is currently building
 	BUILDING
+
+	// the attempt to build this node failed
 	FAILED
+
+	// we will not try to build this node, because building one of its
+	// parents failed
+	TAINTED
+
+	// this node was successfully built
 	BUILT
 )
 

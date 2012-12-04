@@ -28,11 +28,18 @@ func (self *BuildState) BuildStaleTargets() []error {
 
 	for !stale.IsEmpty() {
 		for _, id := range setToSlice(stale) {
-			attempted++
 			node := self.dag.nodes[id]
+			if node.State() == TAINTED {
+				// one of this node's parents failed to build: skip it
+				stale.Remove(id)
+				continue
+			}
+
+			attempted++
 			node.SetState(BUILDING)
 			err := node.Action().Execute()
 			stale.Remove(id)
+			//fmt.Printf("%s: err = %v\n", node.Action(), err)
 
 			if err != nil {
 				// normal, everyday build failure
@@ -42,6 +49,8 @@ func (self *BuildState) BuildStaleTargets() []error {
 				if !self.keepGoing() {
 					break
 				}
+				taintChildren(self.dag, id, node)
+				continue		// to the next stale target
 			}
 
 			node.SetState(BUILT)
@@ -144,6 +153,12 @@ func (self *BuildState) reportError(err error) {
 	fmt.Fprintf(os.Stderr, "build failure: %s\n", err)
 }
 
+func taintChildren(dag *DAG, id int, node Node) {
+	dag.children[id].Do(func(childid int) {
+		dag.nodes[childid].SetState(TAINTED)
+	})
+}
+
 func checkChanged(
 	dag *DAG, id int, node Node, stale *bit.Set) error {
 
@@ -156,9 +171,15 @@ func checkChanged(
 			panic(fmt.Sprintf(
 				"BuildState: no children known for node %d (%v)", id, node))
 		}
-		dag.children[id].Do(func (childid int) {
-			stale.Add(childid)
-			dag.nodes[childid].SetState(STALE)
+		dag.children[id].Do(func(childid int) {
+			child := dag.nodes[childid]
+			if child.State() != TAINTED {
+				// XXX this might be premature: I think we should not add a
+				// node to the stale set until *all* of its parents are
+				// built! (that might fix the whole "tainted" thing too)
+				stale.Add(childid)
+				child.SetState(STALE)
+			}
 		})
 	}
 	return nil
