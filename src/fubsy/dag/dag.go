@@ -132,11 +132,23 @@ func (self *DAG) FindFinalTargets() NodeSet {
 // ancestors of any node in goal. Store that set (along with some
 // other useful information discovered in the graph walk) in self.
 func (self *DAG) FindRelevantNodes(goal NodeSet) NodeSet {
-	colour := make([]byte, len(self.nodes))
 	relevant := bit.New()
+	self.DFS(goal, func(id int) {
+		relevant.Add(id)
+	})
 
-	var visit func(id int)
-	visit = func(id int) {
+	//fmt.Printf("FindRelevantNodes: %v\n", relevant)
+	return NodeSet(relevant)
+}
+
+// Perform a partial depth-first search of the graph, exploring
+// ancestors of all nodes in 'start'. For each node visited, call
+// visit() just as we're leaving that node -- i.e. calls to visit()
+// are in topological order.
+func (self *DAG) DFS(start NodeSet, visit func(id int)) {
+	colour := make([]byte, len(self.nodes))
+	var descend func(id int)
+	descend = func(id int) {
 		node := self.nodes[id]
 		//fmt.Printf("visiting node %d: %s\n", id, node)
 		parents := self.parents[id]
@@ -148,22 +160,19 @@ func (self *DAG) FindRelevantNodes(goal NodeSet) NodeSet {
 			}
 			if colour[parent] == WHITE {
 				colour[parent] = GREY
-				visit(parent)
+				descend(parent)
 			}
 		})
-		relevant.Add(id)
+		visit(id)
 		colour[id] = BLACK
 	}
 
-	(*bit.Set)(goal).Do(func(id int) {
+	(*bit.Set)(start).Do(func(id int) {
 		if colour[id] == WHITE {
 			colour[id] = GREY
-			visit(id)
+			descend(id)
 		}
 	})
-
-	//fmt.Printf("FindRelevantNodes: %v\n", relevant)
-	return NodeSet(relevant)
 }
 
 func (self *DAG) NewBuildState() *BuildState {

@@ -55,6 +55,56 @@ func Test_DAG_FindFinalTargets(t *testing.T) {
 	assert.Equal(t, "{0, 1}", targets.String())
 }
 
+func Test_DAG_DFS(t *testing.T) {
+	// 0: a -> {c, f, h}
+	// 1: b -> {d, f, g, h}
+	// 2: c -> {b, e}
+	// 3: d -> {g}
+	// 4: e -> {}
+	// 5: f -> {g}
+	// 6: g -> {}
+	// 7: h -> {}
+	// original sources: {e, g, h} = {4, 6, 7}
+	// final targets:    {a} = {0}
+
+	tdag := newtestdag()
+	tdag.add("a", "c", "f", "h")
+	tdag.add("b", "d", "f", "g", "h")
+	tdag.add("c", "b", "e")
+	tdag.add("d", "g")
+	tdag.add("e",)
+	tdag.add("f", "g")
+	tdag.add("g",)
+	tdag.add("h",)
+	dag := tdag.finish()
+
+	actual := []string {}
+	visit := func(id int) {
+		actual = append(actual, dag.nodes[id].Name())
+	}
+
+	assertDFS := func(start *bit.Set, expect []string) {
+		actual = actual[0:0]
+		dag.DFS(start, visit)
+		assert.Equal(t, expect, actual)
+	}
+
+	start := bit.New()
+	start.AddRange(0, 7)
+	expect := []string {"g", "d", "f", "h", "b", "e", "c", "a"}
+	assertDFS(start, expect)
+
+	// start nodes: {c, f}
+	start = bit.New(2, 5)
+	expect = []string {"g", "d", "f", "h", "b", "e", "c"}
+	assertDFS(start, expect)
+
+	// start nodes: {d, f}
+	start = bit.New(3, 5)
+	expect = []string {"g", "d", "f"}
+	assertDFS(start, expect)
+}
+
 func Test_DAG_FindRelevantNodes(t *testing.T) {
 	dag := makeSimpleGraph()
 	goal := bit.New(0, 1)		// all final targets: tool1, tool2
@@ -218,39 +268,50 @@ func makeSimpleGraph() *DAG {
 	// original sources: {tool1.c, misc.h, misc.c, util.h, util.c, tool2.c}
 	//   (node IDs 6, 7, 8, 9, 10, 11)
 
-	nodes := make([]string, 0)
-	parents := make(map[string] []string)
-	add := func(name string, parent ...string) {
-		nodes = append(nodes, name)
-		parents[name] = parent
-	}
-	finish := func() *DAG {
-		dag := NewDAG()
-		for _, name := range nodes {
-			makestubnode(dag, name)
-		}
-		for _, name := range nodes {
-			node := dag.lookup(name)
-			for _, pname := range parents[name] {
-				dag.addParent(node, dag.lookup(pname))
-			}
-		}
-		return dag
-	}
+	tdag := newtestdag()
+	tdag.add("tool1", "tool1.o", "misc.o", "util.o")
+	tdag.add("tool2", "tool2.o", "util.o")
+	tdag.add("tool1.o", "tool1.c", "misc.h", "util.h")
+	tdag.add("misc.o", "misc.h", "misc.c")
+	tdag.add("util.o", "util.h", "util.c")
+	tdag.add("tool2.o", "tool2.c", "util.h")
+	tdag.add("tool1.c")
+	tdag.add("misc.h")
+	tdag.add("misc.c")
+	tdag.add("util.h")
+	tdag.add("util.c")
+	tdag.add("tool2.c")
+	return tdag.finish()
+}
 
-	add("tool1", "tool1.o", "misc.o", "util.o")
-	add("tool2", "tool2.o", "util.o")
-	add("tool1.o", "tool1.c", "misc.h", "util.h")
-	add("misc.o", "misc.h", "misc.c")
-	add("util.o", "util.h", "util.c")
-	add("tool2.o", "tool2.c", "util.h")
-	add("tool1.c")
-	add("misc.h")
-	add("misc.c")
-	add("util.h")
-	add("util.c")
-	add("tool2.c")
-	return finish()
+// string-based DAG that's easy to construct, and then gets converted
+// to the real thing
+type testdag struct {
+	nodes []string
+	parents map[string] []string
+}
+
+func newtestdag() *testdag {
+	return &testdag{parents: make(map[string] []string)}
+}
+
+func (self *testdag) add(name string, parent ...string) {
+	self.nodes = append(self.nodes, name)
+	self.parents[name] = parent
+}
+
+func (self *testdag) finish() *DAG {
+	dag := NewDAG()
+	for _, name := range self.nodes {
+		makestubnode(dag, name)
+	}
+	for _, name := range self.nodes {
+		node := dag.lookup(name)
+		for _, pname := range self.parents[name] {
+			dag.addParent(node, dag.lookup(pname))
+		}
+	}
+	return dag
 }
 
 func touchSourceFiles(dag *DAG) {
