@@ -31,6 +31,7 @@ package dag
 import (
 	"io"
 	"fmt"
+	"strings"
 	"reflect"
 	"code.google.com/p/go-bit/bit"
 )
@@ -145,24 +146,29 @@ func (self *DAG) FindRelevantNodes(goal NodeSet) NodeSet {
 // ancestors of all nodes in 'start'. For each node visited, call
 // visit() just as we're leaving that node -- i.e. calls to visit()
 // are in topological order.
-func (self *DAG) DFS(start NodeSet, visit func(id int)) {
+func (self *DAG) DFS(start NodeSet, visit func(id int)) error {
 	colour := make([]byte, len(self.nodes))
+	path := make([]int, 0)
+	cycles := make([][]int, 0)
+
 	var descend func(id int)
 	descend = func(id int) {
-		node := self.nodes[id]
-		//fmt.Printf("visiting node %d: %s\n", id, node)
+		path = append(path, id)
+		//node := self.nodes[id]
+		//fmt.Printf("entering node %d: %s (path = %v)\n", id, node, path)
 		parents := self.parents[id]
-		parents.Do(func(parent int) {
-			if colour[parent] == GREY {
-				// we can do a better job of reporting this!
-				panic(fmt.Sprintf("dependency cycle! (..., %s, %s)",
-					node, self.nodes[parent]))
-			}
-			if colour[parent] == WHITE {
-				colour[parent] = GREY
-				descend(parent)
+		parents.Do(func(pid int) {
+			if colour[pid] == GREY {
+				cycle := make([]int, len(path) + 1)
+				copy(cycle, path)
+				cycle[len(path)] = pid
+				cycles = append(cycles, cycle)
+			} else if colour[pid] == WHITE {
+				colour[pid] = GREY
+				descend(pid)
 			}
 		})
+		path = path[0:len(path)-1]
 		visit(id)
 		colour[id] = BLACK
 	}
@@ -173,6 +179,28 @@ func (self *DAG) DFS(start NodeSet, visit func(id int)) {
 			descend(id)
 		}
 	})
+	if len(cycles) > 0 {
+		return CycleError{self, cycles}
+	}
+	return nil
+}
+
+type CycleError struct {
+	dag *DAG
+	cycles [][]int
+}
+
+func (self CycleError) Error() string {
+	result := []string {
+		fmt.Sprintf("found %d dependency cycles:", len(self.cycles))}
+	for _, cycle := range self.cycles {
+		names := make([]string, len(cycle))
+		for i, id := range cycle {
+			names[i] = self.dag.nodes[id].Name()
+		}
+		result = append(result, "  " + strings.Join(names, " -> "))
+	}
+	return strings.Join(result, "\n")
 }
 
 func (self *DAG) NewBuildState() *BuildState {

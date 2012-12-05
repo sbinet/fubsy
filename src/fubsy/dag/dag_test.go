@@ -105,6 +105,56 @@ func Test_DAG_DFS(t *testing.T) {
 	assertDFS(start, expect)
 }
 
+func Test_DAG_DFS_cycle(t *testing.T) {
+	var tdag *testdag
+	var dag *DAG
+	var err error
+
+	visit := func(id int) {}
+
+	tdag = newtestdag()
+	tdag.add("0", "1")
+	tdag.add("1", "0")
+	dag = tdag.finish()
+	err = dag.DFS(NodeSet(bit.New(0, 1)), visit)
+	assert.Equal(t, "found 1 dependency cycles:\n  0 -> 1 -> 0", err.Error())
+
+	// degenerate case
+	tdag = newtestdag()
+	tdag.add("0", "0")
+	dag = tdag.finish()
+	err = dag.DFS(NodeSet(bit.New(0)), visit)
+	assert.Equal(t, "found 1 dependency cycles:\n  0 -> 0", err.Error())
+
+	// weird case: two disconnected isomorphic graphs stuck in the
+	// same data structure; each has two discernible cycles:
+	//   0 -> 2 -> 4 -> 6 -> 2
+	//   0 -> 2 -> 4 -> 8 -> 0
+	//   1 -> 3 -> 5 -> 7 -> 3
+	//   1 -> 3 -> 5 -> 9 -> 1
+	tdag = newtestdag()
+	tdag.add("0", "2", "4")
+	tdag.add("1", "3", "5")
+	tdag.add("2", "4")
+	tdag.add("3", "5")
+	tdag.add("4", "6", "8")
+	tdag.add("5", "7", "9")
+	tdag.add("6", "2")
+	tdag.add("7", "3")
+	tdag.add("8", "0")
+	tdag.add("9", "1")
+	dag = tdag.finish()
+	start := bit.New()
+	start.AddRange(0, 9)
+	err = dag.DFS(NodeSet(start), visit)
+	cycerr := err.(CycleError)
+	assert.Equal(t, 4, len(cycerr.cycles))
+	assert.Equal(t, []int {0, 2, 4, 6, 2}, cycerr.cycles[0])
+	assert.Equal(t, []int {0, 2, 4, 8, 0}, cycerr.cycles[1])
+	assert.Equal(t, []int {1, 3, 5, 7, 3}, cycerr.cycles[2])
+	assert.Equal(t, []int {1, 3, 5, 9, 1}, cycerr.cycles[3])
+}
+
 func Test_DAG_FindRelevantNodes(t *testing.T) {
 	dag := makeSimpleGraph()
 	goal := bit.New(0, 1)		// all final targets: tool1, tool2
@@ -122,22 +172,6 @@ func Test_DAG_FindRelevantNodes(t *testing.T) {
 	goal = bit.New(1)
 	relevant = dag.FindRelevantNodes(NodeSet(goal))
 	assert.Equal(t, "{1,4,5,9,10,11}", setToString(relevant))
-}
-
-func Test_DAG_FindRelevantNodes_cycle(t *testing.T) {
-	dag := makeSimpleGraph()
-	dag.addParent(dag.lookup("misc.h"), dag.lookup("tool1"))
-
-	// goal = {tool2} ==> no cycle, since we don't visit those nodes
-	// (this simply tests that FindRelevantNodes() doesn't panic)
-	goal := bit.New(1)
-	dag.FindRelevantNodes(NodeSet(goal))
-
-	// goal = {tool1} ==> cycle!
-	// (disabled because FindRelevantNodes() currently panics on cycle)
-	return
-	goal = bit.New(0)
-	dag.FindRelevantNodes(NodeSet(goal))
 }
 
 func Test_DAG_Rebuild_simple(t *testing.T) {
