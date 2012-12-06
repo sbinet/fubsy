@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"bytes"
 	"strconv"
+	"errors"
 	//"fmt"
 	//"os"
 	//"os/exec"
@@ -79,8 +80,9 @@ func Test_DAG_DFS(t *testing.T) {
 	dag := tdag.finish()
 
 	actual := []string {}
-	visit := func(id int) {
+	visit := func(id int) error {
 		actual = append(actual, dag.nodes[id].Name())
+		return nil
 	}
 
 	assertDFS := func(start *bit.Set, expect []string) {
@@ -110,7 +112,7 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 	var dag *DAG
 	var err error
 
-	visit := func(id int) {}
+	visit := func(id int) error {return nil}
 
 	tdag = newtestdag()
 	tdag.add("0", "1")
@@ -153,6 +155,30 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 	assert.Equal(t, []int {0, 2, 4, 8, 0}, cycerr.cycles[1])
 	assert.Equal(t, []int {1, 3, 5, 7, 3}, cycerr.cycles[2])
 	assert.Equal(t, []int {1, 3, 5, 9, 1}, cycerr.cycles[3])
+}
+
+func Test_DAG_DFS_error(t *testing.T) {
+	tdag := newtestdag()
+	tdag.add("0", "2", "4")
+	tdag.add("1", "3", "5")
+	tdag.add("2", "4")
+	tdag.add("3", "5")
+	tdag.add("4", "3", "2")		// dependency cycle goes unreported
+	tdag.add("5")
+	dag := tdag.finish()
+
+	visited := make([]int, 0)
+	visit := func(id int) error {
+		visited = append(visited, id)
+		if id == 4 {
+			return errors.New("bite me")
+		}
+		return nil
+	}
+
+	err := dag.DFS(bit.New(0), visit)
+	assert.Equal(t, "bite me", err.Error())
+	assert.Equal(t, []int {5, 3, 4}, visited)
 }
 
 func Test_DAG_FindRelevantNodes(t *testing.T) {

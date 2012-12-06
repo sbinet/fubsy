@@ -134,30 +134,41 @@ func (self *DAG) FindFinalTargets() NodeSet {
 // other useful information discovered in the graph walk) in self.
 func (self *DAG) FindRelevantNodes(goal NodeSet) NodeSet {
 	relevant := bit.New()
-	self.DFS(goal, func(id int) {
+	self.DFS(goal, func(id int) error {
 		relevant.Add(id)
+		return nil
 	})
 
 	//fmt.Printf("FindRelevantNodes: %v\n", relevant)
 	return NodeSet(relevant)
 }
 
+// Callback function to visit nodes from DFS(). Return a non-nil error
+// to abort the traversal and make DFS() return that error. DFS()
+// aborted this way does not report dependency cycles.
+type DFSVisitor func(id int) error
+
 // Perform a partial depth-first search of the graph, exploring
 // ancestors of all nodes in 'start'. For each node visited, call
 // visit() just as we're leaving that node -- i.e. calls to visit()
-// are in topological order.
-func (self *DAG) DFS(start NodeSet, visit func(id int)) error {
+// are in topological order. visit() can abort the search; see
+// DFSVisitor for details.
+func (self *DAG) DFS(start NodeSet, visit DFSVisitor) error {
 	colour := make([]byte, len(self.nodes))
 	path := make([]int, 0)
 	cycles := make([][]int, 0)
 
-	var descend func(id int)
-	descend = func(id int) {
+	var descend func(id int) error
+	descend = func(id int) error {
 		path = append(path, id)
 		//node := self.nodes[id]
 		//fmt.Printf("entering node %d: %s (path = %v)\n", id, node, path)
+		var err error
 		parents := self.parents[id]
 		parents.Do(func(pid int) {
+			if err != nil {
+				return
+			}
 			if colour[pid] == GREY {
 				cycle := make([]int, len(path) + 1)
 				copy(cycle, path)
@@ -165,20 +176,31 @@ func (self *DAG) DFS(start NodeSet, visit func(id int)) error {
 				cycles = append(cycles, cycle)
 			} else if colour[pid] == WHITE {
 				colour[pid] = GREY
-				descend(pid)
+				err = descend(pid)
 			}
 		})
+		if err != nil {
+			return err
+		}
 		path = path[0:len(path)-1]
-		visit(id)
+		err = visit(id)
+		if err != nil {
+			return err
+		}
 		colour[id] = BLACK
+		return nil
 	}
 
+	var err error
 	(*bit.Set)(start).Do(func(id int) {
 		if colour[id] == WHITE {
 			colour[id] = GREY
-			descend(id)
+			err = descend(id)
 		}
 	})
+	if err != nil {
+		return err
+	}
 	if len(cycles) > 0 {
 		return CycleError{self, cycles}
 	}
