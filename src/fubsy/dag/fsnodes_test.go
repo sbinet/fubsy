@@ -2,6 +2,7 @@ package dag
 
 import (
 	"testing"
+	"os"
 	"fmt"
 	"github.com/stretchrcom/testify/assert"
 	"fubsy/types"
@@ -98,6 +99,39 @@ func Test_FileNode_action(t *testing.T) {
 	assert.Equal(t, action, node.Action())
 }
 
+func Test_FileNode_Exists(t *testing.T) {
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	testutils.TouchFiles("foo.txt", "a/a/a/a/foo.txt", "a/b/unreadable")
+
+	makeUnreadable("a/b")
+	defer makeReadable("a/b")
+
+	dag := NewDAG()
+	tests := []struct{name string; exists bool; err string} {
+		{"foo.txt", true, ""},
+		{"a/a/a", false, "stat a/a/a: is a directory, not a regular file"},
+		{"a/a/a/bogus", false, ""},
+		{"a/a/a/a/foo.txt", true, ""},
+		{"a/b/unreadable", false, "stat a/b/unreadable: permission denied"},
+	}
+
+	for _, test := range tests {
+		node := MakeFileNode(dag, test.name)
+		exists, err := node.Exists()
+		if test.err != "" {
+			assert.NotNil(t, err)
+			assert.Equal(t, test.err, err.Error())
+		}
+		if test.exists && !exists {
+			t.Errorf("%v: expected Exists() true, got false", node)
+		} else if !test.exists && exists {
+			t.Errorf("%v: expected Exists() false, got true", node)
+		}
+	}
+}
+
 func Benchmark_FileNode_AddParent(b *testing.B) {
 	b.StopTimer()
 	dag := NewDAG()
@@ -174,4 +208,25 @@ func assertParents(t *testing.T, expect []string, dag *DAG, node Node) {
 		actualnames[i] = node.Name()
 	}
 	assert.Equal(t, expect, actualnames)
+}
+
+func makeUnreadable(name string) {
+	chmodMask(name, ^os.ModePerm, 0)
+}
+
+func makeReadable(name string) {
+	chmodMask(name, 0, 0700)
+}
+
+func chmodMask(name string, andmask, ormask os.FileMode) {
+	// hmmm: does this work on windows?
+	info, err := os.Stat(name)
+	if err != nil {
+		panic(err)
+	}
+	mode := info.Mode() & andmask | ormask
+	err = os.Chmod(name, mode)
+	if err != nil {
+		panic(err)
+	}
 }

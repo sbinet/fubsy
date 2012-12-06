@@ -25,6 +25,10 @@ func (self *stubnode) Equal(other_ Node) bool {
 	return ok && self.name == other.name
 }
 
+func (self *stubnode) Exists() (bool, error) {
+	return true, nil
+}
+
 func (self *stubnode) Changed() (bool, error) {
 	return true, nil
 }

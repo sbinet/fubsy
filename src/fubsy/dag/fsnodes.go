@@ -4,6 +4,9 @@ package dag
 
 import (
 	"fmt"
+	"os"
+	"syscall"
+	"errors"
 	"reflect"
 	"fubsy/types"
 )
@@ -36,6 +39,28 @@ func (self *FileNode) Equal(other_ Node) bool {
 	return ok && other.name == self.name
 }
 
+func (self *FileNode) Exists() (bool, error) {
+	info, err := os.Stat(self.name)
+	if err != nil {
+		errno := err.(*os.PathError).Err.(syscall.Errno)
+		if errno == syscall.ENOENT {
+			// plain boring old "no such file or directory"
+			return false, nil
+		} else {
+			// some other error
+			return false, err
+		}
+	}
+
+	// This test could be much fancier: do we want an error if a
+	// source "file" is really a block device? a FIFO? a symlink?
+	if info.IsDir() {
+		return false, &os.PathError{
+			"stat", self.name, errors.New("is a directory, not a regular file")}
+	}
+	return true, nil
+}
+
 func (self *FileNode) Changed() (bool, error) {
 	// placeholder until we have persistent build state
 	return true, nil
@@ -65,6 +90,13 @@ func (self *GlobNode) String() string {
 func (self *GlobNode) Equal(other_ Node) bool {
 	other, ok := other_.(*GlobNode)
 	return ok && self.glob.Equal(other.glob)
+}
+
+func (self *GlobNode) Exists() (bool, error) {
+	// hmmm: it's perfectly meaningful to ask if a GlobNode exists,
+	// just expensive (have to expand the wildcards) and unexpected
+	panic("Exists() should not be called on a GlobNode " +
+		"(graph should have been rebuilt by this point)")
 }
 
 func (self *GlobNode) Expand(dag *DAG) ([]Node, error) {

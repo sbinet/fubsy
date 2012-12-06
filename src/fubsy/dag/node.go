@@ -42,10 +42,6 @@ type Node interface {
 	// in presenting those nodes to the user
 	String() string
 
-	// return true if this node and other describe the same resource
-	// (should be sufficient to compare names)
-	Equal(other Node) bool
-
 	// return the child nodes that depend on this node
 	//Children() []Node
 
@@ -73,6 +69,18 @@ type Node interface {
 	// called; implemenations that want to preserve themselves must
 	// include themselves in the return list of replacement Nodes.
 	Expand(dag *DAG) ([]Node, error)
+
+	// return true if this node and other describe the same resource
+	// (it's often sufficient to compare names)
+	Equal(other Node) bool
+
+	// return true if the resource represented by this node already
+	// exists -- we don't care if it's stale or up-to-date, or whether
+	// it has changed or not... simply, does it exist? (non-existence
+	// is a short-circuit that means we don't have to check if parent
+	// nodes have changed, because of course we have to rebuild this
+	// node)
+	Exists() (bool, error)
 
 	// return true if this node has changed since the last build where
 	// it was relevant
