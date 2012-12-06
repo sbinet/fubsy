@@ -204,6 +204,20 @@ func Test_DAG_FindRelevantNodes(t *testing.T) {
 	assert.Equal(t, "{1,4,5,9,10,11}", setToString(relevant))
 }
 
+func Test_DAG_MarkSources(t *testing.T) {
+	dag := makeSimpleGraph()
+
+	// initial sanity check
+	assert.Equal(t, UNKNOWN, dag.lookup("tool1.c").State())
+	assert.Equal(t, UNKNOWN, dag.lookup("tool1.o").State())
+	assert.Equal(t, UNKNOWN, dag.lookup("tool1").State())
+
+	dag.MarkSources()
+	assert.Equal(t, SOURCE, dag.lookup("tool1.c").State())
+	assert.Equal(t, UNKNOWN, dag.lookup("tool1.o").State())
+	assert.Equal(t, UNKNOWN, dag.lookup("tool1").State())
+}
+
 func Test_DAG_Rebuild_simple(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
@@ -277,30 +291,11 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	assert.Equal(t, "misc.h", rdag.nodes[2].(*FileNode).name)
 	assert.Equal(t, "util.o", rdag.nodes[3].(*FileNode).name)
 
-	// node2's parents correctly adjusted
-	parents := rdag.parentNodes(node2)
+	// parents of node2 (util.o) were correctly adjusted
+	parents := rdag.parentNodes(3)
 	assert.Equal(t, 2, len(parents))
 	assert.Equal(t, "util.c", parents[0].Name())
 	assert.Equal(t, "util.h", parents[1].Name())
-}
-
-func Test_DAG_ComputeChildren(t *testing.T) {
-	dag := makeSimpleGraph()
-	dag.ComputeChildren()
-	assert.True(t, dag.children[0].IsEmpty()) // final target tool1
-	assert.True(t, dag.children[1].IsEmpty()) // final target tool2
-
-	// children(tool1.o) = {tool1}
-	assert.Equal(t, "{0}", dag.children[2].String())
-
-	// children(util.o) = {tool1, tool2}
-	assert.Equal(t, "{0, 1}", dag.children[4].String())
-
-	// children(misc.h) = {tool1.o, misc.o}
-	assert.Equal(t, "{2, 3}", dag.children[7].String())
-
-	// children(util.c) = {util.o}
-	assert.Equal(t, "{4}", dag.children[10].String())
 }
 
 // func Test_NodeSet_String(t *testing.T) {

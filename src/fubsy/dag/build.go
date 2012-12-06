@@ -15,108 +15,197 @@ type BuildState struct {
 	// from the command line to keepGoing() below?
 }
 
-// The heart of Fubsy: find the initial set of stale targets, then
-// keep building stale targets until all are built (or failed).
-func (self *BuildState) BuildStaleTargets() []error {
-	stale, errors := self.findStaleTargets()
-	if errors != nil {
-		return errors
-	}
+type BuildError struct {
+	// nodes that failed to build
+	failed []Node
 
-	attempted := 0				// number of targets we tried to build
-	failed := []Node {}			// targets that failed to build
-
-	for !stale.IsEmpty() {
-		for _, id := range setToSlice(stale) {
-			node := self.dag.nodes[id]
-			if node.State() == TAINTED {
-				// one of this node's parents failed to build: skip it
-				stale.Remove(id)
-				continue
-			}
-
-			attempted++
-			node.SetState(BUILDING)
-			err := node.Action().Execute()
-			stale.Remove(id)
-			//fmt.Printf("%s: err = %v\n", node.Action(), err)
-
-			if err != nil {
-				// normal, everyday build failure
-				node.SetState(FAILED)
-				self.reportError(err)
-				failed = append(failed, node)
-				if !self.keepGoing() {
-					break
-				}
-				taintChildren(self.dag, id, node)
-				continue		// to the next stale target
-			}
-
-			node.SetState(BUILT)
-			err = checkChanged(self.dag, id, node, stale)
-			if err != nil {
-				// weird, pathological failure: e.g. a compiler wrote
-				// an output file and made it unreadable, or did not
-				// write the file it was supposed to write
-				return []error {err}
-			}
-		}
-	}
-
-	// Collapse possibly many build failures down to a single error
-	// object, because build failure are reported as they happen. At
-	// this point we just need a single error object to summarize the
-	// whole failure and make the process terminate soon.
-	err := self.explainFailures(attempted, failed) // nil if no failures
-	if err != nil {
-		return []error {err}
-	}
-	return nil
+	// total number of nodes that we attempted to build
+	attempts int
 }
 
-// Compute the initial set set of stale nodes, i.e. nodes that are 1)
-// children of the original sources, 2) relevant (ancestors of a goal
-// node), and 3) stale.
-func (self *BuildState) findStaleTargets() (*bit.Set, []error) {
-	//fmt.Printf("FindStaleTargets():\n")
-	if self.dag.children == nil {
-		panic("dag.children == nil: did you forget to call dag.ComputeChildren()?")
-	}
+// The heart of Fubsy: do a depth-first walk of the dependency graph
+// to discover nodes in topological order, then (re)build nodes that
+// are stale or missing. Skip target nodes that are "tainted" by
+// upstream failure. Returns a single error object summarizing what
+// (if anything) went wrong; error details are reported "live" as
+// builds fail (e.g. to the console or a GUI window) so the user gets
+// timely feedback.
+func (self *BuildState) BuildTargets(targets NodeSet) error {
+	// What sort of nodes do we check for changes?
+	changestates := self.getChangeStates()
 
-	var errors []error
-	stale := bit.New()
-	for id, node := range self.dag.nodes {
-		if !self.dag.parents[id].IsEmpty() {
-			// node has parents, so it's not an original source
-			continue
+	builderr := new(BuildError)
+	visit := func(id int) error {
+		node := self.dag.nodes[id]
+		if node.State() == SOURCE {
+			// can't build original source nodes!
+			return nil
 		}
-		err := checkChanged(self.dag, id, node, stale)
+
+		checkInitialState(node)
+
+		// do we need to build this node? can we?
+		missing, stale, tainted, err :=
+			self.inspectParents(changestates, id, node)
 		if err != nil {
-			errors = append(errors, err)
+			return err
 		}
-	}
 
-	//fmt.Printf("FindStaleTargets(): initial stale set = %v\n", stale)
-	return stale, errors
-}
-
-func (self *BuildState) explainFailures(attempted int, failed []Node) error {
-	if len(failed) == 0 {
+		if tainted {
+			node.SetState(TAINTED)
+		} else if missing || stale {
+			ok := self.buildNode(id, node, builderr)
+			if !ok && !self.keepGoing() {
+				// attempts counter is not very useful when we break
+				// out of the build early
+				builderr.attempts = -1
+				return builderr
+			}
+		}
 		return nil
 	}
-
-	var err error
-	if self.keepGoing() {
-		targets := joinNodes(", ", 10, failed)
-		err = fmt.Errorf("failed to build %d of %d targets: %s",
-			len(failed), attempted, targets)
-	} else {
-		// attempted is meaningless if !keepGoing(), because we
-		// broke out of the main loop early
-		err = fmt.Errorf("failed to build target %s", failed[0])
+	err := self.dag.DFS(targets, visit)
+	if err == nil && len(builderr.failed) > 0 {
+		// build failures in keep-going mode
+		err = builderr
 	}
 	return err
+}
+
+func (self *BuildState) getChangeStates() map[NodeState] bool {
+	// Default is like tup: only check original source nodes and nodes
+	// that have just been built.
+	changestates := make(map[NodeState] bool)
+	changestates[SOURCE] = true
+	changestates[BUILT] = true
+	if self.checkAll() {
+		// Optional SCons-like behaviour: assume the user has been
+		// sneaking around and modifying .o or .class files behind our
+		// back and check everything. (N.B. this is unnecessary if the
+		// user sneakily *removes* intermediate targets; that case
+		// should be handled just fine by default.)
+		changestates[UNKNOWN] = true
+	}
+	return changestates
+}
+
+// panic if node is in an impossible state for starting its visit
+func checkInitialState(node Node) {
+	if node.State() != UNKNOWN {
+		// we just skipped SOURCE nodes, the other states are only set
+		// while visiting a node, and we should only visit each node
+		// once
+		panic(fmt.Sprintf(
+			"visiting node %v, state = %d (should be UNKNOWN = %d)",
+			node, node.State(), UNKNOWN))
+	}
+}
+
+// Inspect node and its parents to see if we need to build it. Return
+// tainted=true if we should skip building this node due to upstream
+// failure. Return stale=true if we should build this node because at
+// least one of its parents has changed. Return missing=true if we
+// should build this node because its resource is missing. Return
+// non-nil err if there were unexpected node errors (error checking
+// existence or change status).
+func (self *BuildState) inspectParents(
+	changestates map[NodeState] bool, id int, node Node) (
+	missing, stale, tainted bool, err error) {
+
+	var exists, changed bool
+	exists, err = node.Exists()	// obvious rebuild (unless tainted)
+	if err != nil {
+		return
+	}
+	missing = !exists
+	stale = false				// need to rebuild this node
+	tainted = false				// failures upstream: do not rebuild
+
+	parentnodes := self.dag.parentNodes(id)
+	for _, parent := range parentnodes {
+		pstate := parent.State()
+		if pstate == FAILED || pstate == TAINTED {
+			tainted = true
+			return				// no further inspection required
+		}
+
+		// Try *really hard* to avoid calling parent.Changed(), because
+		// it's likely to do I/O: prone to fail, slow, etc.
+		if missing || stale || !changestates[pstate] {
+			continue
+		}
+		changed, err = parent.Changed()
+		if err != nil {
+			// This should not happen: parent should exist and be readable,
+			// since we've already visited it earlier in the build and we
+			// avoid looking at failed/tainted parents.
+			return
+		}
+		if changed {
+			stale = true
+			// Do NOT return here: we need to continue inspecting parents
+			// to make sure they don't taint this node with upstream
+			// failure.
+		}
+	}
+	return
+}
+
+// Build the specified node (caller has determined that it should be
+// built and can be built). On failure, report the error (e.g. to the
+// console, a GUI window, ...) and return false. On success, return
+// true.
+func (self *BuildState) buildNode(
+	id int, node Node, builderr *BuildError) bool {
+	node.SetState(BUILDING)
+	builderr.attempts++
+	err := node.Action().Execute()
+	if err != nil {
+		// Normal, everyday build failure: report the precise problem
+		// immediately, and accumulate summary info in the caller.
+		node.SetState(FAILED)
+		self.reportFailure(err)
+		builderr.addFailure(node)
+		return false
+	}
+	node.SetState(BUILT)
+	return true
+}
+
+func (self *BuildState) reportFailure(err error) {
+	fmt.Fprintf(os.Stderr, "build failure: %s\n", err)
+}
+
+func (self *BuildState) keepGoing() bool {
+	// eventually this should come from command-line option -k
+	return true
+}
+
+func (self *BuildState) checkAll() bool {
+	// similarly, this should come from --check-all option
+	// (pessimistically assume that someone might have modified
+	// intermediate targets behind our back, not just original
+	// sources)
+	return false
+}
+
+func (self *BuildError) addFailure(node Node) {
+	self.failed = append(self.failed, node)
+}
+
+func (self *BuildError) Error() string {
+	if len(self.failed) == 0 {
+		panic("called Error() on a BuildError with no failures: " +
+			"there is no error here!")
+	}
+
+	if self.attempts > 0 {
+		failed := joinNodes(", ", 10, self.failed)
+		return fmt.Sprintf(
+			"failed to build %d of %d targets: %s",
+			len(self.failed), self.attempts, failed)
+	}
+	return fmt.Sprintf("failed to build target %s", self.failed[0])
 }
 
 // (hopefully) temporary, pending acceptance of my patches to go-bit
@@ -142,45 +231,4 @@ func joinNodes(delim string, max int, nodes []Node) string {
 		svalues[max - 1] = "..."
 	}
 	return strings.Join(svalues, delim)
-}
-
-func (self *BuildState) keepGoing() bool {
-	// eventually this should come from command-line option -k
-	return true
-}
-
-func (self *BuildState) reportError(err error) {
-	fmt.Fprintf(os.Stderr, "build failure: %s\n", err)
-}
-
-func taintChildren(dag *DAG, id int, node Node) {
-	dag.children[id].Do(func(childid int) {
-		dag.nodes[childid].SetState(TAINTED)
-	})
-}
-
-func checkChanged(
-	dag *DAG, id int, node Node, stale *bit.Set) error {
-
-	changed, err := node.Changed()
-	if err != nil {
-		return err
-	} else if changed  {
-		if dag.children[id] == nil {
-			// temporary, until dag.ComputeChildren() implemented
-			panic(fmt.Sprintf(
-				"BuildState: no children known for node %d (%v)", id, node))
-		}
-		dag.children[id].Do(func(childid int) {
-			child := dag.nodes[childid]
-			if child.State() != TAINTED {
-				// XXX this might be premature: I think we should not add a
-				// node to the stale set until *all* of its parents are
-				// built! (that might fix the whole "tainted" thing too)
-				stale.Add(childid)
-				child.SetState(STALE)
-			}
-		})
-	}
-	return nil
 }

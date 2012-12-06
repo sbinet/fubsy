@@ -3,15 +3,17 @@ package dag
 import (
 )
 
+// hmmm: this is really the *build* state of a given node
 type NodeState byte
 
 const (
 	// the default state for all nodes
 	UNKNOWN NodeState = iota
 
-	// this node needs to be rebuilt, i.e. one of its parents has
-	// changed since the last build
-	STALE
+	// this is a source node, so it doesn't make sense to have a build
+	// state; this state just exists because it looks smarter than
+	// UNKNOWN. not sure if we really need it...
+	SOURCE
 
 	// this node is currently building
 	BUILDING
@@ -19,8 +21,8 @@ const (
 	// the attempt to build this node failed
 	FAILED
 
-	// we will not try to build this node, because building one of its
-	// parents failed
+	// we did not try to build this node, because building one of its
+	// ancestors failed
 	TAINTED
 
 	// this node was successfully built

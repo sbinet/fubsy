@@ -75,7 +75,8 @@ func Mkfile(tmpdir string, basename string, data string) string {
 	return fn
 }
 
-// Create many empty files. Panics on any error.
+// Create many empty files. Creates directories to contains those
+// files as needed. Panics on any error.
 func TouchFiles(filenames ...string) {
 	for _, fn := range filenames {
 		err := os.MkdirAll(filepath.Dir(fn), 0755)

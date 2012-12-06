@@ -202,7 +202,8 @@ func Test_GlobNode_Expand(t *testing.T) {
 }
 
 func assertParents(t *testing.T, expect []string, dag *DAG, node Node) {
-	actual := dag.parentNodes(node)
+	id := dag.lookupId(node)
+	actual := dag.parentNodes(id)
 	actualnames := make([]string, len(actual))
 	for i, node := range actual {
 		actualnames[i] = node.Name()

@@ -250,9 +250,13 @@ func (self *Runtime) buildTargets() []error {
 	fmt.Println("\nrebuilt dag:")
 	self.dag.Dump(os.Stdout)
 
-	self.dag.ComputeChildren()
 	bstate := self.dag.NewBuildState()
-	return bstate.BuildStaleTargets()
+	goal = self.dag.FindFinalTargets()
+	err := bstate.BuildTargets(goal)
+	if err != nil {
+		errors = append(errors, err)
+	}
+	return errors
 }
 
 // XXX this is identical to TypeError in types/basictypes.go:
