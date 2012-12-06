@@ -205,7 +205,7 @@ func (self *BuildError) Error() string {
 			"failed to build %d of %d targets: %s",
 			len(self.failed), self.attempts, failed)
 	}
-	return fmt.Sprintf("failed to build target %s", self.failed[0])
+	return fmt.Sprintf("failed to build target: %s", self.failed[0])
 }
 
 // (hopefully) temporary, pending acceptance of my patches to go-bit

@@ -131,15 +131,29 @@ func (self stubaction) Execute() error {
 	return nil
 }
 
+func Test_BuildError_Error(t *testing.T) {
+	dag := NewDAG()
+	err := &BuildError{}
+	err.attempts = 43
+	err.failed = mknodelist(
+		dag, "foo", "bar", "baz")
+	assert.Equal(t,
+		"failed to build 3 of 43 targets: foo, bar, baz", err.Error())
+	err.attempts = -1
+	assert.Equal(t,
+		"failed to build target: foo", err.Error())
+
+	err.attempts = 17
+	err.failed = mknodelist(
+		dag, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j" ,"k")
+	assert.Equal(t,
+		"failed to build 11 of 17 targets: a, b, c, d, e, f, g, h, i, ...",
+		err.Error())
+}
+
 func Test_joinNodes(t *testing.T) {
 	dag := NewDAG()
-	nodes := []Node {
-		makestubnode(dag, "blargh"),
-		makestubnode(dag, "merp"),
-		makestubnode(dag, "whoosh"),
-		makestubnode(dag, "fwob"),
-		makestubnode(dag, "whee"),
-	}
+	nodes := mknodelist(dag, "blargh", "merp", "whoosh", "fwob", "whee")
 
 	assert.Equal(t,
 		"blargh, merp, whoosh, fwob, whee", joinNodes(", ", 10, nodes))
@@ -149,4 +163,12 @@ func Test_joinNodes(t *testing.T) {
 		"blargh, merp, whoosh, ...", joinNodes(", ", 4, nodes))
 	assert.Equal(t,
 		"blargh!*!merp!*!...", joinNodes("!*!", 3, nodes))
+}
+
+func mknodelist(dag *DAG, names ...string) []Node {
+	result := make([]Node, len(names))
+	for i, name := range names {
+		result[i] = makestubnode(dag, name)
+	}
+	return result
 }
