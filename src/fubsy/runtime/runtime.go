@@ -175,34 +175,6 @@ func (self *Runtime) addRule(rule *BuildRule) error {
 
 	// umm: when can this fail?
 	return nil
-/*
-	// XXX this violates the definition of Expand(): it's supposed to
-	// happen in the build phase, but this code runs in the main phase.
-	targets, err := rule.targets.Expand(self)
-	if err != nil {
-		return err
-	}
-	sources, err := rule.sources.Expand(self)
-	if err != nil {
-		return err
-	}
-
-	// XXX assuming all sources and targets are regular files -- what
-	// if they are directories? symlinks? don't exist anymore (deleted
-	// in the window between Expand() and now)?
-
-	snodes := make([]dag.Node, len(sources))
-	for i, source := range sources {
-		snodes[i] = dag.MakeFileNode(self.dag)
-	}
-	tnodes := make([]dag.Node, len(targets))
-	for i, target := range targets {
-		tnodes[i] = dag.MakeFileNode(self.dag, target)
-		tnodes[i].SetAction(action)
-	}
-
-	self.dag.AddManyParents(tnodes, snodes)
-*/
 }
 
 // Convert a single FuObject (possibly a FuList or FuFinderList) to a
