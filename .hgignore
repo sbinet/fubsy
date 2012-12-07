@@ -1,6 +1,5 @@
 ^pkg$
 ^bin$
-^fubsy$
 ~$
 ^y.output$
 ^[a-z]+\.test$
