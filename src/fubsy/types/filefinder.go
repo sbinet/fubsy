@@ -82,7 +82,7 @@ func (self *FuFileFinder) typename() string {
 // Walk the filesystem for files matching this FileFinder's include
 // patterns. Return the list of matching filenames as a FuList of
 // FuString.
-func (self *FuFileFinder) Expand() (FuObject, error) {
+func (self *FuFileFinder) Expand(ns Namespace) (FuObject, error) {
 	result := make(FuList, 0)
 	var matches []string
 	for _, pattern := range self.includes {
@@ -304,10 +304,10 @@ func (self *FuFinderList) List() []FuObject {
 	return result
 }
 
-func (self *FuFinderList) Expand() (FuObject, error) {
+func (self *FuFinderList) Expand(ns Namespace) (FuObject, error) {
 	result := make(FuList, 0)
 	for _, element := range self.elements {
-		batch, err := element.Expand()
+		batch, err := element.Expand(ns)
 		if err != nil {
 			return nil, err
 		}

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"fmt"
 	"reflect"
+	"regexp"
 	"fubsy/dsl"
 )
 
@@ -29,7 +30,7 @@ type FuObject interface {
 	// -O2". Expansion can involve conversions within Fubsy's type
 	// system: e.g. expanding a FuFileFinder might result in a FuList
 	// of file nodes.
-	Expand() (FuObject, error)
+	Expand(ns Namespace) (FuObject, error)
 
 	// Return a brief, human-readable description of the type of this
 	// object. Used in error messages.
@@ -78,9 +79,56 @@ func (self FuString) List() []FuObject {
 	return []FuObject {self}
 }
 
-func (self FuString) Expand() (FuObject, error) {
-	// XXX variable expansion!!!
-	return self, nil
+var expand_re *regexp.Regexp
+
+func init() {
+	// same regex used by the lexer for NAME tokens (no coincidence!)
+	namepat := "([a-zA-Z_][a-zA-Z_0-9]*)"
+	expand_re = regexp.MustCompile(
+		fmt.Sprintf("\\$(?:%s|\\{%s\\})", namepat, namepat))
+}
+
+func (self FuString) Expand(ns Namespace) (FuObject, error) {
+
+	match := expand_re.FindStringSubmatchIndex(string(self))
+	if match == nil {			// fast path for common case
+		return self, nil
+	}
+
+	pos := 0
+	cur := string(self)
+	result := ""
+	var name string
+	var start, end int
+	for match != nil {
+		group1 := match[2:4]		// location of match for "$foo"
+		group2 := match[4:6]		// location of match for "${foo}"
+		if group1[0] > 0 {
+			name = cur[group1[0]:group1[1]]
+			start = group1[0] - 1
+			end = group1[1]
+		} else if group2[0] > 0 {
+			name = cur[group2[0]:group2[1]]
+			start = group2[0] - 2
+			end = group2[1] + 1
+		} else {
+			// this should not happen: panic?
+			return self, nil
+		}
+
+		value := ns.Lookup(name)
+		if value == nil {
+			// XXX very similar to error reported by runtime.evaluateName()
+			// XXX location?
+			return self, fmt.Errorf("undefined variable '%s' in string", name)
+		}
+		result += cur[:start] + value.String()
+		pos = end
+		cur = cur[pos:]
+		match = expand_re.FindStringSubmatchIndex(cur)
+	}
+	result += cur
+	return FuString(result), nil
 }
 
 func (self FuString) typename() string {
@@ -129,11 +177,11 @@ func (self FuList) List() []FuObject {
 	return self
 }
 
-func (self FuList) Expand() (FuObject, error) {
+func (self FuList) Expand(ns Namespace) (FuObject, error) {
 	result := make(FuList, len(self))
 	var err error
 	for i, val := range self {
-		result[i], err = val.Expand()
+		result[i], err = val.Expand(ns)
 		if err != nil {
 			return nil, err
 		}

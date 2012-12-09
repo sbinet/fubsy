@@ -13,7 +13,7 @@ func Test_Runtime_assign(t *testing.T) {
 	// AST for a = "foo"
 	node := dsl.NewASTAssignment("a", stringnode("foo"))
 	rt := &Runtime{}
-	ns := NewNamespace()
+	ns := types.NewValueMap()
 
 	rt.assign(node, ns)
 	expect := types.FuString("foo")
@@ -54,7 +54,7 @@ func stringnode(value string) *dsl.ASTString {
 	return dsl.NewASTString(value)
 }
 
-func assertIn(t *testing.T, ns Namespace, name string, expect types.FuObject) {
+func assertIn(t *testing.T, ns types.ValueMap, name string, expect types.FuObject) {
 	if actual, ok := ns[name]; ok {
 		if actual != expect {
 			t.Errorf("expected %#v, but got %#v", expect, actual)

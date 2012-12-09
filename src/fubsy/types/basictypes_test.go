@@ -74,13 +74,44 @@ func Test_FuString_Add_list(t *testing.T) {
 	assert.Equal(t, "[ls,-l,-a,foo]", result.String())
 }
 
+// this really just tests that I understand the regexp API
+func Test_expand_re(t *testing.T) {
+	s := "blah blah no matches here"
+	assert.Nil(t, expand_re.FindStringSubmatchIndex(s))
+
+	s = "here is a $variable reference"
+	match := expand_re.FindStringSubmatchIndex(s)
+	expect := []int {
+		10, 19,
+		11, 19,
+		-1, -1}
+	assert.Equal(t, expect, match)
+
+	s = "and ${aNoTher_way} of putting it"
+	match = expand_re.FindStringSubmatchIndex(s)
+	expect = []int {
+		4, 18,
+		-1, -1,
+		6, 17}
+	assert.Equal(t, expect, match)
+}
+
 func Test_FuString_Expand(t *testing.T) {
+	ns := makeNamespace("foo", "hello", "meep", "blorf")
 	input := FuString("meep meep!")
-	output, err := input.Expand()
+	output, err := input.Expand(ns)
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
 
-	// not testing variable expansion because it's not implemented yet
+	input = FuString("meep $foo blah")
+	output, err = input.Expand(ns)
+	assert.Nil(t, err)
+	assert.Equal(t, "meep hello blah", output.String())
+
+	input = FuString("hello ${foo} $meep")
+	output, err = input.Expand(ns)
+	assert.Nil(t, err)
+	assert.Equal(t, "hello hello blorf", output.String())
 }
 
 func Test_FuList_String(t *testing.T) {
@@ -117,8 +148,17 @@ func Test_FuList_Add_string(t *testing.T) {
 }
 
 func Test_FuList_Expand(t *testing.T) {
+	ns := makeNamespace()
 	input := makeFuList("gob", "mob")
-	output, err := input.Expand()
+	output, err := input.Expand(ns)
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
+}
+
+func makeNamespace(keyval ...string) Namespace {
+	ns := NewValueMap()
+	for i := 0; i < len(keyval); i += 2 {
+		ns[keyval[i]] = FuString(keyval[i+1])
+	}
+	return ns
 }

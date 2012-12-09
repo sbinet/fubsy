@@ -288,7 +288,8 @@ func Test_FinderList_misc(t *testing.T) {
 }
 
 func assertExpand(t *testing.T, expect []string, obj FuObject) {
-	actual, err := obj.Expand()
+	ns := makeNamespace()
+	actual, err := obj.Expand(ns)
 	assert.Nil(t, err)
 
 	expectobj := makeFuList(expect...)

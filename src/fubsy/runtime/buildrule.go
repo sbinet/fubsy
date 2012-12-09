@@ -10,7 +10,7 @@ type BuildRule struct {
 	targets types.FuObject
 	sources types.FuObject
 	action dag.Action
-	locals Namespace
+	locals types.ValueMap
 }
 
 func NewBuildRule(

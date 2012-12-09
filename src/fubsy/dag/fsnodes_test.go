@@ -194,7 +194,7 @@ func Test_GlobNode_Expand(t *testing.T) {
 	node1 := MakeGlobNode(dag, types.NewFileFinder([]string {"**/*.java"}))
 	_ = node1
 
-	expnodes, err := node0.Expand(dag)
+	expnodes, err := node0.Expand(dag, types.NewValueMap())
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(expnodes))
 	assert.Equal(t, "main.c", expnodes[0].(*FileNode).name)

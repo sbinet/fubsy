@@ -1,6 +1,7 @@
 package dag
 
 import (
+	"fubsy/types"
 )
 
 // hmmm: this is really the *build* state of a given node
@@ -70,7 +71,7 @@ type Node interface {
 	// DAG.Rebuild() by default drops the Node on which Expand() was
 	// called; implemenations that want to preserve themselves must
 	// include themselves in the return list of replacement Nodes.
-	Expand(dag *DAG) ([]Node, error)
+	Expand(dag *DAG, ns types.Namespace) ([]Node, error)
 
 	// return true if this node and other describe the same resource
 	// (it's often sufficient to compare names)
@@ -129,7 +130,7 @@ func (self *nodebase) Action() Action {
 	return self.action
 }
 
-func (self *nodebase) Expand(dag *DAG) ([]Node, error) {
+func (self *nodebase) Expand(dag *DAG, ns types.Namespace) ([]Node, error) {
 	return nil, nil
 }
 

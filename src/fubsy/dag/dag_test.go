@@ -235,7 +235,8 @@ func Test_DAG_Rebuild_simple(t *testing.T) {
 	// entirely of FileNodes -- nothing to expand here
 	relevant := bit.New()
 	relevant.AddRange(0, len(dag.nodes))
-	rdag, err := dag.Rebuild(relevant)
+	ns := types.NewValueMap()
+	rdag, err := dag.Rebuild(relevant, ns)
 
 	assert.Nil(t, err)
 	assert.False(t, &dag.nodes == &rdag.nodes)
@@ -264,7 +265,8 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	// relevant = {0} so we only expand the first GlobNode, and the
 	// new DAG contains only nodes derived from that expansion
 	relevant := bit.New(0)
-	rdag, err := dag.Rebuild(relevant)
+	ns := types.NewValueMap()
+	rdag, err := dag.Rebuild(relevant, ns)
 
 	//fmt.Println("rebuild #1:")
 	//rdag.Dump(os.Stdout)
@@ -279,7 +281,8 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 
 	// all nodes are relevant, so the second GlobNode will be expanded
 	relevant.AddRange(0, len(dag.nodes))
-	rdag, err = dag.Rebuild(relevant)
+	ns = types.NewValueMap()
+	rdag, err = dag.Rebuild(relevant, ns)
 	assert.Nil(t, err)
 
 	//fmt.Println("rebuild #2:")

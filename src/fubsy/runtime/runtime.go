@@ -9,25 +9,19 @@ import (
 	"fubsy/dag"
 )
 
-type Namespace map[string] types.FuObject
-
 type Runtime struct {
 	script string				// filename
 	ast dsl.AST
 
-	locals Namespace
+	locals types.ValueMap
 	dag *dag.DAG
-}
-
-func NewNamespace() Namespace {
-	return make(Namespace)
 }
 
 func NewRuntime(script string, ast dsl.AST) *Runtime {
 	return &Runtime{
 		script: script,
 		ast: ast,
-		locals: NewNamespace(),
+		locals: types.NewValueMap(),
 		dag: dag.NewDAG(),
 	}
 }
@@ -73,12 +67,13 @@ func (self *Runtime) runStatements(main *dsl.ASTPhase) []error {
 
 // node represents code like "NAME = EXPR": evaluate EXPR and store
 // the result in ns
-func (self *Runtime) assign(node *dsl.ASTAssignment, ns Namespace) error {
+// XXX ns should be a ValueStack!
+func (self *Runtime) assign(node *dsl.ASTAssignment, ns types.ValueMap) error {
 	value, err := self.evaluate(node.Expression())
 	if err != nil {
 		return err
 	}
-	ns[node.Target()] = value
+	ns.Assign(node.Target(), value)
 	return nil
 }
 
@@ -215,7 +210,7 @@ func (self *Runtime) buildTargets() []error {
 	goal := self.dag.FindFinalTargets()
 	relevant := self.dag.FindRelevantNodes(goal)
 
-	self.dag, errors = self.dag.Rebuild(relevant)
+	self.dag, errors = self.dag.Rebuild(relevant, self.locals)
 	if len(errors) > 0 {
 		return errors
 	}

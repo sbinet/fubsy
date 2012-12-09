@@ -99,8 +99,8 @@ func (self *GlobNode) Exists() (bool, error) {
 		"(graph should have been rebuilt by this point)")
 }
 
-func (self *GlobNode) Expand(dag *DAG) ([]Node, error) {
-	filenames, err := self.glob.Expand()
+func (self *GlobNode) Expand(dag *DAG, ns types.Namespace) ([]Node, error) {
+	filenames, err := self.glob.Expand(ns)
 	if err != nil {
 		return nil, err
 	}

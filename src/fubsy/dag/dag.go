@@ -34,6 +34,7 @@ import (
 	"strings"
 	"reflect"
 	"code.google.com/p/go-bit/bit"
+	"fubsy/types"
 )
 
 type DAG struct {
@@ -230,7 +231,7 @@ func (self *DAG) NewBuildState() *BuildState {
 // the files matching the glob's patterns). Any BuildState or NodeSet
 // objects derived from the old DAG are invalid with the new DAG:
 // throw them away and start over again.
-func (self *DAG) Rebuild(relevant *bit.Set) (*DAG, []error) {
+func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) {
 	var errors []error
 	replacements := make(map[int] *bit.Set)
 	newdag := NewDAG()
@@ -238,7 +239,7 @@ func (self *DAG) Rebuild(relevant *bit.Set) (*DAG, []error) {
 		if !relevant.Contains(id) {
 			continue
 		}
-		expansion, err := node.Expand(self)
+		expansion, err := node.Expand(self, ns)
 		if err != nil {
 			errors = append(errors, err)
 		} else if expansion != nil {
