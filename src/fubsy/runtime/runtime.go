@@ -33,16 +33,39 @@ func NewRuntime(script string, ast dsl.AST) *Runtime {
 }
 
 func (self *Runtime) RunScript() []error {
+	var errors []error
 	for _, plugin := range self.ast.ListPlugins() {
 		fmt.Printf("loading plugin %s\n", strings.Join(plugin, "."))
 	}
-	main := self.ast.FindPhase("main")
-	errors := self.runStatements(main)
+
+	// Doing things this way could lead to weird effects: e.g. a
+	// global assigned after "main { ... }" would be visible inside
+	// main. That might be wrong.
+	errors = self.assignGlobals()
+	errors = append(errors, self.runMainPhase()...)
 	if len(errors) > 0 {
 		return errors
 	}
 
-	errors = self.buildTargets()
+	errors = self.runBuildPhase()
+	return errors
+}
+
+func (self *Runtime) assignGlobals() []error {
+	// hmmm: what exactly is the point of the AST interface again,
+	// if we have to barge past it to the concrete type underneath?
+	root := self.ast.(*dsl.ASTRoot)
+	var errors []error
+	for _, node_ := range root.Children() {
+		var err error
+		switch node := node_.(type) {
+		case *dsl.ASTAssignment:
+			err = self.assign(node, self.globals)
+		}
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
 	return errors
 }
 
@@ -50,11 +73,16 @@ func (self *Runtime) RunScript() []error {
 // Update self with the results: variable assignments, build rules,
 // etc. Most importantly, on return self.dag will contain the
 // dependency graph ready to hand over to the build phase.
-func (self *Runtime) runStatements(main *dsl.ASTPhase) []error {
+func (self *Runtime) runMainPhase() []error {
+	main := self.ast.FindPhase("main")
+	if main == nil {
+		return []error {
+			RuntimeError{self.ast.Location(), "no main phase defined"}}
+	}
 	locals := types.NewValueMap()
 	self.stack.Push(locals)
 
-	errors := make([]error, 0)
+	var errors []error
 	for _, node_ := range main.Children() {
 		var err error
 		switch node := node_.(type) {
@@ -212,9 +240,14 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 }
 
 // Build user's requested targets according to the dependency graph in
-// self.dag (as constructed by runStatements()).
-func (self *Runtime) buildTargets() []error {
+// self.dag (as constructed by runMainPhase()).
+func (self *Runtime) runBuildPhase() []error {
 	var errors []error
+
+	fmt.Println("\nvalue stack:")
+	for i, vmap := range self.stack {
+		fmt.Printf("  [%d] %v\n", i, vmap)
+	}
 
 	fmt.Println("\ninitial dag:")
 	self.dag.Dump(os.Stdout)

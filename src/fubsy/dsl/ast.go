@@ -10,6 +10,8 @@ import (
 // interface for the whole AST, not just a particular node
 // (implemented by ASTRoot)
 type AST interface {
+	Locatable
+
 	// Return the list of external plugins imported by this script.
 	// Does not include inline plugins. Each plugin is represented as
 	// a []string, e.g. "import foo.bar.baz" becomes {"foo", "bar",
