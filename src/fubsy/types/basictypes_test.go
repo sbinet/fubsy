@@ -114,6 +114,26 @@ func Test_FuString_Expand(t *testing.T) {
 	assert.Equal(t, "hello hello blorf", output.String())
 }
 
+func Test_FuString_Expand_recursive(t *testing.T) {
+	ns := makeNamespace(
+		"CC", "/usr/bin/gcc",
+		"sources", "$files",
+		"files", "f1.c f2.c f3.c")
+	input := FuString("$CC -c $sources")
+	output, err := input.Expand(ns)
+	assert.Nil(t, err)
+	assert.Equal(t, "/usr/bin/gcc -c f1.c f2.c f3.c", output.String())
+
+	// same thing, but now files is a list
+	// (temporarily disabled)
+	return
+	ns.Assign("files", FuList([]FuObject {
+		FuString("f1.c"), FuString("f2.c"), FuString("f3.c")}))
+	output, err = input.Expand(ns)
+	assert.Nil(t, err)
+	assert.Equal(t, "/usr/bin/gcc -c f1.c f2.c f3.c", output.String())
+}
+
 func Test_FuList_String(t *testing.T) {
 	l := makeFuList("beep", "meep")
 	assert.Equal(t, "[beep,meep]", l.String())

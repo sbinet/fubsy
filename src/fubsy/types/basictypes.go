@@ -122,6 +122,11 @@ func (self FuString) Expand(ns Namespace) (FuObject, error) {
 			// XXX location?
 			return self, fmt.Errorf("undefined variable '%s' in string", name)
 		}
+		value, err := value.Expand(ns)
+		if err != nil {
+			return self, nil
+		}
+
 		result += cur[:start] + value.String()
 		pos = end
 		cur = cur[pos:]
