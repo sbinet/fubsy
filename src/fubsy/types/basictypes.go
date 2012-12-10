@@ -142,7 +142,7 @@ func (self FuString) Expand(ns Namespace) (FuObject, error) {
 			return self, nil
 		}
 
-		result += cur[:start] + value.String()
+		result += cur[:start] + value.CommandString()
 		pos = end
 		cur = cur[pos:]
 		match = expand_re.FindStringSubmatchIndex(cur)
