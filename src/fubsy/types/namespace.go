@@ -1,11 +1,14 @@
 package types
 
 import (
+	"io"
+	"fmt"
 )
 
 type Namespace interface {
 	Lookup(name string) (FuObject, bool)
 	Assign(name string, value FuObject)
+	Dump(writer io.Writer, indent string)
 }
 
 type NamespaceStack interface {
@@ -32,6 +35,12 @@ func (self ValueMap) Lookup(name string) (value FuObject, ok bool) {
 // Associate name with value in this namespace.
 func (self ValueMap) Assign(name string, value FuObject) {
 	self[name] = value
+}
+
+func (self ValueMap) Dump(writer io.Writer, indent string) {
+	for name, val := range self {
+		fmt.Fprintf(writer, "%s%s = %T %s\n", indent, name, val, val)
+	}
 }
 
 // a stack of Namespaces, which creates a hierarchy of namespaces from
@@ -82,4 +91,11 @@ func (self ValueStack) Assign(name string, value FuObject) {
 
 	// did not find it: add it to the innermost namespace
 	self[len(self)-1].Assign(name, value)
+}
+
+func (self ValueStack) Dump(writer io.Writer, indent string) {
+	for i, ns := range self {
+		fmt.Fprintf(writer, "%slevel %d:\n", indent, i)
+		ns.Dump(writer, indent + "  ")
+	}
 }

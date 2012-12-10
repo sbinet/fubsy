@@ -245,9 +245,7 @@ func (self *Runtime) runBuildPhase() []error {
 	var errors []error
 
 	fmt.Println("\nvalue stack:")
-	for i, vmap := range *self.stack {
-		fmt.Printf("  [%d] %v\n", i, vmap)
-	}
+	self.stack.Dump(os.Stdout, "")
 
 	fmt.Println("\ninitial dag:")
 	self.dag.Dump(os.Stdout)

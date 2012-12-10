@@ -2,6 +2,7 @@ package dag
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"fubsy/dsl"
 	"fubsy/types"
@@ -106,6 +107,9 @@ func (self *CommandAction) String() string {
 
 func (self *CommandAction) Execute(ns types.Namespace) error {
 	fmt.Println("raw command:", self.raw)
+	fmt.Println("namespace for expansion:")
+	ns.Dump(os.Stdout, "")
+
 	command, err := self.raw.Expand(ns)
 	if err != nil {
 		return err
