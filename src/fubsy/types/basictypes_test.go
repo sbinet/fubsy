@@ -2,12 +2,18 @@ package types
 
 import (
 	"testing"
+	//"fmt"
 	"github.com/stretchrcom/testify/assert"
 )
 
 func Test_FuString_String(t *testing.T) {
 	s := FuString("bip bop")
 	assert.Equal(t, "bip bop", s.String())
+}
+
+func Test_FuString_CommandString(t *testing.T) {
+	s := FuString("don't start")
+	assert.Equal(t, "\"don't start\"", s.CommandString())
 }
 
 func Test_basictypes_Equal(t *testing.T) {
@@ -142,6 +148,11 @@ func Test_FuList_String(t *testing.T) {
 	assert.Equal(t, "[beep,,meep]", l.String())
 }
 
+func Test_FuList_CommandString(t *testing.T) {
+	l := makeFuList("foo", "*.c", "ding dong")
+	assert.Equal(t, "foo '*.c' 'ding dong'", l.CommandString())
+}
+
 func Test_FuList_Add_list(t *testing.T) {
 	l1 := makeFuList("foo", "bar")
 	l2 := makeFuList("qux")
@@ -173,6 +184,30 @@ func Test_FuList_Expand(t *testing.T) {
 	output, err := input.Expand(ns)
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
+}
+
+func Test_shellQuote(t *testing.T) {
+	assertquote := func(expect string, input string) {
+		actual := shellQuote(input)
+		assert.Equal(t, expect, actual)
+	}
+
+	s := "helloworld.txt"
+	assertquote(s, s)
+	//assert.Equal(t, s, q)
+
+	// first choice: use single quotes
+	s = "hello world"
+	assertquote("'hello world'", s)
+
+	// second choice: string has single quotes, so use double quotes
+	s = "mr. o'reilly has $10"
+	assertquote("\"mr. o'reilly has \\$10\"", s)
+
+	// worst case: string has single and double quotes, so give up
+	// on quotes and just use backslash for everything
+	s = "mr. o'reilly said \"I have $10!\""
+	assertquote("mr.\\ o\\'reilly\\ said\\ \\\"I\\ have\\ \\$10!\\\"", s)
 }
 
 func makeNamespace(keyval ...string) Namespace {

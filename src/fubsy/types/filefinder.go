@@ -36,6 +36,15 @@ func (self *FuFileFinder) String() string {
 	return "<" + strings.Join(self.includes, " ") + ">"
 }
 
+func (self *FuFileFinder) CommandString() string {
+	// ummm: what about excludes?
+	result := make([]string, len(self.includes))
+	for i, pattern := range self.includes {
+		result[i] = shellQuote(pattern)
+	}
+	return strings.Join(result, " ")
+}
+
 func (self *FuFileFinder) Equal(other_ FuObject) bool {
 	other, ok := other_.(*FuFileFinder)
 	return (ok &&
@@ -273,6 +282,20 @@ func (self *FuFinderList) String() string {
 		result[i] = finder.String()
 	}
 	return strings.Join(result, " + ")
+}
+
+func (self *FuFinderList) CommandString() string {
+	result := make([]string, len(self.elements))
+	j := 0
+	for _, finder := range self.elements {
+		result[j] = finder.CommandString()
+		if result[j] == "" {
+			// in case someone constructs a finder with no include patterns
+			j--
+		}
+		j++
+	}
+	return strings.Join(result[0:j], " ")
 }
 
 func (self *FuFinderList) Equal(other_ FuObject) bool {

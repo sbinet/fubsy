@@ -13,6 +13,17 @@ import (
 
 type FuObject interface {
 	String() string
+
+	// Return a string representation of this object that is suitable
+	// for use in a shell command. Scalar values should supply quotes
+	// so the shell will see them as a single word -- e.g. values with
+	// spaces in them must be quoted. Multiple-valued objects should
+	// format their values as distinct words, e.g. space-separated
+	// with necessary quoting. This is *not* the same as expansion;
+	// typically, CommandString() is invoked on expanded values just
+	// before incorporating them into a shell command to be executed.
+	CommandString() string
+
 	Equal(FuObject) bool
 	Add(FuObject) (FuObject, error)
 
@@ -47,6 +58,10 @@ type FuList []FuObject
 
 func (self FuString) String() string {
 	return string(self)
+}
+
+func (self FuString) CommandString() string {
+	return shellQuote(string(self))
 }
 
 func (self FuString) Equal(other_ FuObject) bool {
@@ -145,6 +160,14 @@ func (self FuList) String() string {
 	return "[" + strings.Join(self.Values(), ",") + "]"
 }
 
+func (self FuList) CommandString() string {
+	result := make([]string, len(self))
+	for i, s := range self {
+		result[i] = shellQuote(s.String())
+	}
+	return strings.Join(result, " ")
+}
+
 func (self FuList) Equal(other_ FuObject) bool {
 	other, ok := other_.(FuList)
 	return ok && reflect.DeepEqual(self, other)
@@ -220,4 +243,37 @@ type TypeError struct {
 
 func (self TypeError) Error() string {
 	return self.location.String() + self.message
+}
+
+const shellmeta = "# `\"'\\&?*[]{}();$><|"
+
+// initialized on demand
+var shellreplacer *strings.Replacer
+
+// Return s decorated with quote characters so it can safely be
+// included in a shell command.
+func shellQuote(s string) string {
+	if !strings.ContainsAny(s, shellmeta) {
+		return s				// fast path for common case
+	}
+	double := strings.Contains(s, "\"")
+	single := strings.Contains(s, "'")
+	if double && single {
+		if shellreplacer == nil {
+			pairs := make([]string, len(shellmeta) * 2)
+			for i := 0; i < len(shellmeta); i++ {
+				pairs[i*2] = string(shellmeta[i])
+				pairs[i*2+1] = "\\" + string(shellmeta[i])
+			}
+			shellreplacer = strings.NewReplacer(pairs...)
+		}
+		return shellreplacer.Replace(s)
+	} else if single {
+		// use double quotes, but be careful of $
+		return "\"" + strings.Replace(s, "$", "\\$", -1) + "\""
+	} else {
+		// use single quotes
+		return "'" + s + "'"
+	}
+	panic("unreachable code")
 }

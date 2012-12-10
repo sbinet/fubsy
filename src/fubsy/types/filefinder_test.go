@@ -117,6 +117,12 @@ func Test_FuFileFinder_String(t *testing.T) {
 	assert.Equal(t, "<*.c **/*.h>", ff.String())
 }
 
+func Test_FuFileFinder_CommandString(t *testing.T) {
+	var ff FuObject
+	ff = &FuFileFinder{includes: []string {"*.c", "blurp/blop", "**/*.h"}}
+	assert.Equal(t, "'*.c' blurp/blop '**/*.h'", ff.CommandString())
+}
+
 func Test_FuFileFinder_Equal(t *testing.T) {
 	ff1 := NewFileFinder([]string {"*.c", "*.h"})
 	ff2 := NewFileFinder([]string {"*.c", "*.h"})
@@ -266,10 +272,12 @@ func Test_FinderList_misc(t *testing.T) {
 	sum1, err := ff1.Add(ff2)
 	assert.Nil(t, err)
 	assert.Equal(t, "<*.c *.h> + <doc/???.txt>", sum1.String())
+	assert.Equal(t, "'*.c' '*.h' 'doc/???.txt'", sum1.CommandString())
 
 	sum2, err := ff3.Add(sum1)
 	assert.Nil(t, err)
 	assert.Equal(t, "<> + <*.c *.h> + <doc/???.txt>", sum2.String())
+	assert.Equal(t, "'*.c' '*.h' 'doc/???.txt'", sum2.CommandString())
 
 	assert.False(t, sum1.Equal(sum2))
 
@@ -285,6 +293,9 @@ func Test_FinderList_misc(t *testing.T) {
 	assert.Equal(t,
 		"<*.c *.h> + <doc/???.txt> + <> + <*.c *.h> + <doc/???.txt>",
 		sum3.String())
+	assert.Equal(t,
+		"'*.c' '*.h' 'doc/???.txt' '*.c' '*.h' 'doc/???.txt'",
+		sum3.CommandString())
 }
 
 func assertExpand(t *testing.T, expect []string, obj FuObject) {
