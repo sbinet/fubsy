@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"code.google.com/p/go-bit/bit"
+	"fubsy/types"
 )
 
 type BuildState struct {
@@ -30,7 +31,7 @@ type BuildError struct {
 // (if anything) went wrong; error details are reported "live" as
 // builds fail (e.g. to the console or a GUI window) so the user gets
 // timely feedback.
-func (self *BuildState) BuildTargets(targets NodeSet) error {
+func (self *BuildState) BuildTargets(ns types.Namespace, targets NodeSet) error {
 	// What sort of nodes do we check for changes?
 	changestates := self.getChangeStates()
 
@@ -54,7 +55,7 @@ func (self *BuildState) BuildTargets(targets NodeSet) error {
 		if tainted {
 			node.SetState(TAINTED)
 		} else if missing || stale {
-			ok := self.buildNode(id, node, builderr)
+			ok := self.buildNode(ns, id, node, builderr)
 			if !ok && !self.keepGoing() {
 				// attempts counter is not very useful when we break
 				// out of the build early
@@ -156,10 +157,10 @@ func (self *BuildState) inspectParents(
 // console, a GUI window, ...) and return false. On success, return
 // true.
 func (self *BuildState) buildNode(
-	id int, node Node, builderr *BuildError) bool {
+	ns types.Namespace, id int, node Node, builderr *BuildError) bool {
 	node.SetState(BUILDING)
 	builderr.attempts++
-	err := node.Action().Execute()
+	err := node.Action().Execute(ns)
 	if err != nil {
 		// Normal, everyday build failure: report the precise problem
 		// immediately, and accumulate summary info in the caller.

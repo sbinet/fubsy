@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/stretchrcom/testify/assert"
 	"code.google.com/p/go-bit/bit"
+	"fubsy/types"
 )
 
 // full build (all targets), all actions succeed
@@ -22,8 +23,9 @@ func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 	}
 
 	bstate := dag.NewBuildState()
+	ns := types.NewValueMap()
 	goal := NodeSet(bit.New(0, 1))
-	err := bstate.BuildTargets(goal)
+	err := bstate.BuildTargets(ns, goal)
 	assert.Nil(t, err)
 	assertBuild(t, dag, expect, *executed)
 
@@ -51,8 +53,9 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 	}
 
 	bstate := dag.NewBuildState()
+	ns := types.NewValueMap()
 	goal := NodeSet(bit.New(0, 1))
-	err := bstate.BuildTargets(goal)
+	err := bstate.BuildTargets(ns, goal)
 	assert.NotNil(t, err)
 	assertBuild(t, dag, expect, *executed)
 
@@ -123,7 +126,7 @@ func (self stubaction) String() string {
 	return self.desc
 }
 
-func (self stubaction) Execute() error {
+func (self stubaction) Execute(ns types.Namespace) error {
 	self.callback(self.desc)
 	if !self.ok {
 		return errors.New("action failed")

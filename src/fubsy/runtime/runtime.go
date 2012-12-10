@@ -267,7 +267,7 @@ func (self *Runtime) runBuildPhase() []error {
 
 	bstate := self.dag.NewBuildState()
 	goal = self.dag.FindFinalTargets()
-	err := bstate.BuildTargets(goal)
+	err := bstate.BuildTargets(self.stack, goal)
 	if err != nil {
 		errors = append(errors, err)
 	}

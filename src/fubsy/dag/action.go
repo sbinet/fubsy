@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"fubsy/dsl"
+	"fubsy/types"
 )
 
 type Action interface {
@@ -14,7 +15,7 @@ type Action interface {
 	// first error; they do not continue executing. (The global
 	// "--keep-going" option is irrelevant at this level; the caller
 	// of Execute() is responsible for respecting that option.)
-	Execute() error
+	Execute(ns types.Namespace) error
 }
 
 type actionbase struct {
@@ -31,10 +32,10 @@ type CommandAction struct {
 	actionbase
 
 	// as read from the build script, without variables expanded
-	raw string
+	raw types.FuObject
 
 	// with all variables expanded, ready to execute
-	expanded string
+	expanded types.FuObject
 }
 
 // an action that evaluates an expression and assigns the result to a
@@ -70,10 +71,10 @@ func (self *SequenceAction) String() string {
 	return strings.Join(result, " && ") + tail
 }
 
-func (self *SequenceAction) Execute() error {
+func (self *SequenceAction) Execute(ns types.Namespace) error {
 	var err error
 	for _, sub := range self.subactions {
-		err = sub.Execute()
+		err = sub.Execute(ns)
 		if err != nil {
 			return err
 		}
@@ -86,7 +87,8 @@ func (self *SequenceAction) AddAction(action Action) {
 }
 
 func (self *SequenceAction) AddCommand(command *dsl.ASTString) {
-	self.AddAction(&CommandAction{raw: command.Value()})
+	raw := types.FuString(command.Value())
+	self.AddAction(&CommandAction{raw: raw})
 }
 
 func (self *SequenceAction) AddAssignment(assignment *dsl.ASTAssignment) {
@@ -99,11 +101,16 @@ func (self *SequenceAction) AddFunctionCall(fcall *dsl.ASTFunctionCall) {
 
 
 func (self *CommandAction) String() string {
-	return self.raw
+	return self.raw.String()
 }
 
-func (self *CommandAction) Execute() error {
-	fmt.Println("expand:", self.raw)
+func (self *CommandAction) Execute(ns types.Namespace) error {
+	fmt.Println("raw command:", self.raw)
+	command, err := self.raw.Expand(ns)
+	if err != nil {
+		return err
+	}
+	fmt.Println("command:", command)
 	panic("command execution not implemented yet")
 
 	// self.expanded = self.rule.Expand(self.raw)
@@ -115,7 +122,7 @@ func (self *AssignmentAction) String() string {
 	//return self.assignment.String()
 }
 
-func (self *AssignmentAction) Execute() error {
+func (self *AssignmentAction) Execute(ns types.Namespace) error {
 	panic("assignment in build rule not implemented yet")
 }
 
@@ -123,6 +130,6 @@ func (self *FunctionCallAction) String() string {
 	return self.fcall.String() + "(...)"
 }
 
-func (self *FunctionCallAction) Execute() error {
+func (self *FunctionCallAction) Execute(ns types.Namespace) error {
 	panic("function call in build rule not implemeneted yet")
 }

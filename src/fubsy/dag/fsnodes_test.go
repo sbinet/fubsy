@@ -94,7 +94,7 @@ func Test_FileNode_action(t *testing.T) {
 	dag := NewDAG()
 	node := MakeFileNode(dag, "foo")
 
-	action := &CommandAction{raw: "ls -l"}
+	action := &CommandAction{raw: types.FuString("ls -l")}
 	node.SetAction(action)
 	assert.Equal(t, action, node.Action())
 }
