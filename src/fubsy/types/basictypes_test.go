@@ -147,8 +147,8 @@ func Test_FuList_String(t *testing.T) {
 }
 
 func Test_FuList_CommandString(t *testing.T) {
-	l := makeFuList("foo", "*.c", "ding dong")
-	assert.Equal(t, "foo '*.c' 'ding dong'", l.CommandString())
+	l := makeFuList("foo", "*.c", "ding dong", "")
+	assert.Equal(t, "foo '*.c' 'ding dong' ''", l.CommandString())
 }
 
 func Test_FuList_Add_list(t *testing.T) {

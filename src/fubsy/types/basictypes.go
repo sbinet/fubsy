@@ -253,7 +253,7 @@ var shellreplacer *strings.Replacer
 // Return s decorated with quote characters so it can safely be
 // included in a shell command.
 func shellQuote(s string) string {
-	if !strings.ContainsAny(s, shellmeta) {
+	if len(s) > 0 && !strings.ContainsAny(s, shellmeta) {
 		return s				// fast path for common case
 	}
 	double := strings.Contains(s, "\"")
