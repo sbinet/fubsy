@@ -30,9 +30,8 @@ func Test_Runtime_evaluate_simple(t *testing.T) {
 	assertEvaluateOK(t, rt, expect, snode)
 
 	// the expression foo evaluates to the string "meep" if foo is set
-	// to that string in the local namespace...
-	ns := rt.locals
-	ns["foo"] = expect
+	// to that string in the global ValueMap
+	rt.globals.Assign("foo", expect)
 	nnode := dsl.NewASTName("foo")
 	assertEvaluateOK(t, rt, expect, nnode)
 

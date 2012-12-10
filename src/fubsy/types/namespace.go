@@ -5,6 +5,7 @@ import (
 
 type Namespace interface {
 	Lookup(name string) FuObject
+	Assign(name string, value FuObject)
 }
 
 // a mapping from name to value, used for a single scope (e.g. phase

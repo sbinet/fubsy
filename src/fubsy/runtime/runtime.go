@@ -13,15 +13,21 @@ type Runtime struct {
 	script string				// filename
 	ast dsl.AST
 
-	locals types.ValueMap
+	globals types.ValueMap
+	stack types.ValueStack
 	dag *dag.DAG
 }
 
 func NewRuntime(script string, ast dsl.AST) *Runtime {
+	globals := types.NewValueMap()
+	stack := types.NewValueStack()
+	stack.Push(globals)
+
 	return &Runtime{
 		script: script,
 		ast: ast,
-		locals: types.NewValueMap(),
+		globals: globals,
+		stack: stack,
 		dag: dag.NewDAG(),
 	}
 }
@@ -45,12 +51,15 @@ func (self *Runtime) RunScript() []error {
 // etc. Most importantly, on return self.dag will contain the
 // dependency graph ready to hand over to the build phase.
 func (self *Runtime) runStatements(main *dsl.ASTPhase) []error {
+	locals := types.NewValueMap()
+	self.stack.Push(locals)
+
 	errors := make([]error, 0)
 	for _, node_ := range main.Children() {
 		var err error
 		switch node := node_.(type) {
 		case *dsl.ASTAssignment:
-			err = self.assign(node, self.locals)
+			err = self.assign(node, self.stack)
 		case *dsl.ASTBuildRule:
 			rule, err := self.makeRule(node)
 			if err == nil {
@@ -62,13 +71,18 @@ func (self *Runtime) runStatements(main *dsl.ASTPhase) []error {
 			errors = append(errors, err)
 		}
 	}
+
+	// XXX local variables need to be available for variable expansion
+	// in the build phase, but then they're not really local to this
+	// phase, are they? hmmmm. not sure what to do about that. for
+	// now, I'm deliberately not calling self.stack.Pop().
+
 	return errors
 }
 
 // node represents code like "NAME = EXPR": evaluate EXPR and store
 // the result in ns
-// XXX ns should be a ValueStack!
-func (self *Runtime) assign(node *dsl.ASTAssignment, ns types.ValueMap) error {
+func (self *Runtime) assign(node *dsl.ASTAssignment, ns types.Namespace) error {
 	value, err := self.evaluate(node.Expression())
 	if err != nil {
 		return err
@@ -95,14 +109,15 @@ func (self *Runtime) evaluate (expr_ dsl.ASTExpression) (types.FuObject, error) 
 
 func (self *Runtime) evaluateName(expr *dsl.ASTName) (types.FuObject, error) {
 	name := expr.Name()
-	if result, ok := self.locals[name]; ok {
-		return result, nil
+	value := self.stack.Lookup(name)
+	if value == nil {
+		err := RuntimeError{
+			location: expr.Location(),
+			message: fmt.Sprintf("undefined variable '%s'", name),
+		}
+		return nil, err
 	}
-	err := RuntimeError{
-		location: expr.Location(),
-		message: fmt.Sprintf("undefined variable '%s'", name),
-	}
-	return nil, err
+	return value, nil
 }
 
 func (self *Runtime) evaluateAdd(expr *dsl.ASTAdd) (types.FuObject, error) {
@@ -210,7 +225,7 @@ func (self *Runtime) buildTargets() []error {
 	goal := self.dag.FindFinalTargets()
 	relevant := self.dag.FindRelevantNodes(goal)
 
-	self.dag, errors = self.dag.Rebuild(relevant, self.locals)
+	self.dag, errors = self.dag.Rebuild(relevant, self.stack)
 	if len(errors) > 0 {
 		return errors
 	}
