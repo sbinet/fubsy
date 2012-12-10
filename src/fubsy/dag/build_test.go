@@ -23,9 +23,9 @@ func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 	}
 
 	bstate := dag.NewBuildState()
-	ns := types.NewValueMap()
+	ns := types.NewValueStack()
 	goal := NodeSet(bit.New(0, 1))
-	err := bstate.BuildTargets(ns, goal)
+	err := bstate.BuildTargets(&ns, goal)
 	assert.Nil(t, err)
 	assertBuild(t, dag, expect, *executed)
 
@@ -53,9 +53,9 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 	}
 
 	bstate := dag.NewBuildState()
-	ns := types.NewValueMap()
+	ns := types.NewValueStack()
 	goal := NodeSet(bit.New(0, 1))
-	err := bstate.BuildTargets(ns, goal)
+	err := bstate.BuildTargets(&ns, goal)
 	assert.NotNil(t, err)
 	assertBuild(t, dag, expect, *executed)
 

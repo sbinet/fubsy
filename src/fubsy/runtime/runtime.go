@@ -14,7 +14,7 @@ type Runtime struct {
 	ast dsl.AST
 
 	globals types.ValueMap
-	stack types.ValueStack
+	stack *types.ValueStack
 	dag *dag.DAG
 }
 
@@ -27,7 +27,7 @@ func NewRuntime(script string, ast dsl.AST) *Runtime {
 		script: script,
 		ast: ast,
 		globals: globals,
-		stack: stack,
+		stack: &stack,
 		dag: dag.NewDAG(),
 	}
 }
@@ -137,8 +137,8 @@ func (self *Runtime) evaluate (expr_ dsl.ASTExpression) (types.FuObject, error) 
 
 func (self *Runtime) evaluateName(expr *dsl.ASTName) (types.FuObject, error) {
 	name := expr.Name()
-	value := self.stack.Lookup(name)
-	if value == nil {
+	value, ok := self.stack.Lookup(name)
+	if !ok {
 		err := RuntimeError{
 			location: expr.Location(),
 			message: fmt.Sprintf("undefined variable '%s'", name),
@@ -245,7 +245,7 @@ func (self *Runtime) runBuildPhase() []error {
 	var errors []error
 
 	fmt.Println("\nvalue stack:")
-	for i, vmap := range self.stack {
+	for i, vmap := range *self.stack {
 		fmt.Printf("  [%d] %v\n", i, vmap)
 	}
 

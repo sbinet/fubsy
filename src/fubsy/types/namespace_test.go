@@ -7,17 +7,23 @@ import (
 
 func Test_ValueMap_basics(t *testing.T) {
 	ns := NewValueMap()
-	assert.Nil(t, ns.Lookup("foo"))
-	assert.Nil(t, ns.Lookup("bar"))
+	val, ok := ns.Lookup("foo")
+	assert.False(t, ok)
+	val, ok = ns.Lookup("bar")
+	assert.False(t, ok)
 
 	ns.Assign("foo", FuString("blurp"))
-	assert.Equal(t, "blurp", ns.Lookup("foo").String())
-	assert.Nil(t, ns.Lookup("bar"))
+	val, ok = ns.Lookup("foo")
+	assert.True(t, ok)
+	assert.Equal(t, "blurp", val.String())
+	val, ok = ns.Lookup("bar")
+	assert.False(t, ok)
 }
 
 func Test_ValueStack_Lookup(t *testing.T) {
 	empty := NewValueStack()
-	assert.Nil(t, empty.Lookup("foo"))
+	val, ok := empty.Lookup("foo")
+	assert.False(t, ok)
 
 	list1 := FuList([]FuObject {FuString("ding"), FuString("dong")})
 	list2 := FuList([]FuObject {FuString("shadow")})
@@ -29,9 +35,14 @@ func Test_ValueStack_Lookup(t *testing.T) {
 	ns1.Assign("foo", list2)
 	stack := NewValueStack(ns0, ns1)
 
-	assert.True(t, stack.Lookup("foo").Equal(list2))
-	assert.True(t, stack.Lookup("bar").Equal(list1))
-	assert.Nil(t, stack.Lookup("x"))
+	val, ok = stack.Lookup("foo")
+	assert.True(t, ok)
+	assert.True(t, val.Equal(list2))
+	val, ok = stack.Lookup("bar")
+	assert.True(t, ok)
+	assert.True(t, val.Equal(list1))
+	val, ok = stack.Lookup("x")
+	assert.False(t, ok)
 }
 
 func Test_ValueStack_Assign(t *testing.T) {
@@ -46,9 +57,13 @@ func Test_ValueStack_Assign(t *testing.T) {
 	val3 := FuString("fnord")
 
 	stack.Assign("foo", val1)
-	assert.True(t, stack.Lookup("foo").Equal(val1))
+	val, ok := stack.Lookup("foo")
+	assert.True(t, ok)
+	assert.True(t, val.Equal(val1))
 	stack.Assign("foo", val2)
-	assert.True(t, stack.Lookup("foo").Equal(val2))
+	val, ok = stack.Lookup("foo")
+	assert.True(t, ok)
+	assert.True(t, val.Equal(val2))
 
 	ns1 := NewValueMap()
 	stack.Push(ns1)
@@ -57,17 +72,23 @@ func Test_ValueStack_Assign(t *testing.T) {
 	stack.Assign("foo", val3)
 
 	// make sure we can get the new values out of the stack
-	assert.True(t, stack.Lookup("bar").Equal(val1))
-	assert.True(t, stack.Lookup("foo").Equal(val3))
+	val, ok = stack.Lookup("bar")
+	assert.True(t, val.Equal(val1))
+	val, ok = stack.Lookup("foo")
+	assert.True(t, val.Equal(val3))
 
 	// peek under the hood and make sure each one was added to the
 	// right namespace: bar is a new name, so it will be in the
 	// innermost (last) namespace
-	assert.True(t, ns1.Lookup("bar").Equal(val1))
-	assert.Nil(t, ns0.Lookup("bar"))
+	val, ok = ns1.Lookup("bar")
+	assert.True(t, val.Equal(val1))
+	val, ok = ns0.Lookup("bar")
+	assert.False(t, ok)
 
 	// foo already existed in an enclosing namespace, so Assign()
 	// replaced it there
-	assert.True(t, ns0.Lookup("foo").Equal(val3))
-	assert.Nil(t, ns1.Lookup("foo"))
+	val, ok = ns0.Lookup("foo")
+	assert.True(t, val.Equal(val3))
+	val, ok = ns1.Lookup("foo")
+	assert.False(t, ok)
 }

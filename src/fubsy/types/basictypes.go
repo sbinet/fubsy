@@ -116,8 +116,8 @@ func (self FuString) Expand(ns Namespace) (FuObject, error) {
 			return self, nil
 		}
 
-		value := ns.Lookup(name)
-		if value == nil {
+		value, ok := ns.Lookup(name)
+		if !ok {
 			// XXX very similar to error reported by runtime.evaluateName()
 			// XXX location?
 			return self, fmt.Errorf("undefined variable '%s' in string", name)

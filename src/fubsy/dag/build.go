@@ -31,9 +31,14 @@ type BuildError struct {
 // (if anything) went wrong; error details are reported "live" as
 // builds fail (e.g. to the console or a GUI window) so the user gets
 // timely feedback.
-func (self *BuildState) BuildTargets(ns types.Namespace, targets NodeSet) error {
+func (self *BuildState) BuildTargets(stack types.NamespaceStack, targets NodeSet) error {
 	// What sort of nodes do we check for changes?
 	changestates := self.getChangeStates()
+
+	// Need an additional namespace for magic variables ($TARGET, $SOURCES, ...)
+	locals := types.NewValueMap()
+	stack.Push(locals)
+	defer stack.Pop()
 
 	builderr := new(BuildError)
 	visit := func(id int) error {
@@ -55,7 +60,8 @@ func (self *BuildState) BuildTargets(ns types.Namespace, targets NodeSet) error 
 		if tainted {
 			node.SetState(TAINTED)
 		} else if missing || stale {
-			ok := self.buildNode(ns, id, node, builderr)
+			self.setLocals(locals, id, node)
+			ok := self.buildNode(stack, id, node, builderr)
 			if !ok && !self.keepGoing() {
 				// attempts counter is not very useful when we break
 				// out of the build early
@@ -150,6 +156,22 @@ func (self *BuildState) inspectParents(
 		}
 	}
 	return
+}
+
+func (self *BuildState) setLocals(ns types.Namespace, id int, node Node) {
+	// XXX how do we set $TARGETS? that requires knowing all nodes
+	// that will be built from the same Action as this node!
+
+	// collapsing Nodes to FuStrings loses information: would be nice
+	// if every Node type also implemented FuObject!
+	pnodes := self.dag.parentNodes(id)
+	parents := make([]types.FuObject, len(pnodes))
+	for i, pnode := range pnodes {
+		parents[i] = types.FuString(pnode.String())
+	}
+
+	ns.Assign("TARGET", types.FuString(node.String()))
+	ns.Assign("SOURCES", types.FuList(parents))
 }
 
 // Build the specified node (caller has determined that it should be
