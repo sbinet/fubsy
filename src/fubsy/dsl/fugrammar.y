@@ -26,7 +26,6 @@ const BADTOKEN = -1
 %type <node> element
 %type <node> import
 %type <tokenlist> dottedname
-%type <node> global
 %type <node> inline
 %type <node> phase
 %type <node> block
@@ -74,7 +73,6 @@ elementlist:
 
 element:
 	import
-|	global
 |	inline
 |	phase
 
@@ -93,9 +91,6 @@ dottedname:
 	{
 		$$ = []token {$1}
 	}
-
-global:
-	assignment
 
 inline:
 	PLUGIN NAME L3BRACE INLINE R3BRACE

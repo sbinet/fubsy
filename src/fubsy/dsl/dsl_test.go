@@ -130,7 +130,6 @@ func TestParse_omnibus_1(t *testing.T) {
 		"any ol' crap! \"bring it on,\n" +
 		"dude\" ...\n" +
 		"}}}\n" +
-		"SRC = <lib/*.c>\n" +
 		"main {\n" +
 		"  a   =(\"foo\") + b\n" +
 		"  c=(d.e)  ()\n" +
@@ -151,8 +150,6 @@ func TestParse_omnibus_1(t *testing.T) {
 		"    any ol' crap! \"bring it on,\n" +
 		"    dude\" ...\n" +
 		"  }}}\n" +
-		"  ASTAssignment[SRC]\n" +
-		"    ASTFileList[lib/*.c]\n" +
 		"  ASTPhase[main] {\n" +
 		"    ASTAssignment[a]\n" +
 		"      ASTAdd\n" +

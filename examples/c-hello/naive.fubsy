@@ -1,9 +1,8 @@
 # the NAIVE WAY to build a C program; in reality, you should
 # use the 'c' plugin!
 
-CC = "/usr/bin/gcc"
-
 main {
+    CC = "/usr/bin/gcc"
     headers = <*.h>
     source = <*.c>
 
