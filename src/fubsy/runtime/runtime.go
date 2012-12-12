@@ -19,8 +19,13 @@ type Runtime struct {
 }
 
 func NewRuntime(script string, ast dsl.AST) *Runtime {
-	globals := types.NewValueMap()
 	stack := types.NewValueStack()
+
+	// The globals namespace is not currently used in production,
+	// because the right syntax for assigning globals is not yet
+	// decided. But the unit tests use globals, and this serves as a
+	// placeholder to fill in once the syntax is settled.
+	globals := types.NewValueMap()
 	stack.Push(globals)
 
 	return &Runtime{
@@ -38,34 +43,12 @@ func (self *Runtime) RunScript() []error {
 		fmt.Printf("loading plugin %s\n", strings.Join(plugin, "."))
 	}
 
-	// Doing things this way could lead to weird effects: e.g. a
-	// global assigned after "main { ... }" would be visible inside
-	// main. That might be wrong.
-	errors = self.assignGlobals()
-	errors = append(errors, self.runMainPhase()...)
+	errors = self.runMainPhase()
 	if len(errors) > 0 {
 		return errors
 	}
 
 	errors = self.runBuildPhase()
-	return errors
-}
-
-func (self *Runtime) assignGlobals() []error {
-	// hmmm: what exactly is the point of the AST interface again,
-	// if we have to barge past it to the concrete type underneath?
-	root := self.ast.(*dsl.ASTRoot)
-	var errors []error
-	for _, node_ := range root.Children() {
-		var err error
-		switch node := node_.(type) {
-		case *dsl.ASTAssignment:
-			err = self.assign(node, self.globals)
-		}
-		if err != nil {
-			errors = append(errors, err)
-		}
-	}
 	return errors
 }
 
