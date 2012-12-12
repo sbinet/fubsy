@@ -1,0 +1,16 @@
+@import "default.css";
+
+tt {
+    background-color: #f0f0f0;
+    padding: 0px 2px;
+    font-size: 120%;
+    white-space: nowrap;
+}
+
+div.body p, div.body dd, div.body li {
+    text-align: left;
+}
+
+pre {
+    font-size: 120%;
+}
