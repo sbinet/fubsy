@@ -7,12 +7,6 @@ import (
 	"io/ioutil"
 )
 
-func AssertNoErrors(t *testing.T, actual []error) {
-	if len(actual) != 0 {
-		t.Fatalf("expected empty list of errors, but got %v", actual)
-	}
-}
-
 func AssertError(t *testing.T, expect string, actual error) {
 	if actual == nil {
 		t.Fatal("expected error, but got nil")

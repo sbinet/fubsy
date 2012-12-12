@@ -3,7 +3,7 @@ package dsl
 import (
 	"testing"
 	"bytes"
-
+	"github.com/stretchrcom/testify/assert"
 	"fubsy/testutils"
 )
 
@@ -18,7 +18,7 @@ func TestParse_valid_1(t *testing.T) {
 			&ASTPhase{name: "main", children: []ASTNode {
 					&ASTFileList{patterns: []string {"meep"}}}}}}
 	ast, err := Parse(fn)
-	testutils.AssertNoErrors(t, err)
+	assert.Equal(t, 0, len(err))
 	assertASTEquals(t, expect, ast)
 }
 
@@ -34,7 +34,7 @@ func TestParse_valid_sequence(t *testing.T) {
 		"plugin foo {{{o'malley & friends\n}}}\n" +
 		"blob {\n \"meep\"\n }")
 	ast, err := Parse(fn)
-	testutils.AssertNoErrors(t, err)
+	assert.Equal(t, 0, len(err))
 
 	expect := &ASTRoot{children: []ASTNode {
 			&ASTPhase{
@@ -65,7 +65,7 @@ func TestParse_internal_newlines(t *testing.T) {
 		")\n"+
 		"}")
 	ast, err := Parse(fn)
-	testutils.AssertNoErrors(t, err)
+	assert.Equal(t, 0, len(err))
 
 	expect := &ASTRoot{
 		children: []ASTNode {
@@ -141,7 +141,7 @@ func TestParse_omnibus_1(t *testing.T) {
 		"  >\n" +
 		"}\n")
 	ast, err := Parse(fn)
-	testutils.AssertNoErrors(t, err)
+	assert.Equal(t, 0, len(err))
 
 	expect :=
 		"ASTRoot {\n" +
@@ -191,7 +191,7 @@ func TestParse_omnibus_2(t *testing.T) {
 		"}\n" +
 		"")
 	ast, err := Parse(fn)
-	testutils.AssertNoErrors(t, err)
+	assert.Equal(t, 0, len(err))
 
 	expect :=
 		"ASTRoot {\n" +
