@@ -67,7 +67,7 @@ First, here's the naive way to do it, using only core Fubsy features
     }
 
 Like the naive C example above, this works, but it could be better.
-Here's how it works: first, we assign four local variables with
+Here's how it works: first, we assign four variables with
 filenames of interest. ``mainsrc`` and ``testsrc`` are filelist
 objects as above, which use wildcards to find files as late as
 possible. Note the use of recursive patterns here, since Java
@@ -94,11 +94,11 @@ command: you can't do this portably (``rm -rf`` on Unix, ``rmdir /s
 /q`` on Windows), so instead Fubsy provides built-in support for it.
 
 This example demonstrates local variables in build rule scope: those
-two ``classdir`` variables are in fact local to each build rule, not
-to the *main* phase; they exist only while the actions for each build
-rule are running. (And, by the way, those actions run later, during
-the *build* phase. Build rules express dependencies and specify
-actions for execution during the *build* phase.)
+two ``classdir`` variables are in fact local to each build rule; they
+exist only while the actions for each build rule are running. (And, by
+the way, those actions run later, during the *build* phase. Build
+rules express dependencies and specify actions for execution during
+the *build* phase.)
 
 Building ``example-test.jar`` is a bit more troublesome, and
 illustrates most of the problems with this naive approach to building
@@ -155,10 +155,10 @@ rather than compile to bytecode, it's cleaner to have a separate
 with a clever hack that tricks it into generating annotations.
 
 The second use of ``java.classes()`` shows our first explicit use of a
-*build variable*, which is a special type of global variable defined
-by plugins and used by build actions. In this case, rather than having
-a single global value of ``CLASSPATH``, we override it for one
-particular builder (and thus for all build rules defined by that
-builder). As usual, Fubsy is relaxed about the distinction between
-lists and atomic values: normally ``CLASSPATH`` is a list of filenames
-and directories, but if you just pass a lone filename, that's OK.
+*build variable*, which is a special type of variable defined by
+plugins and used by build actions. In this case, rather than having a
+single value of ``CLASSPATH``, we override it for one particular
+builder (and thus for all build rules defined by that builder). As
+usual, Fubsy is relaxed about the distinction between lists and atomic
+values: normally ``CLASSPATH`` is a list of filenames and directories,
+but if you just pass a lone filename, that's OK.

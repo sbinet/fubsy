@@ -32,11 +32,6 @@ Next we see two variable assignments::
     headers = <*.h>
     source = <*.c>
 
-Since these are inside a phase, they are local to that phase.
-(Variable assignments at top level define global variables, visible
-throughout the entire build script. By convention, global variables
-are UPPERCASE, and local variables are lowercase.)
-
 Since finding files is very common in build scripts, Fubsy has special
 syntax for it: angle brackets `<>` contain a space-separated list of
 wildcards. (The wildcard syntax is the same as Ant's, e.g.
@@ -95,11 +90,11 @@ source files have changed since the targets were last built.
 
 You're probably wondering why that shell command uses uppercase
 ``$TARGET`` but lowercase ``$source``. ``$source`` is easy: it's just
-a reference to the local variable ``source`` defined earlier in the
-*main* phase. If we had instead called that local variable ``cfiles``,
-then the command would use ``$cfiles``. ``$TARGET`` is special: it
-expands to the build rule's first target file. Other special variables
-that are only available in build rule actions are ``$TARGETS`` (all
+a reference to the variable ``source`` defined earlier in the *main*
+phase. If we had instead called that variable ``files``, then
+the command would use ``$files``. ``$TARGET`` is special: it expands
+to the build rule's first target file. Other special variables that
+are only available in build rule actions are ``$TARGETS`` (all
 targets), ``$SOURCE``, and ``$SOURCES``. We don't use ``$SOURCES`` in
 this case because it includes ``*.h`` as well as ``*.c``, and you
 don't pass header files to the C compiler.
