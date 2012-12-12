@@ -1,3 +1,2 @@
 src/github.com/stretchrcom/testify = [git]git://github.com/stretchrcom/testify
-src/code.google.com/p/go-bit = https://code.google.com/p/go-bit
 src/github.com/axw/gocov    = [git]git://github.com/axw/gocov
