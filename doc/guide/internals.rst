@@ -22,8 +22,8 @@ core of that script was a single build rule::
         "cc -o $TARGET myapp.c util.c"
     }
 
-(I've dropped the ``source`` and ``headers`` variables here to make
-things more explicit.)
+(I've dropped all variables and filefinders here to make things more
+explicit.)
 
 This build rule specifies a simple dependency graph:
 
@@ -93,26 +93,27 @@ example, unit tests typically don't generate any output: they run and
 either pass or fail. If a unit test passed in the last build, there's
 no need to re-run it unless something that it depends on changed. So
 it's useful to have a node in your dependency graph that records the
-successful execution of a unit test. Static analysis tools are
-similar.)
+successful execution of a unit test. Similar reasoning applies to
+static analysis tools.)
 
-Here's how it works. First, Fubsy figures out what targets to build.
-By default, its goal is to build all *final targets*, i.e. target
-files that are not themselves the source for some later target. You
-can specify which targets to build on the command line, e.g. ::
+Here's how it works. First, Fubsy figures out the set of *goal nodes*,
+i.e. which targets to build. By default, the goal is the set of all
+*final targets*: targets that are not themselves the source for some
+later target. Alternately, you can specify which targets to build on
+the command line--e.g., if you're having trouble compiling ``myapp.c``
+and just want to concentrate on it for the moment::
 
     fubsy myapp.o
 
-if you're having trouble compiling ``myapp.c`` and just want to
-concetrate on it for the moment.
-
 (Incidentally, *source* and *target* are relative terms: ``myapp.o``
 is a target derived from ``myapp.c``, but a source for ``myapp``. Any
-file that is both a source and a target is also called an
-*intermediate target*. Any file that is not built from something else
+node that is both a source and a target is also called an
+*intermediate target*. Any node that is not built from something else
 is called an *original source*. Original sources are what you modify
 and keep in source control; everything else is temporary and
-disposable.)
+disposable. And final targets, as already described, are nodes that
+are not the source to any other node, typically deployable
+executables, packages, or installers.)
 
 Let's cook up a slightly more complex example to illustrate: now we're
 going to build two binaries, ``tool1`` and ``tool2``, from the
@@ -143,8 +144,8 @@ And here is the dependency graph described by that build script:
   tool2 -> util.o -> util.c, util.h
   ]
 
-Once Fubsy has determined the targets that it's trying to build -- the
-goal nodes -- it walks the dependency graph to find all *relevant*
+Once Fubsy has determined the targets that it's trying to build--the
+goal nodes--it walks the dependency graph to find all *relevant*
 nodes, i.e. all ancestors of the goal nodes. The end points of this
 walk are the original source nodes that the goal nodes depend on.
 Fubsy examines each relevant original source node to determine which

@@ -8,15 +8,16 @@ C the naive way
 
 Here is a naive build script for that simple C project above::
 
-    # the WRONG WAY to build a C program; in reality, you should
+    # the NAIVE WAY to build a C program; in reality, you should
     # use the 'c' plugin!
     main {
+        CC = "/usr/bin/gcc"
         headers = <*.h>
         source = <*.c>
 
         # rebuild mytool when any source or header file changes
         "mytool": headers + source {
-            "cc -o $TARGET $source"
+            "$CC -o $TARGET $source"
         }
     }
 
@@ -33,13 +34,13 @@ Next we see two variable assignments::
     source = <*.c>
 
 Since finding files is very common in build scripts, Fubsy has special
-syntax for it: angle brackets `<>` contain a space-separated list of
+syntax for it: angle brackets ``<>`` contain a space-separated list of
 wildcards. (The wildcard syntax is the same as Ant's, e.g.
 ``<**/*.c>`` finds all ``*.c`` files in your tree, including the top
 directory.)
 
 Fubsy wildcards are evaluated as late as possible. At this point,
-``headers`` simply contains a reference to a file-finding object that
+``headers`` simply contains a reference to a "filefinder" object that
 will expand ``*.h`` when needed. Also, wildcard expansion uses both
 the filesystem and the dependency graph. If you have a build rule
 somewhere in your script that generates a new ``*.h`` file, the
@@ -64,7 +65,8 @@ various forms:
 
   * bare string (presumed to be a filename)
   * list of strings (presumed filenames)
-  * wildcard object (``<*.c>``)
+  * filefinder object, e.g. ``<*.c>`` (effectively a lazy list of
+    filenames)
   * node object (for resources other than files)
   * list of node objects
   * variable referencing any of the above
@@ -82,7 +84,8 @@ All actions happen later, during the *build* phase. Calling
 phase is running, it just tells Fubsy to call ``remove()`` later, when
 executing the actions in this build rule. However, if you call
 ``remove()`` outside of a build rule, it will go ahead and remove the
-specified files when the *main* phase is running.
+specified files when the *main* phase is running--probably not what
+you want.
 
 In any event, Fubsy only executes the actions in a build rule when it
 determines that at least one target is out-of-date, i.e. any of the
@@ -99,18 +102,18 @@ targets), ``$SOURCE``, and ``$SOURCES``. We don't use ``$SOURCES`` in
 this case because it includes ``*.h`` as well as ``*.c``, and you
 don't pass header files to the C compiler.
 
-So what's wrong with this example? Why is this the "WRONG WAY" to
-build C programs with Fubsy? There are several problems:
+So what's wrong with this example? Why is this the naive way to build
+C programs with Fubsy? There are several problems:
 
   * it's not portable: ``mytool`` is the wrong filename on Windows,
     and ``cc`` is a Unix convention
 
   * it won't scale: for a 3-file project, it's no big deal to
     recompile the world on every change. But if ``headers`` contains
-    250 header files and ``source`` 300 source files, you will feel
-    the pain on every rebuild. You want an *incremental build*, where
-    Fubsy rebuilds the bare minimum based on your actual source
-    dependencies and which files have changed.
+    250 header files and ``source`` 300 source files, every rebuild
+    will recompile all of those files. You want an *incremental
+    build*, where Fubsy rebuilds the bare minimum based on your actual
+    source dependencies and which files have changed.
 
 Incidentally, this build script isn't really *wrong*, as long as you
 only care about building on Unix. It will do the job, and it
@@ -154,17 +157,17 @@ this case, the rule is "build binary executable ``myapp`` from
     ``util.c`` to ``util.o``, and a third to link the two object files
     together.
 
-  * The build rules respect header file dependencies: Fubsy (or
-    rather, the ``c`` plugin) actually reads your ``*.c`` source files
-    to find who includes which header files. For example, if
-    ``myapp.c`` includes ``<util.h>``, then Fubsy will ensure that
-    ``myapp.o`` depends on ``util.h``. You don't have to do anything;
-    Fubsy just automatically takes care of C (and C++) header
-    dependencies for you. Note that this is a feature of the C/C++
-    plugins, and other language plugins might not be as clever. For
-    example, determining compile-time dependencies for Java is
-    surprisingly difficult, so the Java plugin takes a completely
-    different approach to dependency analysis.
+  * The build rules respect header file dependencies: the ``c`` plugin
+    actually reads your ``*.c`` source files to find who includes
+    which header files. For example, if ``myapp.c`` includes
+    ``<util.h>``, then Fubsy will ensure that ``myapp.o`` depends on
+    ``util.h``. You don't have to do anything; Fubsy just
+    automatically takes care of C (and C++) header dependencies for
+    you. Note that this is a feature of the C/C++ plugins, and other
+    language plugins might not be as clever. For example, determining
+    compile-time dependencies for Java is surprisingly difficult, so
+    the Java plugin takes a completely different approach to
+    dependency analysis.
 
 In case you're wondering, Fubsy also has excellent built-in C++
 support, but the plugin is called ``cxx``. More details later.

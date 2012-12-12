@@ -1,7 +1,7 @@
 A simple Java example
 =====================
 
-Since C++ and Java are two of the most widely-used programming
+Since C and Java are two of the most widely-used programming
 languages in the world, it's surprising that so few build tools even
 try to support both [2]_. So before the Java programmers start to feel
 left out, let's go through a similar exercise for a simple Java
@@ -31,7 +31,7 @@ depend on test code: the build will fail if you do. (Eventually we
 want to run the tests too, but that'll come later.)
 
 .. [2] In fact, I'm aware of only one other build tool that supports
-   both Java and C++: Gradle.
+   Java and C/C++: Gradle.
 
 Java the naive way
 ------------------
@@ -67,15 +67,15 @@ First, here's the naive way to do it, using only core Fubsy features
     }
 
 Like the naive C example above, this works, but it could be better.
-Here's how it works: first, we assign four variables with
-filenames of interest. ``mainsrc`` and ``testsrc`` are filelist
-objects as above, which use wildcards to find files as late as
-possible. Note the use of recursive patterns here, since Java
-programmers are prone to deep package hierarchies. ``mainjar`` and
-``testjar`` are of course just strings, the names of the two files
-we're building. Fubsy has no idea that these are filenames; they're
-just strings. It's only once a string is used as a target or source in
-a build rule that it is interpreted as a filename.
+Here's how it works: first, we assign four variables with filenames of
+interest. ``mainsrc`` and ``testsrc`` are filefinder objects as above,
+which use wildcards to find files as late as possible. Note the use of
+recursive patterns here, since Java programmers are prone to deep
+package hierarchies. ``mainjar`` and ``testjar`` are just string
+variables, the names of the two files we're building. Fubsy has no
+idea that these are filenames; they're just strings. It's only once a
+string is used as a target or source in a build rule that it is
+interpreted as a filename.
 
 Building the main ``example.jar`` is straightforward: compile a bunch
 of ``.java`` files to ``.class`` files, then archive those ``.class``
@@ -93,12 +93,13 @@ Also, using ``remove()`` illustrates an action that is not a shell
 command: you can't do this portably (``rm -rf`` on Unix, ``rmdir /s
 /q`` on Windows), so instead Fubsy provides built-in support for it.
 
-This example demonstrates local variables in build rule scope: those
-two ``classdir`` variables are in fact local to each build rule; they
-exist only while the actions for each build rule are running. (And, by
-the way, those actions run later, during the *build* phase. Build
-rules express dependencies and specify actions for execution during
-the *build* phase.)
+This example demonstrates variables local to a build rule: those two
+``classdir`` variables are in fact distinct and not visible outside of
+the build rules. They exist only while the actions for each build rule
+are running. (And, by the way, those actions run later, during the
+*build* phase. That's the whole point of build rules, after all: to
+specify actions that might run in the build phase, if at least one
+source has changed.)
 
 Building ``example-test.jar`` is a bit more troublesome, and
 illustrates most of the problems with this naive approach to building
@@ -113,10 +114,10 @@ plugins, which you can implement in a variety of "real" languages.
 
 Another problem is that the dependency on ``example.jar`` is expressed
 twice: first, we have to tell Fubsy that ``example-test.jar`` depends
-on ``example.jar``, and then we have to tell ``javac`` by putting it
-in the compile-time classpath. That's a Java-specific convention,
-though, so of course it doesn't belong in core Fubsy. That sort of
-knowledge belongs in the ``java`` plugin.
+on ``example.jar``, and then we have to tell ``javac`` the same thing
+by putting it in the compile-time classpath. That's a Java-specific
+convention, though, so of course it doesn't belong in core Fubsy. That
+sort of knowledge belongs in the ``java`` plugin.
 
 
 Java the right way

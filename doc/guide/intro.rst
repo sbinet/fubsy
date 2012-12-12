@@ -1,7 +1,7 @@
 Introduction
 ============
 
-Fubsy is a tool for efficiently building software. Roughly speaking:
+Fubsy is a tool for efficiently building software. Roughly speaking,
 Fubsy lets you (re)build target files from source files with minimal
 effort based on which source files have changed. More generically,
 Fubsy is an engine for the *conditional execution* of *actions* based
@@ -19,17 +19,18 @@ source files::
     README.txt
 
 Initially, your goal is simply to build the executable ``mytool`` by
-compiling ``mytool.c`` to ``mytool.o`` and ``util.c`` to ``util.o``,
-then linking the two object files together [1]_. More importantly, you
-want to perform the minimum necessary work whenever source files
-change: if you modify ``mytool.c``, then recompile ``mytool.o`` and
-relink the executable. But if you modify ``util.h``, you may need to
-recompile both ``util.o`` and ``main.o`` before relinking. This is
-exactly the sort of problem that Fubsy is designed for.
+compiling ``mytool.c`` and ``util.c``, and then linking the two object
+files together. More importantly, you want to perform the minimum
+necessary work whenever source files change: if you modify
+``mytool.c``, then recompile ``mytool.o`` and relink the executable.
+But if you modify ``util.h``, you may need to recompile both
+``util.o`` and ``main.o`` before relinking. This is exactly the sort
+of problem that Fubsy is designed for.
 
-.. [1] On Windows, of course, the output files are ``mytool.obj``,
-   ``util.obj``, and ``mytool.exe``. Fubsy's core knows nothing of
-   this, but its C and C++ plugins take care of these details for you.
+(At this point, outraged Windows programmers might point out that they
+build ``mytool.obj`` and ``mytool.exe`` This platform variation is a
+quirk of C/C++ that Fubsy's C/C++ plugins handle, but which core Fubsy
+knows nothing about.)
 
 Similar tools
 -------------
@@ -37,12 +38,11 @@ Similar tools
 Of course, Fubsy is hardly the first piece of software that attempts
 to tackle this problem. Every C programmer is familiar with Make,
 which does a reasonable job for small-to-medium C/C++ projects on
-Unix-like systems... except for the matter of header file dependencies
-(``mytool.o`` depends on ``util.h``), which Fubsy -- or rather,
-Fubsy's C plugin -- handles nicely. However, Make has awkward syntax,
-poor extensibility, and confusing semantics, which have led many
-people over the years to paper over its difficulties by writing
-Makefile generators and the like.
+Unix-like systems (if you ignore the difficulty with header
+dependencies). However, Make has awkward syntax, poor extensibility,
+and confusing semantics, which have led many people over the years to
+paper over its difficulties by writing Makefile generators and the
+like.
 
 Similarly, most Java programmers are familiar with Ant, which attempts
 to solve the problem in a radically different way. Ant doesn't provide
