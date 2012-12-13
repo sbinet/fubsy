@@ -3,6 +3,7 @@ package dag
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"fubsy/dsl"
 	"fubsy/types"
@@ -106,19 +107,35 @@ func (self *CommandAction) String() string {
 }
 
 func (self *CommandAction) Execute(ns types.Namespace) error {
-	fmt.Println("raw command:", self.raw)
-	fmt.Println("namespace for expansion:")
-	ns.Dump(os.Stdout, "")
+	//fmt.Println(self.raw)
 
-	command, err := self.raw.Expand(ns)
+	var err error
+	self.expanded, err = self.raw.Expand(ns)
 	if err != nil {
 		return err
 	}
-	fmt.Println("command:", command)
-	panic("command execution not implemented yet")
+	fmt.Println(self.expanded)
 
-	// self.expanded = self.rule.Expand(self.raw)
-	// fmt.Printf("execute:", self.expanded)
+	// Run commands with the shell because people expect redirection,
+	// pipes, etc. to work from their build scripts. (And besides, all
+	// we have is a string: Fubsy makes no effort to encourage
+	// commands as lists. That just confuses people and causes excess
+	// typing. And it's pointless on Windows, where command lists get
+	// collapsed to a string and then parsed back into words by the
+	// program being run.)
+	// XXX can we mitigate security risks of using the shell?
+	// XXX what about Windows?
+	// XXX for parallel builds: gather stdout and stderr, accumulate
+	// them in order but still distinguishing them, and dump them to
+	// our stdout/stderr when the command finishes
+	// XXX the error message doesn't say which command failed (and if
+	// it did, it would probably say "/bin/sh", which is useless): can
+	// we do better?
+	cmd := exec.Command("/bin/sh", "-c", self.expanded.String())
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	return err
 }
 
 func (self *AssignmentAction) String() string {
