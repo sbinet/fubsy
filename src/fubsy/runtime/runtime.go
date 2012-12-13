@@ -243,6 +243,7 @@ func (self *Runtime) runBuildPhase() []error {
 	if len(errors) > 0 {
 		return errors
 	}
+	self.dag.MarkSources()
 	fmt.Println("\nrebuilt dag:")
 	self.dag.Dump(os.Stdout)
 
