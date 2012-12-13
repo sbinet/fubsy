@@ -6,6 +6,10 @@ Enough with the vague promises; let's see some code.
 C the naive way
 ---------------
 
+.. note:: As of Fubsy 0.0.1, this mostly works! (Fubsy currently has
+          no memory of previous builds, so it always thinks that all
+          files have changed.)
+
 Here is a naive build script for that simple C project above::
 
     # the NAIVE WAY to build a C program; in reality, you should
@@ -130,6 +134,10 @@ So what is the right way to build a C program with Fubsy?
 
 C the right way
 ---------------
+
+.. note:: Not implemented yet. First we need to figure out the
+          architecture for plugins, then start implementing useful
+          plugins.
 
 The right way is to use Fubsy's builtin plugin for analyzing,
 compiling, and linking C libraries and programs, unsurprisingly called

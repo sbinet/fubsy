@@ -32,6 +32,26 @@ build ``mytool.obj`` and ``mytool.exe`` This platform variation is a
 quirk of C/C++ that Fubsy's C/C++ plugins handle, but which core Fubsy
 knows nothing about.)
 
+Disclaimer
+----------
+
+.. note:: Currently, this document is more of a specification than a
+          description of actual software. Many of the features
+          described here have barely even been thought through, never
+          mind implemented and tested. Mentally add a "not implemented
+          yet" footnote to every sentence in this guide, and you won't
+          be too far off from the truth. I've tried to help by adding
+          explicit "this actually works" and "not implemented yet"
+          notes here and there, but don't be surprised if Fubsy
+          doesn't behave quite as the document promises.
+
+          Furthermore, it's quite likely that the final product will
+          differ considerably from the description in this document;
+          that's just the nature of software. Consider this an
+          invitation to `join in the development of Fubsy
+          <http://fubsy.gerg.ca/develop/>`_ and influence how it will
+          turn out.
+
 Similar tools
 -------------
 

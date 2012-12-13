@@ -5,6 +5,13 @@ Now that we've seen four small but realistic examples, this is a good
 time to delve into how Fubsy really works: what exactly is going on
 behind the scenes in these build scripts?
 
+.. note:: This section is mostly accurate as of Fubsy 0.0.1. Fubsy
+          currently has no memory of previous builds, so it always
+          thinks that all files have changed. That means that
+          incremental builds aren't actually incremental. All of the
+          code *except* for determining what has changed is written
+          and tested, though, so things are looking pretty good here.
+
 The dependency graph
 --------------------
 
@@ -257,7 +264,7 @@ two files must be rebuilt::
 
 But because you only changed a comment, the object code in both files
 is unchanged. So when Fubsy visits ``myapp``, none of that node's
-parents are changed, and it can skip rebuilding. The final graph::
+parents are changed, and it can skip rebuilding. The final graph:
 
   [diagram: as above, with tool2.o, util.o "built" and tool2 "skipped"]
 

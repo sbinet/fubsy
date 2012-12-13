@@ -32,3 +32,12 @@ phases are:
 All phases except ``main`` are optional; a build script with no
 ``main`` phase would have an empty dependency graph, so nothing to
 build.
+
+.. note:: Partly implemented. The *main* phase is explicit in every
+          build script, and the *build* phase always happens
+          implicitly. *options* and *configure* will definitely
+          involve explicit code in the build script; *clean* might but
+          doesn't have to. It's unclear if *build* will ever need
+          explicit code. It's entirely possible that using the same
+          "phase" abstraction to describe both explicitly coded *main*
+          and implicit behind-the-scenes *build* is a bad idea.

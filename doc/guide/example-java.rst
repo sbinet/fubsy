@@ -36,6 +36,8 @@ want to run the tests too, but that'll come later.)
 Java the naive way
 ------------------
 
+.. note:: Not working yet. On the to-do list for Fubsy 0.0.1.
+
 First, here's the naive way to do it, using only core Fubsy features
 (no plugins)::
 
@@ -123,6 +125,10 @@ sort of knowledge belongs in the ``java`` plugin.
 Java the right way
 ------------------
 
+.. note:: Not implemented yet. First we need to figure out the
+          architecture for plugins, then start implementing useful
+          plugins.
+
 As with C, the right way to build your Java code is to use Fubsy's
 built-in ``java`` plugin::
 
@@ -159,6 +165,7 @@ The second use of ``java.classes()`` shows our first explicit use of a
 *build variable*, which is a special type of variable defined by
 plugins and used by build actions. In this case, rather than having a
 single value of ``CLASSPATH``, we override it for one particular
+
 builder (and thus for all build rules defined by that builder). As
 usual, Fubsy is relaxed about the distinction between lists and atomic
 values: normally ``CLASSPATH`` is a list of filenames and directories,
