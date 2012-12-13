@@ -91,9 +91,9 @@ nodes in the dependency graph instead. Nodes are *usually* files, but
 can be any resource involved in a dependency relationship. For
 example, unit tests typically don't generate any output: they run and
 either pass or fail. If a unit test passed in the last build, there's
-no need to re-run it unless something that it depends on changed. So
-it's useful to have a node in your dependency graph that records the
-successful execution of a unit test. Similar reasoning applies to
+no need to re-run it unless something that it depends on has changed.
+So it's useful to have a node in your dependency graph that records
+the successful execution of a unit test. Similar reasoning applies to
 static analysis tools.)
 
 Here's how it works. First, Fubsy figures out the set of *goal nodes*,
@@ -112,7 +112,7 @@ node that is both a source and a target is also called an
 is called an *original source*. Original sources are what you modify
 and keep in source control; everything else is temporary and
 disposable. And final targets, as already described, are nodes that
-are not the source to any other node, typically deployable
+are not the source to any other node--typically deployable
 executables, packages, or installers.)
 
 Let's cook up a slightly more complex example to illustrate: now we're
@@ -145,24 +145,29 @@ And here is the dependency graph described by that build script:
   ]
 
 Once Fubsy has determined the targets that it's trying to build--the
-goal nodes--it walks the dependency graph to find all *relevant*
-nodes, i.e. all ancestors of the goal nodes. The end points of this
-walk are the original source nodes that the goal nodes depend on.
-Fubsy examines each relevant original source node to determine which
-have changed since the last build; if there is no information for a
-particular node, e.g. because there was no previous build, it is
-considered to have changed. The relevant children of those modified
-nodes are the *initial rebuild set*, the set of nodes that must be
-rebuilt.
+goal nodes--it constructs a second dependency graph containing only
+the goal nodes and their ancestors. This step is also used to expand
+any filefinder nodes that have survived this far: e.g. if there is a
+node like ``<src/**/*.java>`` in the graph, it is replaced with nodes
+for every matching file. We'll call this second graph the *build
+graph*.
 
-Having computed the initial rebuild set, Fubsy starts the build
-proper. It rebuilds each node in the rebuild set by executing the
-actions associated with it. Then it checks if the node was actually
-changed by the rebuild, which can usefully short-circuit builds after
-a whitespace-only change in source code (which does not usually affect
-compiler output). If the node was indeed changed, Fubsy adds all of
-its relevant children to the rebuild set and continues building until
-the rebuild set is empty.
+Then, Fubsy walks the new dependency graph in *topological order*:
+that is, if node *B* depends on (is a child of) node *A*, it will
+visit *A* before visiting *B*. In fact, it will visit all nodes that
+*B* depends on before visiting *B*. As it visits each node, Fubsy
+performs the following steps:
+
+  #. if the node is an original source node (it depends on nothing
+     else), skip to the next node in topological order
+  #. if the node is *tainted* because one of its ancestors failed to
+     build, skip to the next node
+  #. if the node is missing or *stale* (one of its parents has changed
+     since the last build), build it
+
+Once those three tests have been applied to every node in the goal
+set, then the build is finished. If there were any failures, the whole
+build is a failure.
 
 Example: initial build
 ----------------------
@@ -170,39 +175,35 @@ Example: initial build
 An example should clarify things. Let's continue with the case above,
 building ``tool1`` and ``tool2``. By default, the goal consists of all
 final targets. To make things interesting, let's suppose you specify a
-different goal: ``fubsy tool2``, which means the relevant nodes are a
-subset of the whole graph:
+different goal: ``fubsy tool2``, which means the build graph contains only ancestors of ``tool2``:
 
-  [diagram: same as above, with tool2 marked as the goal node,
-  and tool2.o, tool2.c, util.o, util.c, util.h as relevant nodes]
+  [diagram: same as above, with non-ancestors of tool2 removed]
 
-On the first build, Fubsy has no record of what came before, so it
-considers that all of the relevant original source nodes are changed,
-which implies the initial rebuild set too:
+Let's assume that Fubsy's topological graph walk visits all of the
+original source nodes first.
 
-  [diagram: same as above, with tool2.c, util.c, util.h marked
-  "changed" and tool2.o, util.o marked "stale"]
+  [diagram: same as above, with tool2.c, util.c, util.h "skipped"]
 
-(A node in state "stale" is in the rebuild set.) So Fubsy has to build
-the two object files::
+When it visits ``tool2.o``, Fubsy looks in the filesystem and sees
+that that node is missing, so builds it::
 
     cc -o tool2.o tool2.c
+
+Now the graph looks like this:
+
+  [diagram: same as above, with tool2.o marked "built"]
+
+Next in line is ``util.o``, which is also missing::
+
     cc -o util.o util.c
 
-After building each node, Fubsy checks if it has changed. Again, since
-this is the first build and we have no previous information, it
-considers each to have changed, which means the graph now looks like this:
-
-  [diagram: same as above, but now tool2.o, util.o are "built" and "changed"
-  and tool2 is "stale"]
-
-Build all nodes in the rebuild set::
+Finally we visit and build ``tool2``::
 
     cc -o tool2 tool2.o util.o
 
-and we're done, because the rebuild set is now empty:
+We're done; every node in the graph has been visited:
 
-  [diagram: same as above, but now tool2 is "built"]
+  [diagram: same as above, but now util.o and tool2 are "built"]
 
 Example: incremental rebuild
 ----------------------------
@@ -211,24 +212,30 @@ Of course, if all you want to do is build everything, you don't need a
 fancy build tool like Fubsy. A shell script will work just fine. The
 real value of Fubsy becomes apparent when you modify your source code.
 To make things interesting, let's say we've made a real change in
-``tool2.c``, i.e. one that affects the object code. Again, we'll
-assume the goal node is just ``tool2``. So after Fubsy determines
-relevant nodes and the initial rebuild set, we have this:
+``tool.c``, i.e. one that affects the object code. Again, we'll
+assume the goal node is just ``tool2``.
 
-  [diagram: as above, with tool2 the goal node, same relevant nodes;
-  tool2.c "changed"; tool2.o "stale"]
-
-The first pass over the rebuild set::
+The initial build graph is the same as in the previous example, and
+the first couple of steps are the same. Things change slightly when
+Fubsy reaches ``tool2.o``: this time the target node exists, but one
+of its parents (``tool2.c``) has changed since the last build. So
+Fubsy has to rebuild the target::
 
     cc -o tool2.o tool2.c
 
-updates the graph to
+The graph looks the same as it did at this point in the previous example:
 
-  [diagram: as above, but now tool2.o is "built", "changed"]
+  [diagram: as above, tool.o marked "built"]
 
-which requires one more pass to empty the rebuild set::
+Next we visit ``util.o``. But none of its parents have changed, so no
+rebuild is required.
 
-  cc -o tool2 tool2.o util.o
+  [diagram: as above, util.o marked "skipped"]
+
+Finally we visit the ``tool2`` node. One of its parents, ``tool2.o``,
+has changed, so we have to rebuild the final target::
+
+    cc -o tool2 tool2.o util.o
 
 Because none of the ancestors of ``util.o`` changed, we didn't have to
 rebuild it, and used the pre-existing version of ``util.o`` to link
@@ -238,27 +245,22 @@ Example: short-circuit rebuild
 ------------------------------
 
 Now let's say you edit a comment in ``util.h``. Assuming this does not
-affect the object code, this should avoid unnecessary rebuilds apart
-from some object files: a short-circuit rebuild. First, Fubsy
-determines the relevant nodes, original source nodes, and initial
-rebuild set:
+affect the object code, this should avoid unnecessary downstream
+rebuilds: a short-circuit rebuild.
 
-  [diagram: tool2 is the goal, relevant set is the same, util.h is
-  "changed", util.o, tool2.o are "stale"]
-
-Because both ``util.o`` and ``tool2.o`` depend on (are children of)
-``util.h``, we must rebuild both. Fubsy has no idea that you only
-changed a comment, so it has no way to know that your change is
-trivial until it rebuilds the children of ``util.h``::
+When Fubsy reaches ``tool2.o``, it will inspect its parents and
+realize that ``util.h`` has changed; likewise for ``util.o``. So those
+two files must be rebuilt::
 
     cc -o tool2.o tool2.c
     cc -o util.o util.c
 
-After rebuilding each object file, Fubsy examines it and determines
-that it is in fact unchanged since the last build:
+But because you only changed a comment, the object code in both files
+is unchanged. So when Fubsy visits ``myapp``, none of that node's
+parents are changed, and it can skip rebuilding. The final graph::
 
-  [diagram: util.o, tool2.o are "unchanged", "built"]
+  [diagram: as above, with tool2.o, util.o "built" and tool2 "skipped"]
 
-Because both are unchanged, Fubsy adds nothing to the rebuild set,
-which is now empty. So the build is done without the expense of
-unnecessarily relinking ``tool2``.
+We've saved the cost of linking one binary. In this trivial example,
+that's not much. But it can make a difference in larger builds, and
+Fubsy is designed to scale up to very large builds indeed.
