@@ -30,6 +30,17 @@ const (
 	BUILT
 )
 
+var statenames []string
+
+func init() {
+	statenames = []string {
+		"UNKNOWN", "SOURCE", "BUILDING", "FAILED", "TAINTED", "BUILT"}
+}
+
+func (self NodeState) String() string {
+	return statenames[int(self)]
+}
+
 // This interface must not betray anything about the filesystem,
 // otherwise we'll have no hope of making non-file nodes. (They're not
 // needed often, but when you need them you *really* need them.)

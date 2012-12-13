@@ -96,7 +96,8 @@ func (self *DAG) Dump(writer io.Writer) {
 		if detail != desc {
 			desc += " (" + detail + ")"
 		}
-		fmt.Fprintf(writer, "%04d: %s (%T)\n", id, desc, node)
+		fmt.Fprintf(writer, "%04d: %s (%T, %v)\n",
+			id, desc, node, node.State())
 		if action != nil {
 			fmt.Fprintf(writer, "  action: %v\n", action)
 		}
