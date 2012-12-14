@@ -3,9 +3,10 @@ Fubsy: The Universal Build Tool
 
 Fubsy is a tool for efficiently building software. If you need to
 minimally rebuild a bunch of target files from a bunch of source files
-by following a bunch of rules, Fubsy is what you need. If you prefer
-formal abstract language, Fubsy is an engine for conditional execution
-of actions based on the dependencies between related resources.
+by following a bunch of rules, Fubsy is what you need. If you prefer a
+more formal, abstract description: Fubsy is an engine for conditional
+execution of actions based on the dependencies between related
+resources.
 
 Building
 --------
@@ -32,6 +33,13 @@ Contributing
 The main purpose of this release is to attract developers who want to
 help shape Fubsy into a world-class build tool. Please see
 http://fubsy.gerg.ca/develop/ for more information.
+
+Mailing list
+------------
+
+Currently there is only one mailing list: fubsydev@librelist.org. Send
+an empty message to that address and you'll be subscribed. Then help
+us make Fubsy the best it can be!
 
 Author, copyright, license
 --------------------------
