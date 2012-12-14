@@ -230,7 +230,7 @@ func Test_FuFileFinder_Expand_double_recursion(t *testing.T) {
 	assertExpand(t, expect, ff)
 }
 
-func Test_FileFinder_Add(t *testing.T) {
+func Test_FuFileFinder_Add(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 	testutils.TouchFiles(
@@ -240,7 +240,7 @@ func Test_FileFinder_Add(t *testing.T) {
 	ff1 := NewFileFinder([]string{"**/*.c"})
 	ff2 := NewFileFinder([]string{"doc/*.txt"})
 
-	// simulate sum = <**/*.c> + <doc/*.txt>
+	// sum = <**/*.c> + <doc/*.txt>
 	expect := []string{
 		"main.c", "src/foo.c", "doc/stuff.txt"}
 	sum, err := ff1.Add(ff2)
@@ -248,11 +248,10 @@ func Test_FileFinder_Add(t *testing.T) {
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 
-	// simulate sum + <"*c*/?o?.h">
+	// sum = sum + <"*c*/?o?.h">
 	ff3 := NewFileFinder([]string{"*c*/?o?.h"})
 	expect = append(expect, "include/bop.h", "src/foo.h")
 	sum, err = sum.Add(ff3)
-	//fmt.Printf("ff3 = %v\nnew sum = %v\n", ff3, sum)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 
@@ -270,25 +269,36 @@ func Test_FileFinder_Add(t *testing.T) {
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 
+	// <**/*.c> + "urgh"
+	expect = []string{
+		"main.c", "src/foo.c", "urgh"}
 	sum, err = ff1.Add(FuString("urgh"))
-	assert.Equal(t,
-		"unsupported operation: cannot add string to filefinder", err.Error())
-	assert.Nil(t, sum)
+	assert.Nil(t, err)
+	assertExpand(t, expect, sum)
+
+	// <**/*.c> + ["a", "b", "c"]
+	expect = []string{
+		"main.c", "src/foo.c", "a", "b", "c"}
+	sum, err = ff1.Add(FuList([]FuObject{
+		FuString("a"), FuString("b"), FuString("c")}))
+	assert.Nil(t, err)
+	assertExpand(t, expect, sum)
 }
 
-func Test_FinderList_misc(t *testing.T) {
+// hmmmm: interface-wise, this tests that FileFinder.Add() returns an
+// object whose CommandString() behaves sensibly... but in
+// implementation terms, it's really a test of FuList.CommandString()
+func Test_FuFileFinder_misc(t *testing.T) {
 	ff1 := NewFileFinder([]string{"*.c", "*.h"})
 	ff2 := NewFileFinder([]string{"doc/???.txt"})
 	ff3 := NewFileFinder([]string{})
 
 	sum1, err := ff1.Add(ff2)
 	assert.Nil(t, err)
-	assert.Equal(t, "<*.c *.h> + <doc/???.txt>", sum1.String())
 	assert.Equal(t, "'*.c' '*.h' 'doc/???.txt'", sum1.CommandString())
 
 	sum2, err := ff3.Add(sum1)
 	assert.Nil(t, err)
-	assert.Equal(t, "<> + <*.c *.h> + <doc/???.txt>", sum2.String())
 	assert.Equal(t, "'*.c' '*.h' 'doc/???.txt'", sum2.CommandString())
 
 	assert.False(t, sum1.Equal(sum2))
@@ -302,9 +312,6 @@ func Test_FinderList_misc(t *testing.T) {
 	// constructs something silly, we do something silly.
 	sum3, err := sum1.Add(sum2)
 	assert.Nil(t, err)
-	assert.Equal(t,
-		"<*.c *.h> + <doc/???.txt> + <> + <*.c *.h> + <doc/???.txt>",
-		sum3.String())
 	assert.Equal(t,
 		"'*.c' '*.h' 'doc/???.txt' '*.c' '*.h' 'doc/???.txt'",
 		sum3.CommandString())

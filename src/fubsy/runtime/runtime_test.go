@@ -155,9 +155,9 @@ func Test_nodify(t *testing.T) {
 	ffsum, err := ff1.Add(ff2)
 	assert.Nil(t, err)
 	nodes = rt.nodify(ffsum)
-	assert.Equal(t, 1, len(nodes))
-	assert.Equal(t, "<*.c *.h> + <**/*.java>",
-		nodes[0].(*dag.GlobNode).String())
+	assert.Equal(t, 2, len(nodes))
+	assert.Equal(t, "<*.c *.h>", nodes[0].(*dag.GlobNode).String())
+	assert.Equal(t, "<**/*.java>", nodes[1].(*dag.GlobNode).String())
 }
 
 func assertIn(t *testing.T, ns types.ValueMap, name string, expect types.FuObject) {

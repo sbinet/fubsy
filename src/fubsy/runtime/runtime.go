@@ -216,12 +216,11 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 	case types.FuString:
 		result = []dag.Node{dag.MakeFileNode(self.dag, targets.Value())}
 	case types.FuList:
-		filenames := targets.Values()
-		result = make([]dag.Node, len(filenames))
-		for i, fn := range filenames {
-			result[i] = dag.MakeFileNode(self.dag, fn)
+		result = make([]dag.Node, 0, len(targets))
+		for _, val := range targets {
+			result = append(result, self.nodify(val)...)
 		}
-	case *types.FuFileFinder, *types.FuFinderList:
+	case *types.FuFileFinder:
 		result = []dag.Node{dag.MakeGlobNode(self.dag, targets)}
 	}
 	return result

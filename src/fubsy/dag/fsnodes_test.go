@@ -175,7 +175,7 @@ func Test_GlobNode_basics(t *testing.T) {
 
 	assert.Equal(t, "<**/*.java>", node0.String())
 	assert.Equal(t, "<doc/*/*.html>", node1.String())
-	assert.Equal(t, "<**/*.java> + <doc/*/*.html>", node2.String())
+	assert.Equal(t, "[<**/*.java>,<doc/*/*.html>]", node2.String())
 
 	assert.True(t, node0.Equal(node0))
 	assert.False(t, node0.Equal(node1))

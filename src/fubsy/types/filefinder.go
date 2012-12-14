@@ -24,14 +24,6 @@ type FuFileFinder struct {
 	excludes []string
 }
 
-// Object that results from adding filefinders together: e.g.
-//   <*.c> + <*.h> + <**/*.java>
-// evaluates to a FuFinderList with three elements. Expanding
-// the FuFinderList expands each of its elements in turn.
-type FuFinderList struct {
-	elements []*FuFileFinder
-}
-
 func NewFileFinder(includes []string) *FuFileFinder {
 	return &FuFileFinder{includes: includes}
 }
@@ -57,29 +49,26 @@ func (self *FuFileFinder) Equal(other_ FuObject) bool {
 }
 
 func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
-	result := NewFinderList()
-	result.elements = []*FuFileFinder{self}
+	var result FuObject
 	switch other := other_.(type) {
 	case *FuFileFinder:
 		// <p1> + <p2>
-		result.elements = append(result.elements, other)
-	case *FuFinderList:
-		// <p1> + (<p2> + <p3>) (evaluating the outer +)
-		result.elements = append(result.elements, other.elements...)
+		list := FuList{self, other}
+		result = list
+	case FuString:
+		// <pat> + "a"
+		list := FuList{self, other}
+		result = list
+	case FuList:
+		// <pat> + ["a", "b", "c"]
+		list := make(FuList, 1 + len(other))
+		list[0] = self
+		copy(list[1:], other)
+		result = list
 	default:
 		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
 	}
 	return result, nil
-
-	// result := NewFileFinder(self.includes)
-	// result.excludes = self.excludes
-	// result.chain = self.chain
-	// prev := result
-	// for cur := self.chain; cur != nil; cur = cur.chain {
-	// 	prev = cur
-	// }
-	// prev.chain = other
-	// return result, nil
 }
 
 func (self *FuFileFinder) List() []FuObject {
@@ -270,75 +259,4 @@ func translateGlob(glob string) (string, error) {
 	}
 	re = append(re, '$')
 	return string(re), nil
-}
-
-func NewFinderList() *FuFinderList {
-	return &FuFinderList{}
-}
-
-func (self *FuFinderList) typename() string {
-	return "filefinder" // hmmm: ambiguous, but clearer errors?
-}
-
-func (self *FuFinderList) String() string {
-	result := make([]string, len(self.elements))
-	for i, finder := range self.elements {
-		result[i] = finder.String()
-	}
-	return strings.Join(result, " + ")
-}
-
-func (self *FuFinderList) CommandString() string {
-	result := make([]string, len(self.elements))
-	j := 0
-	for _, finder := range self.elements {
-		result[j] = finder.CommandString()
-		if result[j] == "" {
-			// in case someone constructs a finder with no include patterns
-			j--
-		}
-		j++
-	}
-	return strings.Join(result[0:j], " ")
-}
-
-func (self *FuFinderList) Equal(other_ FuObject) bool {
-	other, ok := other_.(*FuFinderList)
-	return ok && reflect.DeepEqual(self.elements, other.elements)
-}
-
-func (self *FuFinderList) Add(other_ FuObject) (FuObject, error) {
-	result := &FuFinderList{}
-	result.elements = make([]*FuFileFinder, len(self.elements))
-	copy(result.elements, self.elements)
-
-	switch other := other_.(type) {
-	case *FuFileFinder:
-		result.elements = append(result.elements, other)
-	case *FuFinderList:
-		result.elements = append(result.elements, other.elements...)
-	default:
-		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
-	}
-	return result, nil
-}
-
-func (self *FuFinderList) List() []FuObject {
-	result := make([]FuObject, len(self.elements))
-	for i, finder := range self.elements {
-		result[i] = finder
-	}
-	return result
-}
-
-func (self *FuFinderList) Expand(ns Namespace) (FuObject, error) {
-	result := make(FuList, 0)
-	for _, element := range self.elements {
-		batch, err := element.Expand(ns)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, batch.(FuList)...)
-	}
-	return result, nil
 }

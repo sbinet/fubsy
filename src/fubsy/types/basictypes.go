@@ -33,7 +33,7 @@ type FuObject interface {
 	Add(FuObject) (FuObject, error)
 
 	// Return a slice of FuObjects that you can loop over; intended
-	// for easy access to the elements of compounts types like FuList.
+	// for easy access to the elements of compound types like FuList.
 	// Scalar types (e.g. FuString) should just return themselves in a
 	// one-element slice. Callers must not mutate the returned slice,
 	// since that might (or might not) affect the original object.
@@ -164,9 +164,12 @@ func (self FuList) String() string {
 }
 
 func (self FuList) CommandString() string {
-	result := make([]string, len(self))
-	for i, s := range self {
-		result[i] = shellQuote(s.String())
+	result := make([]string, 0, len(self))
+	for _, val := range self {
+		csval := val.CommandString()
+		if len(csval) > 0 {
+			result = append(result, csval)
+		}
 	}
 	return strings.Join(result, " ")
 }
@@ -184,24 +187,12 @@ func (self FuList) Values() []string {
 	return result
 }
 
-func (self FuList) Add(other_ FuObject) (FuObject, error) {
-	switch other := other_.(type) {
-	case FuList:
-		// ["foo", "bar"] + ["qux"] == ["foo", "bar", "qux"]
-		newlist := make(FuList, len(self)+len(other))
-		copy(newlist, self)
-		copy(newlist[len(self):], other)
-		return newlist, nil
-	case FuString:
-		// ["foo", "bar"] + "qux" == ["foo", "bar", "qux"]
-		newlist := make(FuList, len(self)+1)
-		copy(newlist, self)
-		newlist[len(self)] = other
-		return newlist, nil
-	default:
-		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
-	}
-	panic("unreachable code")
+func (self FuList) Add(other FuObject) (FuObject, error) {
+	otherlist := other.List()
+	result := make(FuList, len(self) + len(otherlist))
+	copy(result, self)
+	copy(result[len(self):], otherlist)
+	return result, nil
 }
 
 func (self FuList) List() []FuObject {
@@ -209,13 +200,13 @@ func (self FuList) List() []FuObject {
 }
 
 func (self FuList) Expand(ns Namespace) (FuObject, error) {
-	result := make(FuList, len(self))
-	var err error
-	for i, val := range self {
-		result[i], err = val.Expand(ns)
+	result := make(FuList, 0, len(self))
+	for _, val := range self {
+		xval, err := val.Expand(ns)
 		if err != nil {
 			return nil, err
 		}
+		result = append(result, xval.List()...)
 	}
 	return result, nil
 }
