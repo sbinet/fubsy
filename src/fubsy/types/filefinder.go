@@ -5,12 +5,12 @@
 package types
 
 import (
-	"os"
-	"strings"
-	"regexp"
 	"errors"
-	"reflect"
+	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
+	"strings"
 )
 
 // file-finding type; another implementation of FuObject, but more
@@ -58,7 +58,7 @@ func (self *FuFileFinder) Equal(other_ FuObject) bool {
 
 func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
 	result := NewFinderList()
-	result.elements = []*FuFileFinder {self}
+	result.elements = []*FuFileFinder{self}
 	switch other := other_.(type) {
 	case *FuFileFinder:
 		// <p1> + <p2>
@@ -85,7 +85,7 @@ func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
 func (self *FuFileFinder) List() []FuObject {
 	// tempting to return a list of self.includes... but what about
 	// self.excludes?
-	return []FuObject {self}
+	return []FuObject{self}
 }
 
 func (self *FuFileFinder) typename() string {
@@ -134,21 +134,21 @@ func splitPattern(pattern string) (
 		// XXX assumes patterns have been normalized to Unix syntax
 		err = errors.New(
 			"recursive glob pattern ** may only occur " +
-			"at the start of a pattern or immediately after /")
+				"at the start of a pattern or immediately after /")
 		return
 	}
-	if idx > len(pattern) - 4 || pattern[idx+2] != '/' {
+	if idx > len(pattern)-4 || pattern[idx+2] != '/' {
 		// the minimum valid pattern is "**/x": "**/" and "**" are invalid
 		err = errors.New(
 			"recursive glob pattern ** must be followed " +
-			"by / and at least one more character")
+				"by / and at least one more character")
 		return
 	}
 	recursive = true
 	if idx == 0 {
 		prefix = "."
 	} else {
-		prefix = pattern[0:idx-1]
+		prefix = pattern[0 : idx-1]
 	}
 	tail = pattern[idx+3:]
 	return
@@ -196,7 +196,7 @@ func recursiveGlob(prefix, tail string) ([]string, error) {
 	// every file found against tailre.
 	var curdir string
 	var matches []string
-	var choplen int				// leading bytes to ignore
+	var choplen int // leading bytes to ignore
 	visit := func(path string, info os.FileInfo, err error) error {
 		// fail if anything is unreadable (do not silently ignore)
 		if err != nil {
@@ -240,7 +240,7 @@ func recursiveGlob(prefix, tail string) ([]string, error) {
 // - "**" matches zero or more characters (including separators) --
 //   effectively a recursive search
 func translateGlob(glob string) (string, error) {
-	re := []byte {}
+	re := []byte{}
 	for i := 0; i < len(glob); i++ {
 		ch := glob[i]
 		switch ch {
@@ -277,7 +277,7 @@ func NewFinderList() *FuFinderList {
 }
 
 func (self *FuFinderList) typename() string {
-	return "file finder"		// hmmm: ambiguous, but clearer errors?
+	return "file finder" // hmmm: ambiguous, but clearer errors?
 }
 
 func (self *FuFinderList) String() string {

@@ -7,6 +7,7 @@ package types
 import (
 	"testing"
 	//"fmt"
+
 	"github.com/stretchrcom/testify/assert"
 )
 
@@ -24,9 +25,9 @@ func Test_basictypes_Equal(t *testing.T) {
 	s1 := FuString("foo")
 	s2 := FuString("foo")
 	s3 := FuString("bar")
-	l1 := FuList([]FuObject {s1, s3})
-	l2 := FuList([]FuObject {s2, s3})
-	l3 := FuList([]FuObject {s3})
+	l1 := FuList([]FuObject{s1, s3})
+	l2 := FuList([]FuObject{s2, s3})
+	l3 := FuList([]FuObject{s3})
 
 	// FuString.Equal is just like builtin string ==
 	assert.True(t, s1.Equal(s1))
@@ -91,7 +92,7 @@ func Test_expand_re(t *testing.T) {
 
 	s = "here is a $variable reference"
 	match := expand_re.FindStringSubmatchIndex(s)
-	expect := []int {
+	expect := []int{
 		10, 19,
 		11, 19,
 		-1, -1}
@@ -99,7 +100,7 @@ func Test_expand_re(t *testing.T) {
 
 	s = "and ${aNoTher_way} of putting it"
 	match = expand_re.FindStringSubmatchIndex(s)
-	expect = []int {
+	expect = []int{
 		4, 18,
 		-1, -1,
 		6, 17}
@@ -136,7 +137,7 @@ func Test_FuString_Expand_recursive(t *testing.T) {
 	assert.Equal(t, expect, output.String())
 
 	// same thing, but now files is a list
-	ns.Assign("files", FuList([]FuObject {FuString("f1.c")}))
+	ns.Assign("files", FuList([]FuObject{FuString("f1.c")}))
 	output, err = input.Expand(ns)
 	assert.Nil(t, err)
 	assert.Equal(t, expect, output.String())

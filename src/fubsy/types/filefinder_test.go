@@ -9,12 +9,17 @@ import (
 	//"fmt"
 	"reflect"
 	"regexp"
+
 	"github.com/stretchrcom/testify/assert"
+
 	"fubsy/testutils"
 )
 
 func Test_translateGlob(t *testing.T) {
-	tests := []struct {glob string; re string} {
+	tests := []struct {
+		glob string
+		re   string
+	}{
 		{"", "$"},
 		{"foo", "foo$"},
 		{"foo/bar", "foo/bar$"},
@@ -40,7 +45,7 @@ func Test_translateGlob(t *testing.T) {
 	assert.Nil(t, err)
 	re, err := regexp.Compile("^" + pat)
 	assert.Nil(t, err)
-	match := []string {
+	match := []string{
 		"foom/pong/bop.c",
 		"foog/pig/abc.c",
 		"foog/pig/a.c.-af#@0(.h",
@@ -50,7 +55,7 @@ func Test_translateGlob(t *testing.T) {
 		assert.Equal(t, fn, re.FindString(fn))
 	}
 
-	nomatch := []string {
+	nomatch := []string{
 		"foo/pong/bop.c",
 		"foom/pongx/bop.c",
 		"foom/pong/bop.cpp",
@@ -69,7 +74,7 @@ func Test_translateGlob_error(t *testing.T) {
 }
 
 func Test_splitPattern_no_recursive(t *testing.T) {
-	patterns := []string {
+	patterns := []string{
 		"",
 		"foobar",
 		"foo/b?r/*/blah/*.[ch]",
@@ -82,7 +87,11 @@ func Test_splitPattern_no_recursive(t *testing.T) {
 }
 
 func Test_splitPattern_valid_recursive(t *testing.T) {
-	tests := []struct {glob string; prefix string; tail string} {
+	tests := []struct {
+		glob   string
+		prefix string
+		tail   string
+	}{
 		{"**/*.c", ".", "*.c"},
 		{"**/foo/b?r/*.[ch]", ".", "foo/b?r/*.[ch]"},
 		{"foo/**/*.c", "foo", "*.c"},
@@ -99,7 +108,7 @@ func Test_splitPattern_valid_recursive(t *testing.T) {
 }
 
 func Test_splitPattern_invalid(t *testing.T) {
-	patterns := []string {
+	patterns := []string{
 		"**",
 		"**/",
 		"foo/**",
@@ -114,23 +123,22 @@ func Test_splitPattern_invalid(t *testing.T) {
 	}
 }
 
-
 func Test_FuFileFinder_String(t *testing.T) {
 	var ff FuObject
-	ff = &FuFileFinder{includes: []string {"*.c", "**/*.h"}}
+	ff = &FuFileFinder{includes: []string{"*.c", "**/*.h"}}
 	assert.Equal(t, "<*.c **/*.h>", ff.String())
 }
 
 func Test_FuFileFinder_CommandString(t *testing.T) {
 	var ff FuObject
-	ff = &FuFileFinder{includes: []string {"*.c", "blurp/blop", "**/*.h"}}
+	ff = &FuFileFinder{includes: []string{"*.c", "blurp/blop", "**/*.h"}}
 	assert.Equal(t, "'*.c' blurp/blop '**/*.h'", ff.CommandString())
 }
 
 func Test_FuFileFinder_Equal(t *testing.T) {
-	ff1 := NewFileFinder([]string {"*.c", "*.h"})
-	ff2 := NewFileFinder([]string {"*.c", "*.h"})
-	ff3 := NewFileFinder([]string {"*.h", "*.c"})
+	ff1 := NewFileFinder([]string{"*.c", "*.h"})
+	ff2 := NewFileFinder([]string{"*.c", "*.h"})
+	ff3 := NewFileFinder([]string{"*.h", "*.c"})
 
 	assert.True(t, ff1.Equal(ff1))
 	assert.True(t, ff1.Equal(ff2))
@@ -143,17 +151,17 @@ func Test_FuFileFinder_Expand_empty(t *testing.T) {
 
 	// no patterns, no files: of course we find nothing
 	ff := &FuFileFinder{}
-	assertExpand(t, []string {}, ff)
+	assertExpand(t, []string{}, ff)
 
 	// patterns, but no files: still nothing
-	ff.includes = []string {"**/*.c", "include/*.h", "*/*.txt"}
-	assertExpand(t, []string {}, ff)
+	ff.includes = []string{"**/*.c", "include/*.h", "*/*.txt"}
+	assertExpand(t, []string{}, ff)
 
 	// no patterns, some files: still nothing
 	ff.includes = ff.includes[0:0]
 	testutils.TouchFiles(
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
-	assertExpand(t, []string {}, ff)
+	assertExpand(t, []string{}, ff)
 }
 
 func Test_FuFileFinder_Expand_single_include(t *testing.T) {
@@ -163,21 +171,21 @@ func Test_FuFileFinder_Expand_single_include(t *testing.T) {
 	testutils.TouchFiles(
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
 
-	ff := &FuFileFinder{includes: []string {"*/*.c"}}
-	assertExpand(t, []string {"lib1/foo.c"}, ff)
+	ff := &FuFileFinder{includes: []string{"*/*.c"}}
+	assertExpand(t, []string{"lib1/foo.c"}, ff)
 
 	ff.includes[0] = "**/*.c"
-	assertExpand(t, []string {"lib1/foo.c", "lib1/sub/blah.c"}, ff)
+	assertExpand(t, []string{"lib1/foo.c", "lib1/sub/blah.c"}, ff)
 	return
 
 	ff.includes[0] = "l?b?/**/*.c"
-	assertExpand(t, []string {"lib1/foo.c", "lib1/sub/blah.c"}, ff)
+	assertExpand(t, []string{"lib1/foo.c", "lib1/sub/blah.c"}, ff)
 
 	ff.includes[0] = "in?lu?e/*.h"
-	assertExpand(t, []string {"include/bip.h", "include/bop.h"}, ff)
+	assertExpand(t, []string{"include/bip.h", "include/bop.h"}, ff)
 
 	ff.includes[0] = "inc*/?i*.h"
-	assertExpand(t, []string {"include/bip.h"}, ff)
+	assertExpand(t, []string{"include/bip.h"}, ff)
 }
 
 func Test_FuFileFinder_Expand_double_recursion(t *testing.T) {
@@ -199,26 +207,26 @@ func Test_FuFileFinder_Expand_double_recursion(t *testing.T) {
 		"misc/app3/src/main/org/example/app3/Helpers.java",
 		"misc/app3/src/test/org/example/app3/TestHelpers.java",
 		"misc/app3/src/test/org/example/app3/testdata",
-		)
+	)
 
 	var ff *FuFileFinder
 	var expect []string
-	ff = NewFileFinder([]string {"**/test/**/*.java"})
-	expect = []string {
+	ff = NewFileFinder([]string{"**/test/**/*.java"})
+	expect = []string{
 		"app1/src/test/org/example/app1/StuffTest.java",
 		"misc/app3/src/test/org/example/app3/TestHelpers.java",
 	}
 	assertExpand(t, expect, ff)
 
-	ff = NewFileFinder([]string {"**/test/**/*"})
-	expect = []string {
+	ff = NewFileFinder([]string{"**/test/**/*"})
+	expect = []string{
 		"app1/src/test/org/example/app1/StuffTest.java",
 		"misc/app3/src/test/org/example/app3/TestHelpers.java",
 		"misc/app3/src/test/org/example/app3/testdata",
 	}
 	assertExpand(t, expect, ff)
 
-	ff = NewFileFinder([]string {"**/test/**"})
+	ff = NewFileFinder([]string{"**/test/**"})
 	assertExpand(t, expect, ff)
 }
 
@@ -229,11 +237,11 @@ func Test_FileFinder_Add(t *testing.T) {
 		"src/foo.c", "src/foo.h", "main.c", "include/bop.h",
 		"doc.txt", "doc/stuff.txt", "doc/blahblah.rst")
 
-	ff1 := NewFileFinder([]string {"**/*.c"})
-	ff2 := NewFileFinder([]string {"doc/*.txt"})
+	ff1 := NewFileFinder([]string{"**/*.c"})
+	ff2 := NewFileFinder([]string{"doc/*.txt"})
 
 	// simulate sum = <**/*.c> + <doc/*.txt>
-	expect := []string {
+	expect := []string{
 		"main.c", "src/foo.c", "doc/stuff.txt"}
 	sum, err := ff1.Add(ff2)
 	//fmt.Printf("ff1 = %v\nff2 = %v\nsum = %v\n", ff1, ff2, sum)
@@ -241,7 +249,7 @@ func Test_FileFinder_Add(t *testing.T) {
 	assertExpand(t, expect, sum)
 
 	// simulate sum + <"*c*/?o?.h">
-	ff3 := NewFileFinder([]string {"*c*/?o?.h"})
+	ff3 := NewFileFinder([]string{"*c*/?o?.h"})
 	expect = append(expect, "include/bop.h", "src/foo.h")
 	sum, err = sum.Add(ff3)
 	//fmt.Printf("ff3 = %v\nnew sum = %v\n", ff3, sum)
@@ -250,14 +258,14 @@ func Test_FileFinder_Add(t *testing.T) {
 
 	// simulate <doc/*.txt> + (<*c*/?o?.h> + <**/*.c>)
 	// (same as before, just different order)
-	expect = []string {
+	expect = []string{
 		//"doc/stuff.txt", "include/bop.h", "src/foo.h", "main.c", "src/foo.c"}
 		"include/bop.h", "src/foo.h", "main.c", "src/foo.c"}
 	sum, err = ff3.Add(ff1)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 
-	expect = append([]string {"doc/stuff.txt"}, expect...)
+	expect = append([]string{"doc/stuff.txt"}, expect...)
 	sum, err = ff2.Add(sum)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
@@ -269,9 +277,9 @@ func Test_FileFinder_Add(t *testing.T) {
 }
 
 func Test_FinderList_misc(t *testing.T) {
-	ff1 := NewFileFinder([]string {"*.c", "*.h"})
-	ff2 := NewFileFinder([]string {"doc/???.txt"})
-	ff3 := NewFileFinder([]string {})
+	ff1 := NewFileFinder([]string{"*.c", "*.h"})
+	ff2 := NewFileFinder([]string{"doc/???.txt"})
+	ff3 := NewFileFinder([]string{})
 
 	sum1, err := ff1.Add(ff2)
 	assert.Nil(t, err)
@@ -309,7 +317,7 @@ func assertExpand(t *testing.T, expect []string, obj FuObject) {
 
 	expectobj := makeFuList(expect...)
 	if !reflect.DeepEqual(expectobj, actual) {
-		t.Errorf("%v Expand(): " +
+		t.Errorf("%v Expand(): "+
 			"expected\n%v\nbut got\n%v",
 			obj, expectobj, actual)
 	}

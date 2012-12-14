@@ -8,10 +8,11 @@
 package types
 
 import (
-	"strings"
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
+
 	"fubsy/dsl"
 )
 
@@ -59,7 +60,6 @@ type FuString string
 // a Fubsy list is a slice of Fubsy objects
 type FuList []FuObject
 
-
 func (self FuString) String() string {
 	return string(self)
 }
@@ -84,7 +84,7 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 		return FuString(self + other), nil
 	case FuList:
 		// "foo" + ["bar"] == ["foo", "bar"]
-		newlist := make(FuList, len(other) + 1)
+		newlist := make(FuList, len(other)+1)
 		newlist[0] = self
 		copy(newlist[1:], other)
 		return newlist, nil
@@ -95,7 +95,7 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 }
 
 func (self FuString) List() []FuObject {
-	return []FuObject {self}
+	return []FuObject{self}
 }
 
 var expand_re *regexp.Regexp
@@ -110,7 +110,7 @@ func init() {
 func (self FuString) Expand(ns Namespace) (FuObject, error) {
 
 	match := expand_re.FindStringSubmatchIndex(string(self))
-	if match == nil {			// fast path for common case
+	if match == nil { // fast path for common case
 		return self, nil
 	}
 
@@ -120,8 +120,8 @@ func (self FuString) Expand(ns Namespace) (FuObject, error) {
 	var name string
 	var start, end int
 	for match != nil {
-		group1 := match[2:4]		// location of match for "$foo"
-		group2 := match[4:6]		// location of match for "${foo}"
+		group1 := match[2:4] // location of match for "$foo"
+		group2 := match[4:6] // location of match for "${foo}"
 		if group1[0] > 0 {
 			name = cur[group1[0]:group1[1]]
 			start = group1[0] - 1
@@ -159,7 +159,6 @@ func (self FuString) typename() string {
 	return "string"
 }
 
-
 func (self FuList) String() string {
 	return "[" + strings.Join(self.Values(), ",") + "]"
 }
@@ -189,13 +188,13 @@ func (self FuList) Add(other_ FuObject) (FuObject, error) {
 	switch other := other_.(type) {
 	case FuList:
 		// ["foo", "bar"] + ["qux"] == ["foo", "bar", "qux"]
-		newlist := make(FuList, len(self) + len(other))
+		newlist := make(FuList, len(self)+len(other))
 		copy(newlist, self)
 		copy(newlist[len(self):], other)
 		return newlist, nil
 	case FuString:
 		// ["foo", "bar"] + "qux" == ["foo", "bar", "qux"]
-		newlist := make(FuList, len(self) + 1)
+		newlist := make(FuList, len(self)+1)
 		copy(newlist, self)
 		newlist[len(self)] = other
 		return newlist, nil
@@ -226,7 +225,7 @@ func (self FuList) typename() string {
 }
 
 func unsupportedOperation(self FuObject, other FuObject, detail string) error {
-	message := fmt.Sprintf("unsupported operation: " + detail,
+	message := fmt.Sprintf("unsupported operation: "+detail,
 		other.typename(), self.typename())
 	return TypeError{message: message}
 }
@@ -242,7 +241,7 @@ func makeFuList(strings ...string) FuList {
 
 type TypeError struct {
 	location dsl.Location
-	message string
+	message  string
 }
 
 func (self TypeError) Error() string {
@@ -258,13 +257,13 @@ var shellreplacer *strings.Replacer
 // included in a shell command.
 func shellQuote(s string) string {
 	if len(s) > 0 && !strings.ContainsAny(s, shellmeta) {
-		return s				// fast path for common case
+		return s // fast path for common case
 	}
 	double := strings.Contains(s, "\"")
 	single := strings.Contains(s, "'")
 	if double && single {
 		if shellreplacer == nil {
-			pairs := make([]string, len(shellmeta) * 2)
+			pairs := make([]string, len(shellmeta)*2)
 			for i := 0; i < len(shellmeta); i++ {
 				pairs[i*2] = string(shellmeta[i])
 				pairs[i*2+1] = "\\" + string(shellmeta[i])

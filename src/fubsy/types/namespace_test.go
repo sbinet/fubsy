@@ -6,6 +6,7 @@ package types
 
 import (
 	"testing"
+
 	"github.com/stretchrcom/testify/assert"
 )
 
@@ -29,8 +30,8 @@ func Test_ValueStack_Lookup(t *testing.T) {
 	val, ok := empty.Lookup("foo")
 	assert.False(t, ok)
 
-	list1 := FuList([]FuObject {FuString("ding"), FuString("dong")})
-	list2 := FuList([]FuObject {FuString("shadow")})
+	list1 := FuList([]FuObject{FuString("ding"), FuString("dong")})
+	list2 := FuList([]FuObject{FuString("shadow")})
 
 	ns0 := NewValueMap()
 	ns0.Assign("foo", FuString("hello"))

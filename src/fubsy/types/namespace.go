@@ -5,8 +5,8 @@
 package types
 
 import (
-	"io"
 	"fmt"
+	"io"
 )
 
 type Namespace interface {
@@ -23,7 +23,7 @@ type NamespaceStack interface {
 
 // a mapping from name to value, used for a single scope (e.g. phase
 // local variables, global variables, ...)
-type ValueMap map[string] FuObject
+type ValueMap map[string]FuObject
 
 func NewValueMap() ValueMap {
 	return make(ValueMap)
@@ -63,7 +63,7 @@ func (self *ValueStack) Push(ns Namespace) {
 }
 
 func (self *ValueStack) Pop() {
-	*self = (*self)[0:len(*self)-1]
+	*self = (*self)[0 : len(*self)-1]
 }
 
 // Look for the named variable starting in the innermost namespace on
@@ -100,6 +100,6 @@ func (self ValueStack) Assign(name string, value FuObject) {
 func (self ValueStack) Dump(writer io.Writer, indent string) {
 	for i, ns := range self {
 		fmt.Fprintf(writer, "%slevel %d:\n", indent, i)
-		ns.Dump(writer, indent + "  ")
+		ns.Dump(writer, indent+"  ")
 	}
 }
