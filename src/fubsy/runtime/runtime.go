@@ -8,18 +8,19 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"fubsy/dag"
 	"fubsy/dsl"
 	"fubsy/types"
-	"fubsy/dag"
 )
 
 type Runtime struct {
-	script string				// filename
-	ast dsl.AST
+	script string // filename
+	ast    dsl.AST
 
 	globals types.ValueMap
-	stack *types.ValueStack
-	dag *dag.DAG
+	stack   *types.ValueStack
+	dag     *dag.DAG
 }
 
 func NewRuntime(script string, ast dsl.AST) *Runtime {
@@ -33,11 +34,11 @@ func NewRuntime(script string, ast dsl.AST) *Runtime {
 	stack.Push(globals)
 
 	return &Runtime{
-		script: script,
-		ast: ast,
+		script:  script,
+		ast:     ast,
 		globals: globals,
-		stack: &stack,
-		dag: dag.NewDAG(),
+		stack:   &stack,
+		dag:     dag.NewDAG(),
 	}
 }
 
@@ -63,7 +64,7 @@ func (self *Runtime) RunScript() []error {
 func (self *Runtime) runMainPhase() []error {
 	main := self.ast.FindPhase("main")
 	if main == nil {
-		return []error {
+		return []error{
 			RuntimeError{self.ast.Location(), "no main phase defined"}}
 	}
 	locals := types.NewValueMap()
@@ -106,7 +107,7 @@ func (self *Runtime) assign(node *dsl.ASTAssignment, ns types.Namespace) error {
 	return nil
 }
 
-func (self *Runtime) evaluate (expr_ dsl.ASTExpression) (types.FuObject, error) {
+func (self *Runtime) evaluate(expr_ dsl.ASTExpression) (types.FuObject, error) {
 	switch expr := expr_.(type) {
 	case *dsl.ASTString:
 		return types.FuString(expr.Value()), nil
@@ -128,7 +129,7 @@ func (self *Runtime) evaluateName(expr *dsl.ASTName) (types.FuObject, error) {
 	if !ok {
 		err := RuntimeError{
 			location: expr.Location(),
-			message: fmt.Sprintf("undefined variable '%s'", name),
+			message:  fmt.Sprintf("undefined variable '%s'", name),
 		}
 		return nil, err
 	}
@@ -212,7 +213,7 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 	var result []dag.Node
 	switch targets := targets_.(type) {
 	case types.FuString:
-		result = []dag.Node {dag.MakeFileNode(self.dag, targets.Value())}
+		result = []dag.Node{dag.MakeFileNode(self.dag, targets.Value())}
 	case types.FuList:
 		filenames := targets.Values()
 		result := make([]dag.Node, len(filenames))
@@ -221,7 +222,7 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 		}
 	case *types.FuFileFinder:
 	case *types.FuFinderList:
-		result = []dag.Node {dag.MakeGlobNode(self.dag, targets)}
+		result = []dag.Node{dag.MakeGlobNode(self.dag, targets)}
 	}
 	return result
 }
@@ -264,7 +265,7 @@ func (self *Runtime) runBuildPhase() []error {
 // factor out a common error type?
 type RuntimeError struct {
 	location dsl.Location
-	message string
+	message  string
 }
 
 func (self RuntimeError) Error() string {

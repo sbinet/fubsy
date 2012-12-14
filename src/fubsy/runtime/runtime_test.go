@@ -7,9 +7,11 @@ package runtime
 import (
 	"testing"
 	//"reflect"
+
 	"github.com/stretchrcom/testify/assert"
-	"fubsy/testutils"
+
 	"fubsy/dsl"
+	"fubsy/testutils"
 	"fubsy/types"
 )
 
@@ -45,9 +47,9 @@ func Test_Runtime_evaluate_simple(t *testing.T) {
 
 	// expression <*.c blah> evaluates to a FileFinder with two
 	// include patterns
-	patterns := []string {"*.c", "blah"}
+	patterns := []string{"*.c", "blah"}
 	flnode := dsl.NewASTFileList(patterns)
-	expect = types.NewFileFinder([]string {"*.c", "blah"})
+	expect = types.NewFileFinder([]string{"*.c", "blah"})
 	assertEvaluateOK(t, rt, expect, flnode)
 }
 

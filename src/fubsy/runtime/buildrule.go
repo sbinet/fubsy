@@ -5,16 +5,16 @@
 package runtime
 
 import (
-	"fubsy/types"
 	"fubsy/dag"
+	"fubsy/types"
 )
 
 type BuildRule struct {
 	runtime *Runtime
 	targets types.FuObject
 	sources types.FuObject
-	action dag.Action
-	locals types.ValueMap
+	action  dag.Action
+	locals  types.ValueMap
 }
 
 func NewBuildRule(
