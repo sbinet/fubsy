@@ -1,27 +1,32 @@
 #!/bin/sh
 
+run() {
+    echo $1
+    eval $1
+}
+
 tests=""
 if [ $# -eq 1 ]; then
     tests="-test.run=$1"
 fi
 
 export GOPATH=$PWD
-set -ex
+set -e
 
 golex=bin/golex
 if [ ! -f $golex ]; then
-    go install github.com/cznic/golex
+    run "go install github.com/cznic/golex"
 fi
 
 gocov=bin/gocov
 if [ ! -f $gocov ]; then
-    go install github.com/axw/gocov/gocov
+    run "go install github.com/axw/gocov/gocov"
 fi
 
-$golex -o src/fubsy/dsl/fulex.go src/fubsy/dsl/fulex.l
-gofmt -w src/fubsy/dsl/fulex.go
+run "$golex -o src/fubsy/dsl/fulex.go src/fubsy/dsl/fulex.l"
+run "gofmt -w src/fubsy/dsl/fulex.go"
 
-go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y
+run "go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y"
 
 # uncomment this to run benchmarks
 #benchopt="-test.bench=.*"
@@ -36,21 +41,21 @@ packages="fubsy/dsl fubsy/types fubsy/dag fubsy/runtime"
 #packages="fubsy/dag"
 #packages="fubsy/runtime"
 
-go install -v -gcflags "-N -l" $packages
-go test -v -gcflags "-N -l" -i $packages
+run "go install -v -gcflags '-N -l' $packages"
+run "go test -v -gcflags '-N -l' -i $packages"
 
 if [ "$coverage" ]; then
     for pkg in $packages; do
         json=coverage-`basename $pkg`.json
         report=coverage-`basename $pkg`.txt
-        ./bin/gocov test \
+        run "./bin/gocov test \
             -exclude fubsy/testutils,github.com/stretchrcom/testify/assert,code.google.com/p/go-bit/bit \
-            $pkg > $json
-        ./bin/gocov report $json > $report
+            $pkg > $json"
+        run "./bin/gocov report $json > $report"
     done
 else
-    go test -v -gcflags "-N -l" $benchopt $packages $tests
+    run "go test -v -gcflags '-N -l' $benchopt $packages $tests"
 fi
 
-go vet $packages
-go install -v -gcflags "-N -l" fubsy
+run "go vet $packages"
+run "go install -v -gcflags '-N -l' fubsy"
