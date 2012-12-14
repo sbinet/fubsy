@@ -5,7 +5,10 @@
 package runtime
 
 import (
+	"bytes"
+	"os"
 	"testing"
+	//"fmt"
 	//"reflect"
 
 	"github.com/stretchrcom/testify/assert"
@@ -14,6 +17,58 @@ import (
 	"fubsy/testutils"
 	"fubsy/types"
 )
+
+func Test_Runtime_runMainPhase_missing(t *testing.T) {
+	// invalid: a script with no main phase
+	filename := "test.fubsy"
+	script := "" +
+		"import meep\n" +
+		"plunk {\n" +
+		"}\n"
+	// ast, err := dsl.ParseString(filename, script)
+	// assert.Equal(t, 0, len(err)) // syntax is fine
+	// rt := NewRuntime(filename, ast)
+	rt := parseScript(t, filename, script)
+	errors := rt.runMainPhase()
+	assert.Equal(t, 1, len(errors))
+	assert.Equal(t, "test.fubsy:1-3: no main phase defined", errors[0].Error())
+}
+
+func Test_Runtime_runMainPhase_valid(t *testing.T) {
+	script := "" +
+		"main {\n" +
+		"  src = \"foo.c\"\n" +
+		"  \"foo\": src {\n" +
+		"    \"cc -o $TARGET $src\"\n" +
+		"  }\n" +
+		"}\n"
+	rt := parseScript(t, "test.fubsy", script)
+	errors := rt.runMainPhase()
+	assert.Equal(t, 0, len(errors))
+	val, ok := rt.stack.Lookup("src")
+	assert.True(t, ok)
+	assert.Equal(t, types.FuString("foo.c"), val)
+	assert.NotNil(t, rt.dag)
+	rt.dag.Dump(os.Stdout)
+
+	// this seems *awfully* detailed and brittle, but DAG doesn't
+	// provide a good way to query what's in it (yet...)
+	expect := "" +
+		"0000: foo (*dag.FileNode, UNKNOWN)\n" +
+		"  action: cc -o $TARGET $src\n" +
+		"  parents:\n" +
+		"    0001: foo.c\n" +
+		"0001: foo.c (*dag.FileNode, UNKNOWN)\n"
+	var buf bytes.Buffer
+	rt.dag.Dump(&buf)
+	assert.Equal(t, expect, buf.String())
+}
+
+func parseScript(t *testing.T, filename string, content string) *Runtime {
+	ast, errors := dsl.ParseString(filename, content)
+	assert.Equal(t, 0, len(errors)) // syntax must be good
+	return NewRuntime(filename, ast)
+}
 
 func Test_Runtime_assign(t *testing.T) {
 	// AST for a = "foo"
