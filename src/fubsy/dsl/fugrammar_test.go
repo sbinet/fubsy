@@ -75,6 +75,18 @@ func Test_fuParse_empty_phase(t *testing.T) {
 				children: []ASTNode{}},
 		}}
 	assertParses(t, expect, tokens)
+
+	// same thing, with one or more empty lines in the body
+	// (the lexer collapses multiple newlines into a single EOL token)
+	tokens = []minitok{
+		{NAME, "blah"},
+		{'{', "{"},
+		{EOL, "\n"},
+		{'}', "}"},
+		{EOL, "\n"},
+		{EOF, ""},
+	}
+	assertParses(t, expect, tokens)
 }
 
 func Test_fuParse_expr_1(t *testing.T) {

@@ -117,6 +117,10 @@ block:
 	{
 		$$ = NewASTBlock([]ASTNode {}, $1, $2)
 	}
+|	'{' EOL '}'
+	{
+		$$ = NewASTBlock([]ASTNode {}, $1, $3)
+	}
 
 statementlist:
 	statementlist statement
