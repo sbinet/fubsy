@@ -26,9 +26,6 @@ func Test_Runtime_runMainPhase_missing(t *testing.T) {
 		"import meep\n" +
 		"plunk {\n" +
 		"}\n"
-	// ast, err := dsl.ParseString(filename, script)
-	// assert.Equal(t, 0, len(err)) // syntax is fine
-	// rt := NewRuntime(filename, ast)
 	rt := parseScript(t, filename, script)
 	errors := rt.runMainPhase()
 	assert.Equal(t, 1, len(errors))
@@ -66,7 +63,7 @@ func Test_Runtime_runMainPhase_valid(t *testing.T) {
 }
 
 func Test_Runtime_runMainPhase_error(t *testing.T) {
-	// runtime error evaluating a build rule (cannot add string to filefinder)
+	// runtime error evaluating a build rule
 	script := "" +
 		"main {\n" +
 		"  \"foo.jar\": bogus {\n" +
@@ -179,8 +176,6 @@ func assertEvaluateOK(
 	obj, err := rt.evaluate(input)
 	assert.Nil(t, err)
 
-	// need to use DeepEqual() to handle (e.g.) slices inside structs
-	//if !reflect.DeepEqual(expect, obj) {
 	if !expect.Equal(obj) {
 		t.Errorf("expected\n%#v\nbut got\n%#v", expect, obj)
 	}

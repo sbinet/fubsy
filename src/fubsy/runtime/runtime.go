@@ -89,11 +89,6 @@ func (self *Runtime) runMainPhase() []error {
 		}
 	}
 
-	// XXX local variables need to be available for variable expansion
-	// in the build phase, but then they're not really local to this
-	// phase, are they? hmmmm. not sure what to do about that. for
-	// now, I'm deliberately not calling self.stack.Pop().
-
 	return errors
 }
 
@@ -207,10 +202,10 @@ func (self *Runtime) addRule(rule *BuildRule) error {
 // Convert a single FuObject (possibly a FuList or FuFinderList) to a
 // list of Nodes in the DAG.
 func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
-	// Blecchh: this limits the extensibility of the type system if we
-	// have handle every type specially here. But I don't want each
-	// type to know how it becomes a node, because then the 'types'
-	// package depends on 'dag', which seems backwards to me. Hmmmm.
+	// Blecchh: specially handling every type here limits the
+	// extensibility of the type system. But I don't want each type to
+	// know how it becomes a node, because then the 'types' package
+	// depends on 'dag', which seems backwards to me. Hmmmm.
 	var result []dag.Node
 	switch targets := targets_.(type) {
 	case types.FuString:
