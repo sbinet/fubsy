@@ -5,12 +5,14 @@
 package dag
 
 import (
-	"testing"
-	"os"
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/stretchrcom/testify/assert"
-	"fubsy/types"
+
 	"fubsy/testutils"
+	"fubsy/types"
 )
 
 func Test_MakeFileNode(t *testing.T) {
@@ -38,12 +40,12 @@ func Test_FileNode_string(t *testing.T) {
 func Test_FileNode_parents(t *testing.T) {
 	dag := NewDAG()
 	node := MakeFileNode(dag, "foo/bar/qux")
-	expect := []string {}
+	expect := []string{}
 	assertParents(t, expect, dag, node)
 
 	// add a single parent in isolation
 	p0 := MakeFileNode(dag, "bong")
-	expect = []string {"bong"}
+	expect = []string{"bong"}
 	dag.addParent(node, p0)
 	assertParents(t, expect, dag, node)
 
@@ -113,7 +115,11 @@ func Test_FileNode_Exists(t *testing.T) {
 	defer makeReadable("a/b")
 
 	dag := NewDAG()
-	tests := []struct{name string; exists bool; err string} {
+	tests := []struct {
+		name   string
+		exists bool
+		err    string
+	}{
 		{"foo.txt", true, ""},
 		{"a/a/a", false, "stat a/a/a: is a directory, not a regular file"},
 		{"a/a/a/bogus", false, ""},
@@ -153,9 +159,9 @@ func Benchmark_FileNode_AddParent(b *testing.B) {
 
 func Test_GlobNode_basics(t *testing.T) {
 	dag := NewDAG()
-	glob0 := types.NewFileFinder([]string {"**/*.java"})
-	glob1 := types.NewFileFinder([]string {"doc/*/*.html"})
-	glob2, err := glob0.Add(glob1)			   // it's a FuFinderList
+	glob0 := types.NewFileFinder([]string{"**/*.java"})
+	glob1 := types.NewFileFinder([]string{"doc/*/*.html"})
+	glob2, err := glob0.Add(glob1) // it's a FuFinderList
 	assert.Nil(t, err)
 
 	node0 := MakeGlobNode(dag, glob0)
@@ -192,10 +198,10 @@ func Test_GlobNode_Expand(t *testing.T) {
 		"src/util-test.c",
 		"doc/README.txt",
 		"main.c",
-		)
+	)
 	dag := NewDAG()
-	node0 := MakeGlobNode(dag, types.NewFileFinder([]string {"*.c", "**/*.h"}))
-	node1 := MakeGlobNode(dag, types.NewFileFinder([]string {"**/*.java"}))
+	node0 := MakeGlobNode(dag, types.NewFileFinder([]string{"*.c", "**/*.h"}))
+	node1 := MakeGlobNode(dag, types.NewFileFinder([]string{"**/*.java"}))
 	_ = node1
 
 	expnodes, err := node0.Expand(dag, types.NewValueMap())
@@ -229,7 +235,7 @@ func chmodMask(name string, andmask, ormask os.FileMode) {
 	if err != nil {
 		panic(err)
 	}
-	mode := info.Mode() & andmask | ormask
+	mode := info.Mode()&andmask | ormask
 	err = os.Chmod(name, mode)
 	if err != nil {
 		panic(err)

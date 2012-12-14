@@ -7,11 +7,12 @@ package dag
 // Fubsy Node types for filesystem objects
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"syscall"
-	"errors"
 	"reflect"
+	"syscall"
+
 	"fubsy/types"
 )
 
@@ -23,7 +24,7 @@ type FileNode struct {
 type GlobNode struct {
 	// name: arbitrary unique string
 	nodebase
-	glob types.FuObject			// likely FuFileFinder or FuFinderList
+	glob types.FuObject // likely FuFileFinder or FuFinderList
 }
 
 // Lookup and return the named file node in dag. If it doesn't exist,
@@ -83,7 +84,7 @@ func MakeGlobNode(dag *DAG, glob types.FuObject) *GlobNode {
 func newGlobNode(name string, glob types.FuObject) *GlobNode {
 	return &GlobNode{
 		nodebase: makenodebase(name),
-		glob: glob,
+		glob:     glob,
 	}
 }
 
@@ -108,7 +109,7 @@ func (self *GlobNode) Expand(dag *DAG, ns types.Namespace) ([]Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	newnodes := []Node {}
+	newnodes := []Node{}
 	for _, fnobj := range filenames.List() {
 		// fnobj must be a FuString -- panic if not
 		fn := fnobj.(types.FuString).Value()

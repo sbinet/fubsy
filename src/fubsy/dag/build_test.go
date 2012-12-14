@@ -8,8 +8,10 @@ import (
 	"testing"
 	//"fmt"
 	"errors"
-	"github.com/stretchrcom/testify/assert"
+
 	"code.google.com/p/go-bit/bit"
+	"github.com/stretchrcom/testify/assert"
+
 	"fubsy/types"
 )
 
@@ -17,13 +19,13 @@ import (
 func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 	dag, executed := setupBuild()
 
-	expect := []buildexpect {
+	expect := []buildexpect{
 		{"tool1.o", BUILT},
-		{"misc.o",  BUILT},
-		{"util.o",  BUILT},
-		{"tool1",   BUILT},
+		{"misc.o", BUILT},
+		{"util.o", BUILT},
+		{"tool1", BUILT},
 		{"tool2.o", BUILT},
-		{"tool2",   BUILT},
+		{"tool2", BUILT},
 	}
 
 	bstate := dag.NewBuildState()
@@ -48,12 +50,12 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 	action := dag.lookup("misc.o").Action().(*stubaction)
 	action.ok = false
 
-	expect := []buildexpect {
+	expect := []buildexpect{
 		{"tool1.o", BUILT},
-		{"misc.o",  FAILED},
-		{"util.o",  BUILT},
+		{"misc.o", FAILED},
+		{"util.o", BUILT},
 		{"tool2.o", BUILT},
-		{"tool2",   BUILT},
+		{"tool2", BUILT},
 	}
 
 	bstate := dag.NewBuildState()
@@ -72,7 +74,7 @@ func setupBuild() (*DAG, *[]string) {
 
 	// add a stub action to every target node, so we know when each
 	// action's Execute() method is called
-	executed := []string {}
+	executed := []string{}
 	callback := func(name string) {
 		executed = append(executed, name)
 	}
@@ -108,7 +110,7 @@ func assertBuild(
 }
 
 type buildexpect struct {
-	name string
+	name  string
 	state NodeState
 }
 
@@ -152,7 +154,7 @@ func Test_BuildError_Error(t *testing.T) {
 
 	err.attempts = 17
 	err.failed = mknodelist(
-		dag, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j" ,"k")
+		dag, "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k")
 	assert.Equal(t,
 		"failed to build 11 of 17 targets: a, b, c, d, e, f, g, h, i, ...",
 		err.Error())

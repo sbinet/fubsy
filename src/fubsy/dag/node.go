@@ -37,7 +37,7 @@ const (
 var statenames []string
 
 func init() {
-	statenames = []string {
+	statenames = []string{
 		"UNKNOWN", "SOURCE", "BUILDING", "FAILED", "TAINTED", "BUILT"}
 }
 
@@ -109,7 +109,6 @@ type Node interface {
 	State() NodeState
 }
 
-
 // Convenient base type for Node implementations -- provides the
 // basics right out of the box. Real Node implementations still have
 // to take care of:
@@ -118,9 +117,9 @@ type Node interface {
 //   Changed()
 
 type nodebase struct {
-	name string
+	name   string
 	action Action
-	state NodeState
+	state  NodeState
 }
 
 func makenodebase(name string) nodebase {

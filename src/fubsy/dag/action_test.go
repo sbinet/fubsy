@@ -6,7 +6,9 @@ package dag
 
 import (
 	"testing"
+
 	"github.com/stretchrcom/testify/assert"
+
 	"fubsy/dsl"
 	"fubsy/types"
 )
@@ -32,7 +34,7 @@ func Test_SequenceAction_create(t *testing.T) {
 	// action 3: remove("*.o")
 	fcall := dsl.NewASTFunctionCall(
 		dsl.NewASTString("remove"),
-		[]dsl.ASTExpression {dsl.NewASTString("\"*.c\"")})
+		[]dsl.ASTExpression{dsl.NewASTString("\"*.c\"")})
 	action.AddFunctionCall(fcall)
 
 	assert.Equal(t, 3, len(action.subactions))

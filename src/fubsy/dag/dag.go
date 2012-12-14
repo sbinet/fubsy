@@ -33,11 +33,13 @@ package dag
 // and libstuff.so is a descendant of foo.h.
 
 import (
-	"io"
 	"fmt"
-	"strings"
+	"io"
 	"reflect"
+	"strings"
+
 	"code.google.com/p/go-bit/bit"
+
 	"fubsy/types"
 )
 
@@ -46,7 +48,7 @@ type DAG struct {
 	nodes []Node
 
 	// map node name to index (offset into nodes)
-	index map[string] int
+	index map[string]int
 
 	// the parents of every node
 	parents []*bit.Set
@@ -70,7 +72,7 @@ const (
 func NewDAG() *DAG {
 	return &DAG{
 		nodes: make([]Node, 0),
-		index: make(map[string] int),
+		index: make(map[string]int),
 	}
 }
 
@@ -108,7 +110,7 @@ func (self *DAG) Dump(writer io.Writer) {
 		parents := self.parents[id]
 		if !parents.IsEmpty() {
 			fmt.Fprintf(writer, "  parents:\n")
-			parents.Do(func (parentid int) {
+			parents.Do(func(parentid int) {
 				pnode := self.nodes[parentid]
 				fmt.Fprintf(writer, "    %04d: %s\n", parentid, pnode.Name())
 			})
@@ -171,7 +173,7 @@ func (self *DAG) DFS(start NodeSet, visit DFSVisitor) error {
 				return
 			}
 			if colour[pid] == GREY {
-				cycle := make([]int, len(path) + 1)
+				cycle := make([]int, len(path)+1)
 				copy(cycle, path)
 				cycle[len(path)] = pid
 				cycles = append(cycles, cycle)
@@ -183,7 +185,7 @@ func (self *DAG) DFS(start NodeSet, visit DFSVisitor) error {
 		if err != nil {
 			return err
 		}
-		path = path[0:len(path)-1]
+		path = path[0 : len(path)-1]
 		err = visit(id)
 		if err != nil {
 			return err
@@ -209,19 +211,19 @@ func (self *DAG) DFS(start NodeSet, visit DFSVisitor) error {
 }
 
 type CycleError struct {
-	dag *DAG
+	dag    *DAG
 	cycles [][]int
 }
 
 func (self CycleError) Error() string {
-	result := []string {
+	result := []string{
 		fmt.Sprintf("found %d dependency cycles:", len(self.cycles))}
 	for _, cycle := range self.cycles {
 		names := make([]string, len(cycle))
 		for i, id := range cycle {
 			names[i] = self.dag.nodes[id].Name()
 		}
-		result = append(result, "  " + strings.Join(names, " -> "))
+		result = append(result, "  "+strings.Join(names, " -> "))
 	}
 	return strings.Join(result, "\n")
 }
@@ -238,7 +240,7 @@ func (self *DAG) NewBuildState() *BuildState {
 // throw them away and start over again.
 func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) {
 	var errors []error
-	replacements := make(map[int] *bit.Set)
+	replacements := make(map[int]*bit.Set)
 	newdag := NewDAG()
 	for id, node := range self.nodes {
 		if !relevant.Contains(id) {
@@ -263,7 +265,7 @@ func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) 
 	// Second loop to rebuild parent info in the new DAG.
 	for oldid := range self.nodes {
 		newids := replacements[oldid]
-		if newids == nil {		// node not relevant (not preserved in new DAG)
+		if newids == nil { // node not relevant (not preserved in new DAG)
 			continue
 		}
 
@@ -321,8 +323,8 @@ func (self *DAG) addNode(node Node) (int, Node) {
 		oldtype := reflect.TypeOf(existing)
 		if newtype != oldtype {
 			panic(fmt.Sprintf(
-				"cannot add node '%s' (type %s): there is already a node " +
-				"with that name, but its type is %s",
+				"cannot add node '%s' (type %s): there is already a node "+
+					"with that name, but its type is %s",
 				name, newtype, oldtype))
 		}
 		return id, existing
@@ -343,7 +345,7 @@ func (self *DAG) addNode(node Node) (int, Node) {
 func (self *DAG) parentNodes(id int) []Node {
 	parents := self.parents[id]
 	result := make([]Node, 0, parents.Size())
-	parents.Do(func (parentid int) {
+	parents.Do(func(parentid int) {
 		result = append(result, self.nodes[parentid])
 	})
 	return result

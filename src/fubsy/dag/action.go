@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
 	"fubsy/dsl"
 	"fubsy/types"
 )
@@ -104,7 +105,6 @@ func (self *SequenceAction) AddAssignment(assignment *dsl.ASTAssignment) {
 func (self *SequenceAction) AddFunctionCall(fcall *dsl.ASTFunctionCall) {
 	self.AddAction(&FunctionCallAction{fcall: fcall})
 }
-
 
 func (self *CommandAction) String() string {
 	return self.raw.String()

@@ -5,19 +5,20 @@
 package dag
 
 import (
-	"testing"
-	"reflect"
 	"bytes"
-	"strconv"
 	"errors"
+	"reflect"
+	"strconv"
+	"testing"
 	//"fmt"
 	//"os"
 	//"os/exec"
-	"github.com/stretchrcom/testify/assert"
-	"code.google.com/p/go-bit/bit"
 
-	"fubsy/types"
+	"code.google.com/p/go-bit/bit"
+	"github.com/stretchrcom/testify/assert"
+
 	"fubsy/testutils"
+	"fubsy/types"
 )
 
 type stubnode struct {
@@ -81,13 +82,13 @@ func Test_DAG_DFS(t *testing.T) {
 	tdag.add("b", "d", "f", "g", "h")
 	tdag.add("c", "b", "e")
 	tdag.add("d", "g")
-	tdag.add("e",)
+	tdag.add("e")
 	tdag.add("f", "g")
-	tdag.add("g",)
-	tdag.add("h",)
+	tdag.add("g")
+	tdag.add("h")
 	dag := tdag.finish()
 
-	actual := []string {}
+	actual := []string{}
 	visit := func(id int) error {
 		actual = append(actual, dag.nodes[id].Name())
 		return nil
@@ -101,17 +102,17 @@ func Test_DAG_DFS(t *testing.T) {
 
 	start := bit.New()
 	start.AddRange(0, 7)
-	expect := []string {"g", "d", "f", "h", "b", "e", "c", "a"}
+	expect := []string{"g", "d", "f", "h", "b", "e", "c", "a"}
 	assertDFS(start, expect)
 
 	// start nodes: {c, f}
 	start = bit.New(2, 5)
-	expect = []string {"g", "d", "f", "h", "b", "e", "c"}
+	expect = []string{"g", "d", "f", "h", "b", "e", "c"}
 	assertDFS(start, expect)
 
 	// start nodes: {d, f}
 	start = bit.New(3, 5)
-	expect = []string {"g", "d", "f"}
+	expect = []string{"g", "d", "f"}
 	assertDFS(start, expect)
 }
 
@@ -120,7 +121,7 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 	var dag *DAG
 	var err error
 
-	visit := func(id int) error {return nil}
+	visit := func(id int) error { return nil }
 
 	tdag = newtestdag()
 	tdag.add("0", "1")
@@ -159,10 +160,10 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 	err = dag.DFS(NodeSet(start), visit)
 	cycerr := err.(CycleError)
 	assert.Equal(t, 4, len(cycerr.cycles))
-	assert.Equal(t, []int {0, 2, 4, 6, 2}, cycerr.cycles[0])
-	assert.Equal(t, []int {0, 2, 4, 8, 0}, cycerr.cycles[1])
-	assert.Equal(t, []int {1, 3, 5, 7, 3}, cycerr.cycles[2])
-	assert.Equal(t, []int {1, 3, 5, 9, 1}, cycerr.cycles[3])
+	assert.Equal(t, []int{0, 2, 4, 6, 2}, cycerr.cycles[0])
+	assert.Equal(t, []int{0, 2, 4, 8, 0}, cycerr.cycles[1])
+	assert.Equal(t, []int{1, 3, 5, 7, 3}, cycerr.cycles[2])
+	assert.Equal(t, []int{1, 3, 5, 9, 1}, cycerr.cycles[3])
 }
 
 func Test_DAG_DFS_error(t *testing.T) {
@@ -171,7 +172,7 @@ func Test_DAG_DFS_error(t *testing.T) {
 	tdag.add("1", "3", "5")
 	tdag.add("2", "4")
 	tdag.add("3", "5")
-	tdag.add("4", "3", "2")		// dependency cycle goes unreported
+	tdag.add("4", "3", "2") // dependency cycle goes unreported
 	tdag.add("5")
 	dag := tdag.finish()
 
@@ -186,12 +187,12 @@ func Test_DAG_DFS_error(t *testing.T) {
 
 	err := dag.DFS(bit.New(0), visit)
 	assert.Equal(t, "bite me", err.Error())
-	assert.Equal(t, []int {5, 3, 4}, visited)
+	assert.Equal(t, []int{5, 3, 4}, visited)
 }
 
 func Test_DAG_FindRelevantNodes(t *testing.T) {
 	dag := makeSimpleGraph()
-	goal := bit.New(0, 1)		// all final targets: tool1, tool2
+	goal := bit.New(0, 1) // all final targets: tool1, tool2
 	relevant := dag.FindRelevantNodes(NodeSet(goal))
 	assert.Equal(t, "{0,1,2,3,4,5,6,7,8,9,10,11}", setToString(relevant))
 
@@ -256,8 +257,8 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	touchSourceFiles(dag)
 
 	dag = NewDAG()
-	node0 := MakeGlobNode(dag, types.NewFileFinder([]string {"**/util.[ch]"}))
-	node1 := MakeGlobNode(dag, types.NewFileFinder([]string {"*.h"}))
+	node0 := MakeGlobNode(dag, types.NewFileFinder([]string{"**/util.[ch]"}))
+	node1 := MakeGlobNode(dag, types.NewFileFinder([]string{"*.h"}))
 	node2 := MakeFileNode(dag, "util.o")
 	_ = node1
 	dag.addParent(node2, node0)
@@ -281,7 +282,7 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	assert.Equal(t, "util.h", rdag.nodes[1].(*FileNode).name)
 
 	buf := new(bytes.Buffer)
-	dag.Dump(buf)				// no panic
+	dag.Dump(buf) // no panic
 
 	// all nodes are relevant, so the second GlobNode will be expanded
 	relevant.AddRange(0, len(dag.nodes))
@@ -353,12 +354,12 @@ func makeSimpleGraph() *DAG {
 // string-based DAG that's easy to construct, and then gets converted
 // to the real thing
 type testdag struct {
-	nodes []string
-	parents map[string] []string
+	nodes   []string
+	parents map[string][]string
 }
 
 func newtestdag() *testdag {
-	return &testdag{parents: make(map[string] []string)}
+	return &testdag{parents: make(map[string][]string)}
 }
 
 func (self *testdag) add(name string, parent ...string) {
@@ -381,7 +382,7 @@ func (self *testdag) finish() *DAG {
 }
 
 func touchSourceFiles(dag *DAG) {
-	filenames := []string {}
+	filenames := []string{}
 	for id, node := range dag.nodes {
 		if dag.parents[id].IsEmpty() {
 			filenames = append(filenames, node.Name())
@@ -405,7 +406,7 @@ func newNodeSet(dag *DAG, names ...string) NodeSet {
 // test-friendly way to formatting a NodeSet as a string
 func setToString(set_ NodeSet) string {
 	set := (*bit.Set)(set_)
-	result := make([]byte, 1, set.Size() * 3)
+	result := make([]byte, 1, set.Size()*3)
 	result[0] = '{'
 	set.Do(func(n int) {
 		result = strconv.AppendInt(result, int64(n), 10)

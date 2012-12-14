@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
 	"code.google.com/p/go-bit/bit"
+
 	"fubsy/types"
 )
 
@@ -83,10 +85,10 @@ func (self *BuildState) BuildTargets(stack types.NamespaceStack, targets NodeSet
 	return err
 }
 
-func (self *BuildState) getChangeStates() map[NodeState] bool {
+func (self *BuildState) getChangeStates() map[NodeState]bool {
 	// Default is like tup: only check original source nodes and nodes
 	// that have just been built.
-	changestates := make(map[NodeState] bool)
+	changestates := make(map[NodeState]bool)
 	changestates[SOURCE] = true
 	changestates[BUILT] = true
 	if self.checkAll() {
@@ -120,24 +122,24 @@ func checkInitialState(node Node) {
 // non-nil err if there were unexpected node errors (error checking
 // existence or change status).
 func (self *BuildState) inspectParents(
-	changestates map[NodeState] bool, id int, node Node) (
+	changestates map[NodeState]bool, id int, node Node) (
 	missing, stale, tainted bool, err error) {
 
 	var exists, changed bool
-	exists, err = node.Exists()	// obvious rebuild (unless tainted)
+	exists, err = node.Exists() // obvious rebuild (unless tainted)
 	if err != nil {
 		return
 	}
 	missing = !exists
-	stale = false				// need to rebuild this node
-	tainted = false				// failures upstream: do not rebuild
+	stale = false   // need to rebuild this node
+	tainted = false // failures upstream: do not rebuild
 
 	parentnodes := self.dag.parentNodes(id)
 	for _, parent := range parentnodes {
 		pstate := parent.State()
 		if pstate == FAILED || pstate == TAINTED {
 			tainted = true
-			return				// no further inspection required
+			return // no further inspection required
 		}
 
 		// Try *really hard* to avoid calling parent.Changed(), because
@@ -255,7 +257,7 @@ func joinNodes(delim string, max int, nodes []Node) string {
 		svalues[i] = nodes[i].String()
 	}
 	if len(nodes) > max {
-		svalues[max - 1] = "..."
+		svalues[max-1] = "..."
 	}
 	return strings.Join(svalues, delim)
 }
