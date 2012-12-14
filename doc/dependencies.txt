@@ -1,0 +1,97 @@
+3rd-Party Dependencies in Fubsy
+===============================
+
+Fubsy depends on:
+
+  * Go (the gc compiler and associated tools)
+  * some third-party tools and libraries, all written in Go
+
+You must have the Go compiler and tools installed on your system in
+order to build Fubsy. The other dependencies are included directly in
+Fubsy's source control repository, e.g. golex is in
+src/github.com/cznic/golex.
+
+(I used Mercurial subrepos to track third-party dependencies for a
+while, but it's more trouble than it's worth. I think subrepos are
+more appropriate for an organization with many internal projects that
+have to be associated with each other. IMHO subrepos are not a great
+way to track third-party dependencies, especially when those
+dependencies are source-level, small, and quick to build.)
+
+Describing dependencies
+-----------------------
+
+$BASE is the "package" path that specifies the upstream source
+repository. $PKG is the path to actual buildable Go code. These are
+often are the same, e.g. ::
+
+    BASE=github.com/cznic/golex
+    PKG=github.com/cznic/golex
+
+But sometimes they are different::
+
+    BASE=code.google.com/p/go-bit
+    PKG=code.google.com/p/go-bit/bit
+
+Adding a new dependency
+-----------------------
+
+To add a new third-party dependency ``$PKG``::
+
+    export GOPATH=$PWD
+    go get -v $BASE
+    go install -v $PKG
+    go test $PKG
+
+One or both of these steps will fail if the package is not compatible
+with ``go get``. Once that's good, commit the new dependency:
+
+    rm -rf `find src/$BASE -name .hg -o -name .git -o -name .bzr`
+    hg add src/$BASE
+    hg commit -m"add new dependency $BASE"
+
+Modify some Fubsy code to use the new package, and make sure the unit
+tests touch that code. Then commit that change:
+
+    hg commit -m"<topic>: use $BASE to make everything spiffy"
+
+It's OK to fold those two commits together if the change to Fubsy code
+is small and well contained.
+
+Updating a dependency
+---------------------
+
+The process is quite similar::
+
+    export GOPATH=$PWD
+    rm -rf src/$BASE
+    go get -v $BASE
+    go install -v $PKG
+    go test $PKG
+
+Make sure Fubsy still builds and passes its tests::
+
+    ./build.sh
+
+If any code changes are required, make them now. Commit everything
+together:
+
+    rm -rf `find src/$BASE -name .hg -o -name .git -o -name .bzr`
+    hg commit -m"update to latest version of $BASE" src/$BASE
+
+Bonus points for including the upstream commit ID/changeset
+ID/revision number in the commit message.
+
+Dependencies that come in a closely related cluster -- like golex and
+friends -- should be added/updated en masse.
+
+Modifying a dependency
+----------------------
+
+Do NOT modify any of Fubsy's dependencies in place. Instead, fork the
+upstream repository, make your required changes, and send them a
+patch/pull request/whatever. If upstream is unresponsive or refuses
+the change, and you absolutely cannot find another way to do the same
+thing, then change Fubsy to depend on your fork instead. That means 1)
+rename the existing dependency to match your repository location, and
+2) follow the "update" procedure.
