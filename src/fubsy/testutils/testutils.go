@@ -5,10 +5,10 @@
 package testutils
 
 import (
-	"testing"
+	"io/ioutil"
 	"os"
 	"path/filepath"
-	"io/ioutil"
+	"testing"
 )
 
 func AssertError(t *testing.T, expect string, actual error) {

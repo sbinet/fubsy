@@ -5,11 +5,11 @@
 package main
 
 import (
-	"os"
 	"fmt"
+	"os"
 
-	"fubsy/runtime"
 	"fubsy/dsl"
+	"fubsy/runtime"
 )
 
 func main() {
@@ -34,8 +34,8 @@ func main() {
 func checkErrors(prefix string, errors []error) {
 	if len(errors) > 0 {
 		for _, err := range errors {
-	 		fmt.Fprintln(os.Stderr, prefix, err)
+			fmt.Fprintln(os.Stderr, prefix, err)
 		}
-	 	os.Exit(1)
+		os.Exit(1)
 	}
 }
