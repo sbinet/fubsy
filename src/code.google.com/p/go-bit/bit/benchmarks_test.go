@@ -67,13 +67,13 @@ func BenchmarkDo(b *testing.B) {
 	S.Do(func(i int) {})
 }
 
-func BenchmarkSetWord(b *testing.B) {
+func BenchmarkNext(b *testing.B) {
 	b.StopTimer()
-	S := New().SetWord(MaxInt>>6, 1)
+	S := BuildTestSet(b.N)
 	b.StartTimer()
 
-	for i := 0; i < b.N; i++ {
-		S.SetWord(i&(MaxInt>>6), 1)
+	for n, ok := S.Next(-1); ok; {
+		n, ok = S.Next(n)
 	}
 }
 

@@ -29,6 +29,28 @@ func ExampleSet_Do() {
 	// Output: sum {1..4} = 10
 }
 
+func ExampleSet_Next() {
+	A := bit.New(2, 3, 5, 7, 11, 13)
+
+	// Print all single digit numbers in A.
+	for n, ok := A.Next(-1); ok && n < 10; n, ok = A.Next(n) {
+		fmt.Printf("%d ", n)
+	}
+	// Output: 2 3 5 7
+}
+
+func ExampleSet_Previous() {
+	A := bit.New(2, 3, 5, 7)
+
+	// Print all numbers in A in reverse order.
+	if !A.IsEmpty() {
+		for n, ok := A.Max(), true; ok; n, ok = A.Previous(n) {
+			fmt.Printf("%d ", n)
+		}
+	}
+	// Output: 7 5 3 2
+}
+
 func ExampleSet_operators() {
 	A := new(bit.Set).AddRange(0, 100)     // A = {0..99}
 	B := bit.New(0, 200).AddRange(50, 150) // B = {0, 50..149, 200}
@@ -61,14 +83,11 @@ func ExampleSet_words() {
 func ExampleSet_eratosthenes() {
 	const max = 50
 	sieve := bit.New().AddRange(2, max)
-	primes := bit.New()
-	for !sieve.IsEmpty() {
-		p := sieve.RemoveMin()
-		primes.Add(p)
+	for p, ok := 2, true; ok; p, ok = sieve.Next(p) {
 		for n := 2 * p; n <= max; n += p {
 			sieve.Remove(n)
 		}
 	}
-	fmt.Println(primes)
+	fmt.Println(sieve)
 	// Output: {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47}
 }
