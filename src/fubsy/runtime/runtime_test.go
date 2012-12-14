@@ -64,6 +64,22 @@ func Test_Runtime_runMainPhase_valid(t *testing.T) {
 	assert.Equal(t, expect, buf.String())
 }
 
+func Test_Runtime_runMainPhase_error(t *testing.T) {
+	// runtime error evaluating a build rule (cannot add string to filefinder)
+	script := "" +
+		"main {\n" +
+		"  \"foo.jar\": <*.java> + \"dep.jar\" {\n" +
+		"    \"javac && jar\"\n" +
+		"  }\n" +
+		"}\n"
+	rt := parseScript(t, "test.fubsy", script)
+	errors := rt.runMainPhase()
+	assert.Equal(t, 1, len(errors))
+	assert.Equal(t,
+		"unsupported operation: cannot add string to filefinder",
+		errors[0].Error())
+}
+
 func parseScript(t *testing.T, filename string, content string) *Runtime {
 	ast, errors := dsl.ParseString(filename, content)
 	assert.Equal(t, 0, len(errors)) // syntax must be good

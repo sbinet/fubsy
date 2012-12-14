@@ -77,7 +77,8 @@ func (self *Runtime) runMainPhase() []error {
 		case *dsl.ASTAssignment:
 			err = self.assign(node, self.stack)
 		case *dsl.ASTBuildRule:
-			rule, err := self.makeRule(node)
+			var rule *BuildRule
+			rule, err = self.makeRule(node)
 			if err == nil {
 				self.addRule(rule)
 			}
