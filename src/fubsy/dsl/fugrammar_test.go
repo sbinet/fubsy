@@ -5,9 +5,9 @@
 package dsl
 
 import (
-	"testing"
 	"bytes"
 	"github.com/stretchrcom/testify/assert"
+	"testing"
 )
 
 func Test_fuParse_valid_imports(t *testing.T) {
@@ -25,9 +25,9 @@ func Test_fuParse_valid_imports(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := &ASTRoot{
-		children: []ASTNode {
-			&ASTImport{plugin: []string {"ding"}},
-			&ASTImport{plugin: []string {"dong", "ping", "whoo"}},
+		children: []ASTNode{
+			&ASTImport{plugin: []string{"ding"}},
+			&ASTImport{plugin: []string{"dong", "ping", "whoo"}},
 		}}
 	assertParses(t, expect, tokens)
 }
@@ -48,15 +48,15 @@ func Test_fuParse_valid_phase(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTPhase{
-			name: "main",
-			children: []ASTNode {
+				name: "main",
+				children: []ASTNode{
 					&ASTString{value: "foo"},
 					&ASTAssignment{
 						target: "x",
-						expr: &ASTString{value: "bar"},
-	}}}}}
+						expr:   &ASTString{value: "bar"},
+					}}}}}
 	assertParses(t, expect, tokens)
 }
 
@@ -69,11 +69,11 @@ func Test_fuParse_empty_phase(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTPhase{
-				name: "blah",
-				children: []ASTNode {}},
-	}}
+				name:     "blah",
+				children: []ASTNode{}},
+		}}
 	assertParses(t, expect, tokens)
 }
 
@@ -94,14 +94,14 @@ func Test_fuParse_expr_1(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTPhase{
 				name: "blorp",
-				children: []ASTNode {
+				children: []ASTNode{
 					&ASTAssignment{
 						target: "stuff",
-						expr: &ASTName{name: "foo"},
-	}}}}}
+						expr:   &ASTName{name: "foo"},
+					}}}}}
 	assertParses(t, expect, tokens)
 }
 
@@ -124,18 +124,18 @@ func Test_fuParse_expr_2(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := &ASTRoot{
-		children: []ASTNode {
-		&ASTPhase{
-			name: "floo",
-			children: []ASTNode {
-				&ASTAdd{
-					op1: &ASTAdd{
-						op1: &ASTName{name: "a"},
-						op2: &ASTName{name: "b"}},
-					op2: &ASTFunctionCall{
-						function: &ASTName{name: "c"},
-						args: []ASTExpression {},
-	}}}}}}
+		children: []ASTNode{
+			&ASTPhase{
+				name: "floo",
+				children: []ASTNode{
+					&ASTAdd{
+						op1: &ASTAdd{
+							op1: &ASTName{name: "a"},
+							op2: &ASTName{name: "b"}},
+						op2: &ASTFunctionCall{
+							function: &ASTName{name: "c"},
+							args:     []ASTExpression{},
+						}}}}}}
 	assertParses(t, expect, tokens)
 }
 
@@ -154,16 +154,14 @@ func Test_fuParse_funccall_1(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTPhase{
 				name: "frob",
-				children: []ASTNode {
+				children: []ASTNode{
 					&ASTFunctionCall{
 						function: &ASTName{name: "foo"},
-						args: []ASTExpression {}},
-				},
-			},
-	}}
+						args:     []ASTExpression{}},
+				}}}}
 	assertParses(t, expect, tokens)
 }
 
@@ -172,23 +170,23 @@ var _funccall_expect *ASTRoot
 
 func init() {
 	_funccall_expect = &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTPhase{
 				name: "frob",
-				children: []ASTNode {
+				children: []ASTNode{
 					&ASTFunctionCall{
 						function: &ASTName{name: "foo"},
-						args: []ASTExpression {
+						args: []ASTExpression{
 							&ASTString{value: "bip"},
 							&ASTName{name: "x"},
-	}}}}}}
+						}}}}}}
 }
 
 func Test_fuParse_funccall_2(t *testing.T) {
 	// parse:
 	// frob {
 	//   foo("bip", x)
-    // }
+	// }
 	tokens := []minitok{
 		{NAME, "frob"},
 		{'{', "{"},
@@ -245,16 +243,16 @@ func Test_fuParse_filelist(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTPhase{
 				name: "main",
-				children: []ASTNode {
+				children: []ASTNode{
 					&ASTAssignment{
 						target: "x",
 						expr: &ASTFileList{
-							patterns: []string {
+							patterns: []string{
 								"**/*.c",
-	}}}}}}}
+							}}}}}}}
 	assertParses(t, expect, tokens)
 }
 
@@ -288,19 +286,19 @@ func Test_fuParse_buildrule_1(t *testing.T) {
 		{EOF, ""},
 	}
 	expect := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTPhase{
 				name: "main",
-				children: []ASTNode {
+				children: []ASTNode{
 					&ASTBuildRule{
 						targets: &ASTName{name: "a"},
 						sources: &ASTString{value: "x"},
-						children: []ASTNode {
+						children: []ASTNode{
 							&ASTString{value: "foo bar"},
 							&ASTFunctionCall{
 								function: &ASTName{name: "bip"},
-								args: []ASTExpression {},
-	}}}}}}}
+								args:     []ASTExpression{},
+							}}}}}}}
 	assertParses(t, expect, tokens)
 }
 
@@ -309,13 +307,13 @@ func Test_fuParse_valid_inline(t *testing.T) {
 		{PLUGIN, "plugin"},
 		{NAME, "whatever"},
 		{L3BRACE, "{{{"},
-		{INLINE, "beep!\"\nblam'" },
+		{INLINE, "beep!\"\nblam'"},
 		{R3BRACE, "}}}"},
 		{EOL, "\n"},
 		{EOF, ""},
 	}
 	expect := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTInline{lang: "whatever", content: "beep!\"\nblam'"}}}
 	assertParses(t, expect, tokens)
 }
@@ -323,7 +321,7 @@ func Test_fuParse_valid_inline(t *testing.T) {
 func Test_fuParse_invalid(t *testing.T) {
 	reset()
 	tokens := toklist([]minitok{
-		{QSTRING, "\"ding\"" },
+		{QSTRING, "\"ding\""},
 		{'<', "<"},
 		{EOF, ""},
 	})
@@ -356,8 +354,8 @@ func Test_fuParse_ast_locations(t *testing.T) {
 	// notional input:
 	// "main{\nfoo = bar(\n  )\n}\n"
 
-	fi := &fileinfo{"foo.txt", []int {0, 6, 17, 21, 23, 24}}
-	tokens := []token {
+	fi := &fileinfo{"foo.txt", []int{0, 6, 17, 21, 23, 24}}
+	tokens := []token{
 		{Location{fi, 0, 4}, NAME, "main"},
 		{Location{fi, 4, 5}, '{', "{"},
 		{Location{fi, 5, 6}, EOL, "\n"},
@@ -403,7 +401,7 @@ func reset() {
 
 // useful for constructing test data
 type minitok struct {
-	id int
+	id   int
 	text string
 }
 
@@ -446,7 +444,7 @@ func assertSyntaxError(t *testing.T, badtext string, parser *Parser) {
 }
 
 func assertASTEquals(t *testing.T, expect *ASTRoot, actual *ASTRoot) {
-	if ! expect.Equal(actual) {
+	if !expect.Equal(actual) {
 		expectbuf := new(bytes.Buffer)
 		actualbuf := new(bytes.Buffer)
 		expect.Dump(expectbuf, "")

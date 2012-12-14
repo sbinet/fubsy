@@ -5,10 +5,10 @@
 package dsl
 
 import (
-	"testing"
-	"reflect"
 	"bytes"
 	"github.com/stretchrcom/testify/assert"
+	"reflect"
+	"testing"
 )
 
 func Test_ASTRoot_Equal(t *testing.T) {
@@ -20,11 +20,11 @@ func Test_ASTRoot_Equal(t *testing.T) {
 	if !node1.Equal(node2) {
 		t.Error("empty root nodes not equal")
 	}
-	node1.children = []ASTNode {&ASTString{}}
+	node1.children = []ASTNode{&ASTString{}}
 	if node1.Equal(node2) {
 		t.Error("non-empty root node equals empty root node")
 	}
-	node2.children = []ASTNode {&ASTString{}}
+	node2.children = []ASTNode{&ASTString{}}
 	if !node1.Equal(node2) {
 		t.Error("root nodes with one child each not equal")
 	}
@@ -37,28 +37,28 @@ func Test_ASTRoot_Equal(t *testing.T) {
 
 func Test_ASTRoot_ListPlugins(t *testing.T) {
 	root := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTPhase{},
 			&ASTPhase{},
-			&ASTImport{plugin: []string {"ding"}},
+			&ASTImport{plugin: []string{"ding"}},
 			&ASTInline{},
-			&ASTImport{plugin: []string {"meep", "beep"}},
-	}}
-	expect := [][]string {{"ding"}, {"meep", "beep"}}
+			&ASTImport{plugin: []string{"meep", "beep"}},
+		}}
+	expect := [][]string{{"ding"}, {"meep", "beep"}}
 	actual := root.ListPlugins()
 	assert.True(t, reflect.DeepEqual(expect, actual),
-	 	"expected\n%v\nbut got\n%v", expect, actual)
+		"expected\n%v\nbut got\n%v", expect, actual)
 }
 
 func Test_ASTRoot_Phase(t *testing.T) {
 	root := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTImport{},
 			&ASTPhase{name: "meep"},
 			&ASTInline{},
 			&ASTPhase{name: "meep"}, // duplicate is invisible
 			&ASTPhase{name: "bong"},
-	}}
+		}}
 	var expect *ASTPhase
 	var actual *ASTPhase
 	actual = root.FindPhase("main")
@@ -90,12 +90,12 @@ func Test_ASTFileList_Equal(t *testing.T) {
 		"list node not equal to itself")
 	assert.True(t, node1.Equal(node2),
 		"empty list nodes not equal")
-	node1.patterns = []string {"bop"}
+	node1.patterns = []string{"bop"}
 	assert.True(t, node1.Equal(node1),
 		"non-empty list node not equal to itself")
 	assert.False(t, node1.Equal(node2),
 		"non-empty list node equal to empty list node")
-	node2.patterns = []string {"pop"}
+	node2.patterns = []string{"pop"}
 	assert.False(t, node1.Equal(node2),
 		"list node equal to list node with different element")
 	node2.patterns[0] = "bop"
@@ -166,7 +166,7 @@ func Test_ASTName_Equal_location(t *testing.T) {
 	assert.True(t, name1.Equal(name2),
 		"obvious equality fails")
 
-	fileinfo := &fileinfo{"foo.txt", []int {}}
+	fileinfo := &fileinfo{"foo.txt", []int{}}
 	name1.location = Location{fileinfo, 0, 5}
 	assert.True(t, name1.Equal(name2),
 		"equality fails with name1.location set")
@@ -184,14 +184,14 @@ func Test_ASTFunctionCall_Equal_location(t *testing.T) {
 	// location is irrelevant to comparison
 	fcall1 := &ASTFunctionCall{
 		function: &ASTName{name: "foo"},
-		args: []ASTExpression {&ASTString{value: "bar"}}}
+		args:     []ASTExpression{&ASTString{value: "bar"}}}
 	fcall2 := &ASTFunctionCall{
 		function: &ASTName{name: "foo"},
-		args: []ASTExpression {&ASTString{value: "bar"}}}
+		args:     []ASTExpression{&ASTString{value: "bar"}}}
 	assert.True(t, fcall1.Equal(fcall2),
 		"obvious equality fails")
 
-	fileinfo := &fileinfo{"foo.txt", []int {}}
+	fileinfo := &fileinfo{"foo.txt", []int{}}
 	fcall1.location = Location{fileinfo, 3, 18}
 	assert.True(t, fcall1.Equal(fcall2),
 		"equality fails when fcall1 has location but fcall2 does not")

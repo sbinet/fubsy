@@ -5,15 +5,15 @@
 package dsl
 
 import (
-	"testing"
 	"fmt"
-	"strings"
 	"github.com/stretchrcom/testify/assert"
+	"strings"
+	"testing"
 )
 
 func TestScan_valid_1(t *testing.T) {
 	input := "xyz <foo*bar\n > # comment\n"
-	expect := []minitok {
+	expect := []minitok{
 		{NAME, "xyz"},
 		{'<', "<"},
 		{FILEPATTERN, "foo*bar"},
@@ -23,9 +23,9 @@ func TestScan_valid_1(t *testing.T) {
 	tokens := scan(input)
 	assertScan(t, expect, tokens)
 	assertLocations(t, tokens,
-		 0,  3, 1,
-		 4,  5, 1,
-		 5, 12, 1,
+		0, 3, 1,
+		4, 5, 1,
+		5, 12, 1,
 		14, 15, 2,
 		25, 26, 2)
 }
@@ -34,7 +34,7 @@ func TestScan_eof(t *testing.T) {
 	// input with no trailing newline generates a synthetic EOL
 	// (text == "" so we can tell it was EOF)
 	input := "main{  \n\"borf\""
-	expect := []minitok {
+	expect := []minitok{
 		{NAME, "main"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -44,16 +44,16 @@ func TestScan_eof(t *testing.T) {
 	tokens := scan(input)
 	assertScan(t, expect, tokens)
 	assertLocations(t, tokens,
-		 0,  4, 1,
-		 4,  5, 1,
-		 7,  8, 1,
-		 8, 14, 2,
+		0, 4, 1,
+		4, 5, 1,
+		7, 8, 1,
+		8, 14, 2,
 		14, 14, 2)
 }
 
 func TestScan_filelist(t *testing.T) {
 	input := "bop { \n<**/*.[ch] [a-z]*.o\n>}"
-	expect := []minitok {
+	expect := []minitok{
 		{NAME, "bop"},
 		{'{', "{"},
 		{EOL, "\n"},
@@ -67,11 +67,11 @@ func TestScan_filelist(t *testing.T) {
 	tokens := scan(input)
 	assertScan(t, expect, tokens)
 	assertLocations(t, tokens,
-		 0,  3, 1,
-		 4,  5, 1,
-		 6,  7, 1,
-		 7,  8, 2,
-		 8, 17, 2,
+		0, 3, 1,
+		4, 5, 1,
+		6, 7, 1,
+		7, 8, 2,
+		8, 17, 2,
 		18, 26, 2,
 		27, 28, 3,
 		28, 29, 3,
@@ -80,7 +80,7 @@ func TestScan_filelist(t *testing.T) {
 
 func TestScan_valid_2(t *testing.T) {
 	input := "main{\"foo\"<bar( )baz>} #ignore"
-	expect := []minitok {
+	expect := []minitok{
 		{NAME, "main"},
 		{'{', "{"},
 		{QSTRING, "\"foo\""},
@@ -96,7 +96,7 @@ func TestScan_valid_2(t *testing.T) {
 
 func TestScan_keywords(t *testing.T) {
 	input := "plugim import _import important .plugin\n"
-	expect := []minitok {
+	expect := []minitok{
 		{NAME, "plugim"},
 		{IMPORT, "import"},
 		{NAME, "_import"},
@@ -110,7 +110,7 @@ func TestScan_keywords(t *testing.T) {
 
 func TestScan_inline_1(t *testing.T) {
 	input := " plugin bob\n\n{{{yo\nhello\nthere\n}}}"
-	expect := []minitok {
+	expect := []minitok{
 		{PLUGIN, "plugin"},
 		{NAME, "bob"},
 		{EOL, "\n"},
@@ -122,8 +122,8 @@ func TestScan_inline_1(t *testing.T) {
 	tokens := scan(input)
 	assertScan(t, expect, tokens)
 	assertLocations(t, tokens,
-		 1,  7, 1,
-		 8, 11, 1,
+		1, 7, 1,
+		8, 11, 1,
 		11, 12, 1,
 		13, 16, 3,
 		16, 31, 3,
@@ -142,7 +142,7 @@ func TestScan_inline_2(t *testing.T) {
 	// threw a bunch of punctuation into the inline text to be sure
 	// that works too
 	input := "\n\nplugin\ntim{{{ any!chars\"are\nallowed'here\n}}}\n"
-	expect := []minitok {
+	expect := []minitok{
 		{PLUGIN, "plugin"},
 		{EOL, "\n"},
 		{NAME, "tim"},
@@ -154,9 +154,9 @@ func TestScan_inline_2(t *testing.T) {
 	tokens := scan(input)
 	assertScan(t, expect, tokens)
 	assertLocations(t, tokens,
-		 2,  8, 3,
-		 8,  9, 3,
-		 9, 12, 4,
+		2, 8, 3,
+		8, 9, 3,
+		9, 12, 4,
 		12, 15, 4,
 		15, 43, 4,
 		43, 46, 6,
@@ -166,7 +166,7 @@ func TestScan_inline_2(t *testing.T) {
 func TestScan_inline_unclosed_1(t *testing.T) {
 	// bad input: make sure unclosed {{{ is not an infinite loop!
 	input := " {{{bip\nbop!["
-	expect := []minitok {
+	expect := []minitok{
 		{L3BRACE, "{{{"},
 		{INLINE, "bip\nbop!["},
 		{EOL, ""},
@@ -174,15 +174,15 @@ func TestScan_inline_unclosed_1(t *testing.T) {
 	tokens := scan(input)
 	assertScan(t, expect, tokens)
 	assertLocations(t, tokens,
-		 1,  4, 1,
-		 4, 13, 1,
+		1, 4, 1,
+		4, 13, 1,
 		13, 13, 2)
 }
 
 func TestScan_inline_unclosed_2(t *testing.T) {
 	// very similar to above, but with incomplete }}}
 	input := " {{{bip\nbop![\n}}"
-	expect := []minitok {
+	expect := []minitok{
 		{L3BRACE, "{{{"},
 		{INLINE, "bip\nbop![\n}}"},
 		{EOL, ""},
@@ -190,14 +190,14 @@ func TestScan_inline_unclosed_2(t *testing.T) {
 	tokens := scan(input)
 	assertScan(t, expect, tokens)
 	assertLocations(t, tokens,
-		 1,  4, 1,
-		 4, 16, 1,
+		1, 4, 1,
+		4, 16, 1,
 		16, 16, 3)
 }
 
 func TestScan_inline_consecutive(t *testing.T) {
 	input := "{{{\nbop\n}}}\n\n{{{meep\n}}}\n"
-	expect := []minitok {
+	expect := []minitok{
 		{L3BRACE, "{{{"},
 		{INLINE, "\nbop\n"},
 		{R3BRACE, "}}}"},
@@ -212,7 +212,7 @@ func TestScan_inline_consecutive(t *testing.T) {
 
 func TestScan_internal_newlines(t *testing.T) {
 	input := "hello\n(\"beep\" +\n\"bop\"\n)\n foo"
-	expect := []minitok {
+	expect := []minitok{
 		{NAME, "hello"},
 		{EOL, "\n"},
 		{'(', "("},
@@ -227,10 +227,10 @@ func TestScan_internal_newlines(t *testing.T) {
 	tokens := scan(input)
 	assertScan(t, expect, tokens)
 	assertLocations(t, tokens,
-		 0,  5, 1,
-		 5,  6, 1,
-		 6,  7, 2,
-		 7, 13, 2,
+		0, 5, 1,
+		5, 6, 1,
+		6, 7, 2,
+		7, 13, 2,
 		14, 15, 2,
 		16, 21, 3,
 		22, 23, 4,
@@ -242,7 +242,7 @@ func TestScan_internal_newlines(t *testing.T) {
 func TestScan_invalid(t *testing.T) {
 	input := "\n !-\"whee]\" whizz&^%\n?bang"
 	input = "\n !-\"whee]\" whizz&^%\n?bang"
-	expect := []minitok {
+	expect := []minitok{
 		{BADTOKEN, "!-"},
 		{QSTRING, "\"whee]\""},
 		{NAME, "whizz"},
@@ -251,12 +251,12 @@ func TestScan_invalid(t *testing.T) {
 		{BADTOKEN, "?"},
 		{NAME, "bang"},
 		{EOL, ""},
-		}
+	}
 	tokens := scan(input)
 	assertScan(t, expect, tokens)
 	assertLocations(t, tokens,
-		 2,  4, 2,
-		 4, 11, 2,
+		2, 4, 2,
+		4, 11, 2,
 		12, 17, 2,
 		17, 20, 2,
 		20, 21, 2,
@@ -298,31 +298,31 @@ func assertTokens(t *testing.T, expect []minitok, actual []token) {
 // locinfo is a sequence of start, end, startline triples
 // (i.e. length must be N*3)
 func assertLocations(t *testing.T, tokens []token, locinfo ...int) {
-	tokens = tokens[:len(tokens) - 1] // ignore EOF token
+	tokens = tokens[:len(tokens)-1] // ignore EOF token
 	needlen := len(tokens) * 3
 	if len(locinfo) != needlen {
 		// this is not a test failure, it's a bug in the test code
 		panic(fmt.Sprintf(
-			"variable argument list must be of length %d " +
-			"(3 per token: start, end, lineno), but got %d",
+			"variable argument list must be of length %d "+
+				"(3 per token: start, end, lineno), but got %d",
 			needlen, len(locinfo)))
 	}
 	for i, tok := range tokens {
 		prefix := fmt.Sprintf("token %d %#v: ", i, tok.text)
 
-		start := locinfo[i*3 + 0]
-		end := locinfo[i*3 + 1]
-		startline := locinfo[i*3 + 2]
+		start := locinfo[i*3+0]
+		end := locinfo[i*3+1]
+		startline := locinfo[i*3+2]
 		assert.Equal(t, start, tok.location.start,
-			prefix + "expected start == %d, but got %d",
+			prefix+"expected start == %d, but got %d",
 			start, tok.location.start)
 		assert.Equal(t, end, tok.location.end,
-			prefix + "expected end == %d, but got %d",
+			prefix+"expected end == %d, but got %d",
 			end, tok.location.end)
 
 		sline, _ := tok.location.linerange()
 		assert.Equal(t, startline, sline,
-			prefix + "expected startline == %d, but got %d",
+			prefix+"expected startline == %d, but got %d",
 			startline, sline)
 	}
 }

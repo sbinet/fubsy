@@ -5,9 +5,9 @@
 package dsl
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
-	"fmt"
 )
 
 type fileinfo struct {
@@ -26,7 +26,7 @@ type Location struct {
 	// start is the offset of the first byte of this location,
 	// and end is *one past* the last byte
 	start int
-	end int
+	end   int
 }
 
 func newLocation(fileinfo *fileinfo) Location {
@@ -72,8 +72,8 @@ func (self Location) merge(other Location) Location {
 
 	if self.fileinfo != other.fileinfo {
 		panic(fmt.Sprintf(
-			"cannot merge Locations from different files" +
-			" (self.fileinfo = %#v, other.fileinfo = %#v)",
+			"cannot merge Locations from different files"+
+				" (self.fileinfo = %#v, other.fileinfo = %#v)",
 			self.fileinfo, other.fileinfo))
 	}
 	result := newLocation(self.fileinfo)
@@ -107,8 +107,8 @@ func (self Location) linerange() (startline int, endline int) {
 	}
 
 	i := 0
-	for ; i < len(offsets) - 1; i++ {
-		if offsets[i] <= self.start && offsets[i+1]-1 >=  self.start  {
+	for ; i < len(offsets)-1; i++ {
+		if offsets[i] <= self.start && offsets[i+1]-1 >= self.start {
 			startline = i + 1
 			break
 		}
@@ -129,8 +129,8 @@ func (self Location) linerange() (startline int, endline int) {
 			self.start, offsets))
 	}
 
-	for ; endline == -1 && i < len(offsets) - 1; i++ {
-		if offsets[i] <= self.end - 1 && offsets[i+1]-1 >= self.end - 1 {
+	for ; endline == -1 && i < len(offsets)-1; i++ {
+		if offsets[i] <= self.end-1 && offsets[i+1]-1 >= self.end-1 {
 			endline = i + 1
 		}
 	}

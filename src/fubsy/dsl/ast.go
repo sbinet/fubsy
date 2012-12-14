@@ -5,10 +5,10 @@
 package dsl
 
 import (
-	"io"
 	"fmt"
-	"strings"
+	"io"
 	"reflect"
+	"strings"
 )
 
 // interface for the whole AST, not just a particular node
@@ -84,13 +84,13 @@ type ASTRoot struct {
 // import a single plugin, e.g. "import NAME"
 type ASTImport struct {
 	astbase
-	plugin []string				// fully-qualified name split on '.'
+	plugin []string // fully-qualified name split on '.'
 }
 
 // an inline plugin, e.g. "plugin LANG {{{ CONTENT }}}"
 type ASTInline struct {
 	astbase
-	lang string
+	lang    string
 	content string
 }
 
@@ -113,7 +113,7 @@ type ASTBlock struct {
 type ASTAssignment struct {
 	astbase
 	target string
-	expr ASTExpression
+	expr   ASTExpression
 }
 
 // TARGETS : SOURCES { ACTIONS }
@@ -137,14 +137,14 @@ type ASTAdd struct {
 type ASTFunctionCall struct {
 	astbase
 	function ASTExpression
-	args []ASTExpression
+	args     []ASTExpression
 }
 
 // member selection: CONTAINER.NAME where CONTAINER is any expr
 type ASTSelection struct {
 	astbase
 	container ASTExpression
-	member string
+	member    string
 }
 
 // a bare name, like foo in "a = foo" or "foo()"
@@ -183,14 +183,14 @@ func (self children) Children() []ASTNode {
 func NewASTRoot(children []ASTNode) *ASTRoot {
 	location := mergeLocations(children[0], children[len(children)-1])
 	return &ASTRoot{
-		astbase: astbase{location},
+		astbase:  astbase{location},
 		children: children}
 }
 
 func (self *ASTRoot) Dump(writer io.Writer, indent string) {
-	fmt.Fprintln(writer, indent + "ASTRoot {")
+	fmt.Fprintln(writer, indent+"ASTRoot {")
 	self.children.Dump(writer, indent)
-	fmt.Fprintln(writer, indent + "}")
+	fmt.Fprintln(writer, indent+"}")
 }
 
 func (self *ASTRoot) Equal(other_ ASTNode) bool {
@@ -222,7 +222,7 @@ func (self *ASTRoot) FindPhase(name string) *ASTPhase {
 func NewASTImport(dottedname []string, location ...Locatable) *ASTImport {
 	return &ASTImport{
 		astbase: astLocation(location),
-		plugin: dottedname}
+		plugin:  dottedname}
 }
 
 func (self *ASTImport) Dump(writer io.Writer, indent string) {
@@ -239,20 +239,20 @@ func (self *ASTImport) Equal(other_ ASTNode) bool {
 func NewASTInline(lang string, content string, location ...Locatable) *ASTInline {
 	return &ASTInline{
 		astbase: astLocation(location),
-		lang: lang,
+		lang:    lang,
 		content: content}
 }
 
 func (self *ASTInline) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTInline[%s] {{{", indent, self.lang)
 	if len(self.content) > 0 {
-		replace := -1			// indent all lines by default
+		replace := -1 // indent all lines by default
 		if strings.HasSuffix(self.content, "\n") {
 			// last line doesn't really exist, so don't indent it
 			replace = strings.Count(self.content, "\n") - 1
 		}
 		content := strings.Replace(
-			self.content, "\n", "\n" + indent + "  ", replace)
+			self.content, "\n", "\n"+indent+"  ", replace)
 		fmt.Fprintf(writer, content)
 	}
 	fmt.Fprintf(writer, "%s}}}\n", indent)
@@ -269,15 +269,15 @@ func (self *ASTInline) Equal(other_ ASTNode) bool {
 
 func NewASTPhase(name string, block *ASTBlock, location ...Locatable) *ASTPhase {
 	return &ASTPhase{
-		astbase: astLocation(location),
-		name: name,
+		astbase:  astLocation(location),
+		name:     name,
 		children: block.children}
 }
 
 func (self *ASTPhase) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTPhase[%s] {\n", indent, self.name)
 	self.children.Dump(writer, indent)
-	fmt.Fprintln(writer, indent + "}")
+	fmt.Fprintln(writer, indent+"}")
 }
 
 func (self *ASTPhase) Equal(other_ ASTNode) bool {
@@ -297,7 +297,7 @@ func (self *ASTPhase) Equal(other_ ASTNode) bool {
 
 func NewASTBlock(children []ASTNode, location ...Locatable) *ASTBlock {
 	return &ASTBlock{
-		astbase: astLocation(location),
+		astbase:  astLocation(location),
 		children: children}
 }
 
@@ -312,13 +312,13 @@ func (self *ASTBlock) Equal(other ASTNode) bool {
 func NewASTAssignment(name string, expr ASTExpression, location ...Locatable) *ASTAssignment {
 	return &ASTAssignment{
 		astbase: astLocation(location),
-		target: name,
-		expr: expr}
+		target:  name,
+		expr:    expr}
 }
 
 func (self *ASTAssignment) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTAssignment[%s]\n", indent, self.target)
-	self.expr.Dump(writer, indent + "  ")
+	self.expr.Dump(writer, indent+"  ")
 }
 
 func (self *ASTAssignment) Equal(other_ ASTNode) bool {
@@ -347,18 +347,18 @@ func NewASTBuildRule(
 	block *ASTBlock) *ASTBuildRule {
 	location := mergeLocations(targets, block)
 	return &ASTBuildRule{
-		astbase: astbase{location},
-		targets: targets,
-		sources: sources,
+		astbase:  astbase{location},
+		targets:  targets,
+		sources:  sources,
 		children: block.children}
 }
 
 func (self *ASTBuildRule) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTBuildRule {\n", indent)
 	fmt.Fprintf(writer, "%stargets:\n", indent)
-	self.targets.Dump(writer, indent + "  ")
+	self.targets.Dump(writer, indent+"  ")
 	fmt.Fprintf(writer, "%ssources:\n", indent)
-	self.sources.Dump(writer, indent + "  ")
+	self.sources.Dump(writer, indent+"  ")
 	fmt.Fprintf(writer, "%sactions:\n", indent)
 	self.children.Dump(writer, indent)
 	fmt.Fprintf(writer, "%s}\n", indent)
@@ -390,16 +390,16 @@ func NewASTAdd(op1 ASTExpression, op2 ASTExpression) *ASTAdd {
 	location := mergeLocations(op1, op2)
 	return &ASTAdd{
 		astbase: astbase{location},
-		op1: op1,
-		op2: op2}
+		op1:     op1,
+		op2:     op2}
 }
 
 func (self *ASTAdd) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTAdd\n", indent)
 	fmt.Fprintf(writer, "%sop1:\n", indent)
-	self.op1.Dump(writer, indent + "  ")
+	self.op1.Dump(writer, indent+"  ")
 	fmt.Fprintf(writer, "%sop2:\n", indent)
-	self.op2.Dump(writer, indent + "  ")
+	self.op2.Dump(writer, indent+"  ")
 }
 
 func (self *ASTAdd) Equal(other_ ASTNode) bool {
@@ -424,16 +424,16 @@ func NewASTFunctionCall(
 	args []ASTExpression,
 	location ...Locatable) *ASTFunctionCall {
 	return &ASTFunctionCall{
-		astbase: astLocation(location),
+		astbase:  astLocation(location),
 		function: function,
-		args: args}
+		args:     args}
 }
 
 func (self *ASTFunctionCall) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTFunctionCall[%s] (%d args)\n",
 		indent, self.function, len(self.args))
 	for _, arg := range self.args {
-		arg.Dump(writer, indent + "  ")
+		arg.Dump(writer, indent+"  ")
 	}
 }
 
@@ -457,9 +457,9 @@ func (self *ASTFunctionCall) String() string {
 
 func NewASTSelection(container ASTExpression, member string, location ...Locatable) *ASTSelection {
 	return &ASTSelection{
-		astbase: astLocation(location),
+		astbase:   astLocation(location),
 		container: container,
-		member: member}
+		member:    member}
 }
 
 func (self *ASTSelection) Dump(writer io.Writer, indent string) {
@@ -483,7 +483,7 @@ func (self *ASTSelection) String() string {
 func NewASTName(name string, location ...Locatable) *ASTName {
 	return &ASTName{
 		astbase: astLocation(location),
-		name: name}
+		name:    name}
 }
 
 func (self *ASTName) Dump(writer io.Writer, indent string) {
@@ -509,10 +509,10 @@ func NewASTString(toktext string, location ...Locatable) *ASTString {
 	// strip the quotes: they're preserved by the tokenizer, but not
 	// part of the string value (but note that the node location still
 	// encompasses the quotes!)
-	value := toktext[1:len(toktext)-1]
+	value := toktext[1 : len(toktext)-1]
 	return &ASTString{
 		astbase: astLocation(location),
-		value: value}
+		value:   value}
 }
 
 func astLocation(locations []Locatable) astbase {
@@ -532,7 +532,7 @@ func astLocation(locations []Locatable) astbase {
 
 func (self *ASTString) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer,
-		indent + "ASTString[" + self.value + "]")
+		indent+"ASTString["+self.value+"]")
 }
 
 func (self *ASTString) Equal(other_ ASTNode) bool {
@@ -553,13 +553,13 @@ func (self *ASTString) Value() string {
 
 func NewASTFileList(patterns []string, location ...Locatable) *ASTFileList {
 	return &ASTFileList{
-		astbase: astLocation(location),
+		astbase:  astLocation(location),
 		patterns: patterns}
 }
 
 func (self *ASTFileList) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer,
-		indent + "ASTFileList[" + strings.Join(self.patterns, " ") + "]")
+		indent+"ASTFileList["+strings.Join(self.patterns, " ")+"]")
 }
 
 func (self *ASTFileList) Equal(other_ ASTNode) bool {

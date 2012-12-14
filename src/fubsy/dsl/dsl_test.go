@@ -5,10 +5,10 @@
 package dsl
 
 import (
-	"testing"
 	"bytes"
-	"github.com/stretchrcom/testify/assert"
 	"fubsy/testutils"
+	"github.com/stretchrcom/testify/assert"
+	"testing"
 )
 
 func TestParse_valid_1(t *testing.T) {
@@ -18,9 +18,9 @@ func TestParse_valid_1(t *testing.T) {
 	// dead simple: a single top-level element
 	fn := testutils.Mkfile(tmpdir, "valid_1.fubsy", "main {\n<meep>\n\n}")
 
-	expect := &ASTRoot{children: []ASTNode {
-			&ASTPhase{name: "main", children: []ASTNode {
-					&ASTFileList{patterns: []string {"meep"}}}}}}
+	expect := &ASTRoot{children: []ASTNode{
+		&ASTPhase{name: "main", children: []ASTNode{
+			&ASTFileList{patterns: []string{"meep"}}}}}}
 	ast, err := Parse(fn)
 	assert.Equal(t, 0, len(err))
 	assertASTEquals(t, expect, ast)
@@ -34,21 +34,21 @@ func TestParse_valid_sequence(t *testing.T) {
 	fn := testutils.Mkfile(
 		tmpdir,
 		"valid_2.fubsy",
-		"main {\n\"boo\"\n}\n" +
-		"plugin foo {{{o'malley & friends\n}}}\n" +
-		"blob {\n \"meep\"\n }")
+		"main {\n\"boo\"\n}\n"+
+			"plugin foo {{{o'malley & friends\n}}}\n"+
+			"blob {\n \"meep\"\n }")
 	ast, err := Parse(fn)
 	assert.Equal(t, 0, len(err))
 
-	expect := &ASTRoot{children: []ASTNode {
-			&ASTPhase{
-				name: "main",
-				children: []ASTNode {&ASTString{value: "boo"}}},
-			&ASTInline{
-				lang: "foo", content: "o'malley & friends\n"},
-			&ASTPhase{
-				name: "blob",
-				children: []ASTNode {&ASTString{value: "meep"}}},
+	expect := &ASTRoot{children: []ASTNode{
+		&ASTPhase{
+			name:     "main",
+			children: []ASTNode{&ASTString{value: "boo"}}},
+		&ASTInline{
+			lang: "foo", content: "o'malley & friends\n"},
+		&ASTPhase{
+			name:     "blob",
+			children: []ASTNode{&ASTString{value: "meep"}}},
 	}}
 	assertASTEquals(t, expect, ast)
 }
@@ -62,28 +62,28 @@ func TestParse_internal_newlines(t *testing.T) {
 		tmpdir,
 		"newlines.fubsy",
 		"main {\n"+
-		//"  x(\n"+
-		//"  a.b\n"+
-		"  x("+
-		"  a.b"+
-		")\n"+
-		"}")
+			//"  x(\n"+
+			//"  a.b\n"+
+			"  x("+
+			"  a.b"+
+			")\n"+
+			"}")
 	ast, err := Parse(fn)
 	assert.Equal(t, 0, len(err))
 
 	expect := &ASTRoot{
-		children: []ASTNode {
+		children: []ASTNode{
 			&ASTPhase{
 				name: "main",
-				children: []ASTNode {
+				children: []ASTNode{
 					&ASTFunctionCall{
 						function: &ASTName{name: "x"},
-						args: []ASTExpression {
+						args: []ASTExpression{
 							&ASTSelection{
 								container: &ASTName{name: "a"},
-								member: "b",
-				}}}},
-	}}}
+								member:    "b",
+							}}}},
+			}}}
 	assertASTEquals(t, expect, ast)
 }
 
@@ -125,48 +125,48 @@ func TestParse_omnibus_1(t *testing.T) {
 	defer cleanup()
 
 	fn := testutils.Mkfile(tmpdir, "omnibus_1.fubsy",
-		"# start with a comment\n" +
-		"import foo\n" +
-		"import foo.bar.baz\n" +
-		"\n     " +
-		"# blank lines are OK!\n" +
-		"plugin funky {{{\n" +
-		"any ol' crap! \"bring it on,\n" +
-		"dude\" ...\n" +
-		"}}}\n" +
-		"main {\n" +
-		"  a   =(\"foo\") + b\n" +
-		"  c=(d.e)  ()\n" +
-		"x.y.z\n" +
-		"  <\n" +
-		"    lib1/*.c\n" +
-		"    lib2/**/*.c\n" +
-		"  >\n" +
-		"}\n")
+		"# start with a comment\n"+
+			"import foo\n"+
+			"import foo.bar.baz\n"+
+			"\n     "+
+			"# blank lines are OK!\n"+
+			"plugin funky {{{\n"+
+			"any ol' crap! \"bring it on,\n"+
+			"dude\" ...\n"+
+			"}}}\n"+
+			"main {\n"+
+			"  a   =(\"foo\") + b\n"+
+			"  c=(d.e)  ()\n"+
+			"x.y.z\n"+
+			"  <\n"+
+			"    lib1/*.c\n"+
+			"    lib2/**/*.c\n"+
+			"  >\n"+
+			"}\n")
 	ast, err := Parse(fn)
 	assert.Equal(t, 0, len(err))
 
 	expect :=
 		"ASTRoot {\n" +
-		"  ASTImport[foo]\n" +
-		"  ASTImport[foo.bar.baz]\n" +
-		"  ASTInline[funky] {{{\n" +
-		"    any ol' crap! \"bring it on,\n" +
-		"    dude\" ...\n" +
-		"  }}}\n" +
-		"  ASTPhase[main] {\n" +
-		"    ASTAssignment[a]\n" +
-		"      ASTAdd\n" +
-		"      op1:\n" +
-		"        ASTString[foo]\n" +
-		"      op2:\n" +
-		"        ASTName[b]\n" +
-		"    ASTAssignment[c]\n" +
-		"      ASTFunctionCall[d.e] (0 args)\n" +
-		"    ASTSelection[x.y: z]\n" +
-		"    ASTFileList[lib1/*.c lib2/**/*.c]\n" +
-		"  }\n" +
-		"}\n"
+			"  ASTImport[foo]\n" +
+			"  ASTImport[foo.bar.baz]\n" +
+			"  ASTInline[funky] {{{\n" +
+			"    any ol' crap! \"bring it on,\n" +
+			"    dude\" ...\n" +
+			"  }}}\n" +
+			"  ASTPhase[main] {\n" +
+			"    ASTAssignment[a]\n" +
+			"      ASTAdd\n" +
+			"      op1:\n" +
+			"        ASTString[foo]\n" +
+			"      op2:\n" +
+			"        ASTName[b]\n" +
+			"    ASTAssignment[c]\n" +
+			"      ASTFunctionCall[d.e] (0 args)\n" +
+			"    ASTSelection[x.y: z]\n" +
+			"    ASTFileList[lib1/*.c lib2/**/*.c]\n" +
+			"  }\n" +
+			"}\n"
 	var actual_ bytes.Buffer
 	ast.Dump(&actual_, "")
 	actual := actual_.String()
@@ -180,48 +180,48 @@ func TestParse_omnibus_2(t *testing.T) {
 	defer cleanup()
 
 	fn := testutils.Mkfile(tmpdir, "omnibus_2.fubsy",
-		"\n" +
-		"main {\n" +
-		"  headers = <*.h>\n" +
-		"\n" +
-		"  a + b : <*.c> + headers {\n" +
-		"    x = a\n" +
-		"    \"cc $x\"\n" +
-		"    f(a, b)\n" +
-		"  }\n" +
-		"}\n" +
-		"")
+		"\n"+
+			"main {\n"+
+			"  headers = <*.h>\n"+
+			"\n"+
+			"  a + b : <*.c> + headers {\n"+
+			"    x = a\n"+
+			"    \"cc $x\"\n"+
+			"    f(a, b)\n"+
+			"  }\n"+
+			"}\n"+
+			"")
 	ast, err := Parse(fn)
 	assert.Equal(t, 0, len(err))
 
 	expect :=
 		"ASTRoot {\n" +
-		"  ASTPhase[main] {\n" +
-		"    ASTAssignment[headers]\n" +
-		"      ASTFileList[*.h]\n" +
-		"    ASTBuildRule {\n" +
-		"    targets:\n" +
-		"      ASTAdd\n" +
-		"      op1:\n" +
-		"        ASTName[a]\n" +
-		"      op2:\n" +
-		"        ASTName[b]\n" +
-		"    sources:\n" +
-		"      ASTAdd\n" +
-		"      op1:\n" +
-		"        ASTFileList[*.c]\n" +
-		"      op2:\n" +
-		"        ASTName[headers]\n" +
-		"    actions:\n" +
-		"      ASTAssignment[x]\n" +
-		"        ASTName[a]\n" +
-		"      ASTString[cc $x]\n" +
-		"      ASTFunctionCall[f] (2 args)\n" +
-		"        ASTName[a]\n" +
-		"        ASTName[b]\n" +
-		"    }\n" +
-		"  }\n" +
-		"}\n"
+			"  ASTPhase[main] {\n" +
+			"    ASTAssignment[headers]\n" +
+			"      ASTFileList[*.h]\n" +
+			"    ASTBuildRule {\n" +
+			"    targets:\n" +
+			"      ASTAdd\n" +
+			"      op1:\n" +
+			"        ASTName[a]\n" +
+			"      op2:\n" +
+			"        ASTName[b]\n" +
+			"    sources:\n" +
+			"      ASTAdd\n" +
+			"      op1:\n" +
+			"        ASTFileList[*.c]\n" +
+			"      op2:\n" +
+			"        ASTName[headers]\n" +
+			"    actions:\n" +
+			"      ASTAssignment[x]\n" +
+			"        ASTName[a]\n" +
+			"      ASTString[cc $x]\n" +
+			"      ASTFunctionCall[f] (2 args)\n" +
+			"        ASTName[a]\n" +
+			"        ASTName[b]\n" +
+			"    }\n" +
+			"  }\n" +
+			"}\n"
 	var actual_ bytes.Buffer
 	ast.Dump(&actual_, "")
 	actual := actual_.String()

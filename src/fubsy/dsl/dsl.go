@@ -5,13 +5,13 @@
 package dsl
 
 import (
-	"os"
 	"fmt"
+	"os"
 )
 
 type SyntaxError struct {
 	badtoken *token
-	message string
+	message  string
 }
 
 func (self SyntaxError) Error() string {
@@ -21,7 +21,7 @@ func (self SyntaxError) Error() string {
 		badtext = "EOF"
 	} else if badtok == EOL && badtext == "\n" {
 		badtext = "EOL"
-	} else 	if badtok == EOL && badtext == "" {
+	} else if badtok == EOL && badtext == "" {
 		// synthetic EOL inserted right before EOF -- perhaps this
 		// should be reported as EOL too?
 		badtext = "EOF"
@@ -37,19 +37,19 @@ func (self SyntaxError) Error() string {
 func Parse(filename string) (*ASTRoot, []error) {
 	infile, err := os.Open(filename)
 	if err != nil {
-		return nil, []error {err}
+		return nil, []error{err}
 	}
 	defer infile.Close()
 	scanner, err := NewFileScanner(filename, infile)
 	if err != nil {
-		return nil, []error {err}
+		return nil, []error{err}
 	}
 	scanner.scan()
 
 	parser := NewParser(scanner.tokens)
 	fuParse(parser)
 	if parser.syntaxerror != nil {
-		return parser.ast, []error {parser.syntaxerror}
+		return parser.ast, []error{parser.syntaxerror}
 	}
 	errors := checkAST(parser.ast)
 	return parser.ast, errors

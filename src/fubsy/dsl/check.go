@@ -7,7 +7,7 @@ package dsl
 // post-parse AST verification (detect semantic errors)
 
 type SemanticError struct {
-	node ASTNode
+	node    ASTNode
 	message string
 }
 
@@ -44,7 +44,7 @@ func checkActions(nodes []ASTNode) (actions []ASTNode, errors []error) {
 		_, ok3 := node.(*ASTAssignment)
 		if !(ok1 || ok2 || ok3) {
 			errors = append(errors, SemanticError{
-				node: node,
+				node:    node,
 				message: "invalid build action: must be either bare string, function call, or variable assignment"})
 		} else {
 			actions = append(actions, node)
