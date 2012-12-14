@@ -68,7 +68,7 @@ func Test_Runtime_runMainPhase_error(t *testing.T) {
 	// runtime error evaluating a build rule (cannot add string to filefinder)
 	script := "" +
 		"main {\n" +
-		"  \"foo.jar\": <*.java> + \"dep.jar\" {\n" +
+		"  \"foo.jar\": bogus {\n" +
 		"    \"javac && jar\"\n" +
 		"  }\n" +
 		"}\n"
@@ -76,7 +76,7 @@ func Test_Runtime_runMainPhase_error(t *testing.T) {
 	errors := rt.runMainPhase()
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
-		"unsupported operation: cannot add string to filefinder",
+		"test.fubsy:2: undefined variable 'bogus'",
 		errors[0].Error())
 }
 
