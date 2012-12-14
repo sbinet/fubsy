@@ -11,6 +11,29 @@ import (
 	"testing"
 )
 
+func Test_ParseString(t *testing.T) {
+	script := "import foo.bar\nbleep {\na\n}"
+	ast, err := ParseString("test", script)
+
+	expect := &ASTRoot{children: []ASTNode{
+		&ASTImport{plugin: []string{"foo", "bar"}},
+		&ASTPhase{
+			name: "bleep",
+			children: []ASTNode{
+				&ASTName{name: "a"}}}}}
+	assert.Equal(t, 0, len(err))
+	assertASTEquals(t, expect, ast)
+}
+
+// now with a syntax error
+func Test_ParseString_invalid(t *testing.T) {
+	script := "import foo,bar\nbleep {\n}\n"
+	ast, err := ParseString("test", script)
+	assert.Nil(t, ast)
+	expect := "test:1: syntax error (near ',')"
+	assertOneError(t, expect, err)
+}
+
 func TestParse_valid_1(t *testing.T) {
 	tmpdir, cleanup := testutils.Mktemp()
 	defer cleanup()

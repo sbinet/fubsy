@@ -45,8 +45,18 @@ func Parse(filename string) (*ASTRoot, []error) {
 		return nil, []error{err}
 	}
 	scanner.scan()
+	return parseTokens(scanner.tokens)
+}
 
-	parser := NewParser(scanner.tokens)
+// mainly used in unit tests
+func ParseString(filename string, input string) (*ASTRoot, []error) {
+	scanner := NewScanner(filename, ([]byte)(input))
+	scanner.scan()
+	return parseTokens(scanner.tokens)
+}
+
+func parseTokens(tokens []token) (*ASTRoot, []error) {
+	parser := NewParser(tokens)
 	fuParse(parser)
 	if parser.syntaxerror != nil {
 		return parser.ast, []error{parser.syntaxerror}
