@@ -189,7 +189,7 @@ func (self FuList) Values() []string {
 
 func (self FuList) Add(other FuObject) (FuObject, error) {
 	otherlist := other.List()
-	result := make(FuList, len(self) + len(otherlist))
+	result := make(FuList, len(self)+len(otherlist))
 	copy(result, self)
 	copy(result[len(self):], otherlist)
 	return result, nil

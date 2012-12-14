@@ -61,7 +61,7 @@ func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
 		result = list
 	case FuList:
 		// <pat> + ["a", "b", "c"]
-		list := make(FuList, 1 + len(other))
+		list := make(FuList, 1+len(other))
 		list[0] = self
 		copy(list[1:], other)
 		result = list

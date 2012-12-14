@@ -24,9 +24,8 @@ if [ ! -f $gocov ]; then
 fi
 
 run "$golex -o src/fubsy/dsl/fulex.go src/fubsy/dsl/fulex.l"
-run "gofmt -w src/fubsy/dsl/fulex.go"
-
 run "go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y"
+run "gofmt -w src/fubsy/dsl/fulex.go src/fubsy/dsl/fugrammar.go"
 
 # uncomment this to run benchmarks
 #benchopt="-test.bench=.*"
@@ -40,6 +39,15 @@ packages="fubsy/dsl fubsy/types fubsy/dag fubsy/runtime"
 #packages="fubsy/types"
 #packages="fubsy/dag"
 #packages="fubsy/runtime"
+
+# make sure all source files are gofmt-compliant
+echo "gofmt -l src/fubsy"
+needfmt=`gofmt -l src/fubsy`
+if [ "$needfmt" ]; then
+    echo "error: gofmt found non-compliant files"
+    echo "you probably need to run: gofmt -w" $needfmt
+    exit 1
+fi
 
 run "go install -v -gcflags '-N -l' $packages"
 run "go test -v -gcflags '-N -l' -i $packages"
