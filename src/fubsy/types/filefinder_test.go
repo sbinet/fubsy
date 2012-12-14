@@ -272,7 +272,7 @@ func Test_FileFinder_Add(t *testing.T) {
 
 	sum, err = ff1.Add(FuString("urgh"))
 	assert.Equal(t,
-		"unsupported operation: cannot add string to file finder", err.Error())
+		"unsupported operation: cannot add string to filefinder", err.Error())
 	assert.Nil(t, sum)
 }
 

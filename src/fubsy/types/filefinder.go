@@ -24,7 +24,7 @@ type FuFileFinder struct {
 	excludes []string
 }
 
-// Object that results from adding file finders together: e.g.
+// Object that results from adding filefinders together: e.g.
 //   <*.c> + <*.h> + <**/*.java>
 // evaluates to a FuFinderList with three elements. Expanding
 // the FuFinderList expands each of its elements in turn.
@@ -89,7 +89,7 @@ func (self *FuFileFinder) List() []FuObject {
 }
 
 func (self *FuFileFinder) typename() string {
-	return "file finder"
+	return "filefinder"
 }
 
 // Walk the filesystem for files matching this FileFinder's include
@@ -277,7 +277,7 @@ func NewFinderList() *FuFinderList {
 }
 
 func (self *FuFinderList) typename() string {
-	return "file finder" // hmmm: ambiguous, but clearer errors?
+	return "filefinder" // hmmm: ambiguous, but clearer errors?
 }
 
 func (self *FuFinderList) String() string {
