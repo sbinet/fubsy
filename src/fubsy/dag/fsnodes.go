@@ -61,7 +61,9 @@ func (self *FileNode) Exists() (bool, error) {
 	// source "file" is really a block device? a FIFO? a symlink?
 	if info.IsDir() {
 		return false, &os.PathError{
-			"stat", self.name, errors.New("is a directory, not a regular file")}
+			Op:   "stat",
+			Path: self.name,
+			Err:  errors.New("is a directory, not a regular file")}
 	}
 	return true, nil
 }
