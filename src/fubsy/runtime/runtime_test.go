@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchrcom/testify/assert"
 
+	"fubsy/dag"
 	"fubsy/dsl"
 	"fubsy/testutils"
 	"fubsy/types"
@@ -128,6 +129,35 @@ func stringnode(value string) *dsl.ASTString {
 	// NewASTString takes a token, which comes quoted
 	value = "\"" + value + "\""
 	return dsl.NewASTString(value)
+}
+
+func Test_nodify(t *testing.T) {
+	sval1 := types.FuString("hello.txt")
+	sval2 := types.FuString("foo.c")
+	lval1 := types.FuList([]types.FuObject{sval1, sval2})
+	ff1 := types.NewFileFinder([]string{"*.c", "*.h"})
+	ff2 := types.NewFileFinder([]string{"**/*.java"})
+
+	rt := NewRuntime("", nil)
+	nodes := rt.nodify(sval1)
+	assert.Equal(t, 1, len(nodes))
+	assert.Equal(t, "hello.txt", nodes[0].(*dag.FileNode).String())
+
+	nodes = rt.nodify(lval1)
+	assert.Equal(t, 2, len(nodes))
+	assert.Equal(t, "hello.txt", nodes[0].(*dag.FileNode).String())
+	assert.Equal(t, "foo.c", nodes[1].(*dag.FileNode).String())
+
+	nodes = rt.nodify(ff1)
+	assert.Equal(t, 1, len(nodes))
+	assert.Equal(t, "<*.c *.h>", nodes[0].(*dag.GlobNode).String())
+
+	ffsum, err := ff1.Add(ff2)
+	assert.Nil(t, err)
+	nodes = rt.nodify(ffsum)
+	assert.Equal(t, 1, len(nodes))
+	assert.Equal(t, "<*.c *.h> + <**/*.java>",
+		nodes[0].(*dag.GlobNode).String())
 }
 
 func assertIn(t *testing.T, ns types.ValueMap, name string, expect types.FuObject) {
