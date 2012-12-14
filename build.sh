@@ -52,4 +52,5 @@ else
     go test -v -gcflags "-N -l" $benchopt $packages $tests
 fi
 
+go vet $packages
 go install -v -gcflags "-N -l" fubsy
