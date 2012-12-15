@@ -62,7 +62,7 @@ if [ "$coverage" ]; then
         run "./bin/gocov report $json > $report"
     done
 else
-    run "go test -v -gcflags '-N -l' $benchopt $packages $tests"
+    run "go test -gcflags '-N -l' $benchopt $packages $tests"
 fi
 
 run "go vet $packages"
