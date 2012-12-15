@@ -246,13 +246,15 @@ func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) 
 		if !relevant.Contains(id) {
 			continue
 		}
-		expansion, err := node.Expand(self, ns)
+		expansion, err := node.Expand(ns)
 		if err != nil {
 			errors = append(errors, err)
 		} else if expansion != nil {
 			repl := bit.New()
-			for _, expnode := range expansion {
-				newid, _ := newdag.addNode(expnode)
+			for _, expnode := range expansion.List() {
+				// if this type assertion panics, then node.Expand()
+				// returned FuObjects that don't implement Node
+				newid, _ := newdag.addNode(expnode.(Node))
 				repl.Add(newid)
 			}
 			replacements[id] = repl

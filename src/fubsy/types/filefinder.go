@@ -36,7 +36,7 @@ func (self *FuFileFinder) CommandString() string {
 	// ummm: what about excludes?
 	result := make([]string, len(self.includes))
 	for i, pattern := range self.includes {
-		result[i] = shellQuote(pattern)
+		result[i] = ShellQuote(pattern)
 	}
 	return strings.Join(result, " ")
 }
@@ -77,7 +77,7 @@ func (self *FuFileFinder) List() []FuObject {
 	return []FuObject{self}
 }
 
-func (self *FuFileFinder) typename() string {
+func (self *FuFileFinder) Typename() string {
 	return "filefinder"
 }
 

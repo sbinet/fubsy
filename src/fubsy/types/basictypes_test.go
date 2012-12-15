@@ -189,9 +189,9 @@ func Test_FuList_Expand(t *testing.T) {
 	assert.Equal(t, input, output)
 }
 
-func Test_shellQuote(t *testing.T) {
+func Test_ShellQuote(t *testing.T) {
 	assertquote := func(expect string, input string) {
-		actual := shellQuote(input)
+		actual := ShellQuote(input)
 		assert.Equal(t, expect, actual)
 	}
 

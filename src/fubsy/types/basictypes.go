@@ -50,7 +50,7 @@ type FuObject interface {
 
 	// Return a brief, human-readable description of the type of this
 	// object. Used in error messages.
-	typename() string
+	Typename() string
 }
 
 // a Fubsy string is a Go string, until there's a demonstrated need
@@ -65,7 +65,7 @@ func (self FuString) String() string {
 }
 
 func (self FuString) CommandString() string {
-	return shellQuote(string(self))
+	return ShellQuote(string(self))
 }
 
 func (self FuString) Equal(other_ FuObject) bool {
@@ -73,6 +73,7 @@ func (self FuString) Equal(other_ FuObject) bool {
 	return ok && other == self
 }
 
+// XXX still needed?
 func (self FuString) Value() string {
 	return string(self)
 }
@@ -155,7 +156,7 @@ func (self FuString) Expand(ns Namespace) (FuObject, error) {
 	return FuString(result), nil
 }
 
-func (self FuString) typename() string {
+func (self FuString) Typename() string {
 	return "string"
 }
 
@@ -179,6 +180,7 @@ func (self FuList) Equal(other_ FuObject) bool {
 	return ok && reflect.DeepEqual(self, other)
 }
 
+// XXX still needed?
 func (self FuList) Values() []string {
 	result := make([]string, len(self))
 	for i, obj := range self {
@@ -211,13 +213,13 @@ func (self FuList) Expand(ns Namespace) (FuObject, error) {
 	return result, nil
 }
 
-func (self FuList) typename() string {
+func (self FuList) Typename() string {
 	return "list"
 }
 
 func unsupportedOperation(self FuObject, other FuObject, detail string) error {
 	message := fmt.Sprintf("unsupported operation: "+detail,
-		other.typename(), self.typename())
+		other.Typename(), self.Typename())
 	return TypeError{message: message}
 }
 
@@ -246,7 +248,7 @@ var shellreplacer *strings.Replacer
 
 // Return s decorated with quote characters so it can safely be
 // included in a shell command.
-func shellQuote(s string) string {
+func ShellQuote(s string) string {
 	if len(s) > 0 && !strings.ContainsAny(s, shellmeta) {
 		return s // fast path for common case
 	}

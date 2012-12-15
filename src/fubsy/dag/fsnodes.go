@@ -39,9 +39,33 @@ func newFileNode(name string) *FileNode {
 	return &FileNode{nodebase: makenodebase(name)}
 }
 
-func (self *FileNode) Equal(other_ Node) bool {
+func (self *FileNode) Typename() string {
+	return "FileNode"
+}
+
+func (self *FileNode) Equal(other_ types.FuObject) bool {
 	other, ok := other_.(*FileNode)
 	return ok && other.name == self.name
+}
+
+func (self *FileNode) Add(other_ types.FuObject) (types.FuObject, error) {
+	var result types.FuObject
+	switch other := other_.(type) {
+	case types.FuString:
+		// caller must add it to the appropriate DAG!
+		result = newFileNode(self.name + string(other))
+	default:
+		otherlist := other.List()
+		list := make(types.FuList, 1+len(otherlist))
+		list[0] = self
+		copy(list[1:], otherlist)
+		result = list
+	}
+	return result, nil
+}
+
+func (self *FileNode) List() []types.FuObject {
+	return []types.FuObject{self}
 }
 
 func (self *FileNode) Exists() (bool, error) {
@@ -74,13 +98,16 @@ func (self *FileNode) Changed() (bool, error) {
 }
 
 func MakeGlobNode(dag *DAG, glob types.FuObject) *GlobNode {
+	_, node := dag.addNode(newGlobNode(globname(glob), glob))
+	return node.(*GlobNode)
+}
+
+func globname(glob types.FuObject) string {
 	// get the address of the underlying struct; panics if glob is not
 	// a pointer (roughly speaking), i.e. we are passed an
 	// implementation of FuObject that we can't get the address of
 	ptr := reflect.ValueOf(glob).Pointer()
-	name := fmt.Sprintf("glob:%x", ptr)
-	_, node := dag.addNode(newGlobNode(name, glob))
-	return node.(*GlobNode)
+	return fmt.Sprintf("glob:%x", ptr)
 }
 
 func newGlobNode(name string, glob types.FuObject) *GlobNode {
@@ -90,13 +117,34 @@ func newGlobNode(name string, glob types.FuObject) *GlobNode {
 	}
 }
 
+func (self *GlobNode) Typename() string {
+	return "GlobNode"
+}
+
 func (self *GlobNode) String() string {
 	return self.glob.String()
 }
 
-func (self *GlobNode) Equal(other_ Node) bool {
+func (self *GlobNode) CommandString() string {
+	return self.glob.CommandString()
+}
+
+func (self *GlobNode) Equal(other_ types.FuObject) bool {
 	other, ok := other_.(*GlobNode)
 	return ok && self.glob.Equal(other.glob)
+}
+
+func (self *GlobNode) Add(other types.FuObject) (types.FuObject, error) {
+	newobj, err := self.glob.Add(other)
+	if err != nil {
+		return nil, err
+	}
+	// caller must add it to the DAG (hmmmmm)
+	return newGlobNode(globname(other), newobj), nil
+}
+
+func (self *GlobNode) List() []types.FuObject {
+	return self.glob.List()
 }
 
 func (self *GlobNode) Exists() (bool, error) {
@@ -106,16 +154,17 @@ func (self *GlobNode) Exists() (bool, error) {
 		"(graph should have been rebuilt by this point)")
 }
 
-func (self *GlobNode) Expand(dag *DAG, ns types.Namespace) ([]Node, error) {
-	filenames, err := self.glob.Expand(ns)
+func (self *GlobNode) Expand(ns types.Namespace) (types.FuObject, error) {
+	expobj, err := self.glob.Expand(ns)
 	if err != nil {
 		return nil, err
 	}
-	newnodes := []Node{}
-	for _, fnobj := range filenames.List() {
-		// fnobj must be a FuString -- panic if not
-		fn := fnobj.(types.FuString).Value()
-		newnodes = append(newnodes, newFileNode(fn))
+	filenames := expobj.List()
+	newnodes := make(types.FuList, len(filenames))
+	for i, fnobj := range filenames {
+		// fnobj really should be a FuString
+		fn := fnobj.String()
+		newnodes[i] = newFileNode(fn)
 	}
 	return newnodes, nil
 }

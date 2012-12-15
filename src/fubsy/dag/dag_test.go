@@ -25,7 +25,11 @@ type stubnode struct {
 	nodebase
 }
 
-func (self *stubnode) Equal(other_ Node) bool {
+func (self *stubnode) Typename() string {
+	return "stubnode"
+}
+
+func (self *stubnode) Equal(other_ types.FuObject) bool {
 	other, ok := other_.(*stubnode)
 	return ok && self.name == other.name
 }
@@ -36,6 +40,14 @@ func (self *stubnode) Exists() (bool, error) {
 
 func (self *stubnode) Changed() (bool, error) {
 	return true, nil
+}
+
+func (self *stubnode) List() []types.FuObject {
+	return []types.FuObject{self}
+}
+
+func (self *stubnode) Add(other types.FuObject) (types.FuObject, error) {
+	panic("should be unused in tests")
 }
 
 func makestubnode(dag *DAG, name string) *stubnode {
