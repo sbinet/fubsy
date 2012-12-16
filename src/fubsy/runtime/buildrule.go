@@ -5,6 +5,9 @@
 package runtime
 
 import (
+	"fmt"
+	"os"
+
 	"fubsy/dag"
 	"fubsy/types"
 )
@@ -32,6 +35,8 @@ func (self *BuildRule) Execute() ([]dag.Node, error) {
 	defer stack.Pop()
 
 	self.setLocals(locals)
+	fmt.Printf("about to execute action %v; stack:\n", self.action)
+	stack.Dump(os.Stdout, "")
 	err := self.action.Execute(stack)
 	return self.targets, err
 }

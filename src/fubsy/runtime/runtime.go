@@ -183,12 +183,10 @@ func (self *Runtime) makeRuleNodes(astrule *dsl.ASTBuildRule) (
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Printf("targets = %T %v, err = %v\n", targetobj, targetobj, err)
 	sourceobj, err = self.evaluate(astrule.Sources())
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Printf("sources = %T %v, err = %v\n", sourceobj, sourceobj, err)
 
 	// Convert each of those FuObjects to a list of DAG nodes.
 	targets = self.nodify(targetobj)
@@ -234,9 +232,6 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 // self.dag (as constructed by runMainPhase()).
 func (self *Runtime) runBuildPhase() []error {
 	var errors []error
-
-	fmt.Println("\nvalue stack:")
-	self.stack.Dump(os.Stdout, "")
 
 	fmt.Println("\ninitial dag:")
 	self.dag.Dump(os.Stdout)
