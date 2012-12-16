@@ -68,6 +68,10 @@ func (self *FileNode) List() []types.FuObject {
 	return []types.FuObject{self}
 }
 
+func (self *FileNode) Expand(ns types.Namespace) (types.FuObject, error) {
+	return self, nil
+}
+
 func (self *FileNode) Exists() (bool, error) {
 	info, err := os.Stat(self.name)
 	if err != nil {

@@ -136,6 +136,8 @@ func (self FuString) Expand(ns Namespace) (FuObject, error) {
 			return self, nil
 		}
 
+		// XXX it's possible for Lookup() to return (nil, true), if
+		// someone puts a nil value into a ValueMap
 		value, ok := ns.Lookup(name)
 		if !ok {
 			// XXX very similar to error reported by runtime.evaluateName()

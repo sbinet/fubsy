@@ -107,6 +107,14 @@ func Test_FileNode_buildrule(t *testing.T) {
 	assert.Equal(t, rule, node.BuildRule())
 }
 
+func Test_FileNode_Expand(t *testing.T) {
+	ns := types.NewValueMap()
+	node := newFileNode("foobar")
+	xnode, err := node.Expand(ns)
+	assert.Nil(t, err)
+	assert.Equal(t, node, xnode)
+}
+
 func Test_FileNode_Exists(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
