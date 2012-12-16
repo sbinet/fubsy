@@ -146,7 +146,7 @@ func Test_joinNodes(t *testing.T) {
 func mknodelist(dag *DAG, names ...string) []Node {
 	result := make([]Node, len(names))
 	for i, name := range names {
-		result[i] = makestubnode(dag, name)
+		result[i] = MakeStubNode(dag, name)
 	}
 	return result
 }

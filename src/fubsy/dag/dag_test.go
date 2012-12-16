@@ -21,52 +21,18 @@ import (
 	"fubsy/types"
 )
 
-type stubnode struct {
-	nodebase
-}
-
-func (self *stubnode) Typename() string {
-	return "stubnode"
-}
-
-func (self *stubnode) Equal(other_ types.FuObject) bool {
-	other, ok := other_.(*stubnode)
-	return ok && self.name == other.name
-}
-
-func (self *stubnode) Exists() (bool, error) {
-	return true, nil
-}
-
-func (self *stubnode) Changed() (bool, error) {
-	return true, nil
-}
-
-func (self *stubnode) List() []types.FuObject {
-	return []types.FuObject{self}
-}
-
-func (self *stubnode) Add(other types.FuObject) (types.FuObject, error) {
-	panic("should be unused in tests")
-}
-
-func makestubnode(dag *DAG, name string) *stubnode {
-	_, node := dag.addNode(&stubnode{nodebase: makenodebase(name)})
-	return node.(*stubnode)
-}
-
 func Test_DAG_add_lookup(t *testing.T) {
 	dag := NewDAG()
 	outnode := dag.lookup("foo")
 	assert.Nil(t, outnode)
 
-	innode := &stubnode{nodebase: makenodebase("foo")}
+	innode := NewStubNode("foo")
 	_, outnode = dag.addNode(innode)
 	assert.True(t, outnode == innode)
-	assert.True(t, innode == dag.nodes[0].(*stubnode))
+	assert.True(t, innode == dag.nodes[0].(*StubNode))
 
 	outnode = dag.lookup("foo")
-	assert.True(t, outnode.(*stubnode) == innode)
+	assert.True(t, outnode.(*StubNode) == innode)
 
 	assert.Nil(t, dag.lookup("bar"))
 }
@@ -382,7 +348,7 @@ func (self *testdag) add(name string, parent ...string) {
 func (self *testdag) finish() *DAG {
 	dag := NewDAG()
 	for _, name := range self.nodes {
-		makestubnode(dag, name)
+		MakeStubNode(dag, name)
 	}
 	for _, name := range self.nodes {
 		node := dag.lookup(name)

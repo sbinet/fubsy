@@ -166,3 +166,44 @@ func (self *nodebase) String() string {
 func (self *nodebase) CommandString() string {
 	return types.ShellQuote(self.name)
 }
+
+// StubNode is test code only, but it's used by tests in other
+// packages, so cannot be in node_test.go.
+
+type StubNode struct {
+	nodebase
+}
+
+func (self *StubNode) Typename() string {
+	return "StubNode"
+}
+
+func (self *StubNode) Equal(other_ types.FuObject) bool {
+	other, ok := other_.(*StubNode)
+	return ok && self.name == other.name
+}
+
+func (self *StubNode) Exists() (bool, error) {
+	return true, nil
+}
+
+func (self *StubNode) Changed() (bool, error) {
+	return true, nil
+}
+
+func (self *StubNode) List() []types.FuObject {
+	return []types.FuObject{self}
+}
+
+func (self *StubNode) Add(other types.FuObject) (types.FuObject, error) {
+	panic("should be unused in tests")
+}
+
+func NewStubNode(name string) *StubNode {
+	return &StubNode{nodebase: makenodebase(name)}
+}
+
+func MakeStubNode(dag *DAG, name string) *StubNode {
+	_, node := dag.addNode(NewStubNode(name))
+	return node.(*StubNode)
+}
