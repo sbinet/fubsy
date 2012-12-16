@@ -128,6 +128,11 @@ func Test_FuString_Expand(t *testing.T) {
 	output, err = input.Expand(ns)
 	assert.Nil(t, err)
 	assert.Equal(t, "hello  blorf", output.String())
+
+	ns.Assign("foo", FuString("ping$pong"))
+	output, err = input.Expand(ns)
+	assert.Equal(t, "undefined variable 'pong' in string", err.Error())
+	assert.Nil(t, output)
 }
 
 func Test_FuString_Expand_recursive(t *testing.T) {

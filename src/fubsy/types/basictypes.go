@@ -145,7 +145,7 @@ func (self FuString) Expand(ns Namespace) (FuObject, error) {
 		} else if value != nil {
 			xvalue, err := value.Expand(ns)
 			if err != nil {
-				return self, nil
+				return nil, err
 			}
 			if xvalue == nil {
 				// this violates the contract for FuObject.Expand()
