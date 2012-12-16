@@ -16,7 +16,7 @@ package dag
 // node. It might be generated source code (e.g. C from a yacc
 // grammar), binary machine code (.o from .c), bytecode (.pyc from
 // .py, .class from .java), an archive (.jar, lib*.a), or in fact any
-// resource that is derived from other resourcs by executing actions.
+// resource that is derived from other resources by executing actions.
 //
 // A node's *children* are the nodes built from it. A node with no
 // children is called a final target.
@@ -96,7 +96,7 @@ func (self *DAG) AddManyParents(targets, sources []Node) {
 // structure.
 func (self *DAG) Dump(writer io.Writer) {
 	for id, node := range self.nodes {
-		action := node.Action()
+		rule := node.BuildRule()
 		desc := node.Name()
 		detail := node.String()
 		if detail != desc {
@@ -104,8 +104,8 @@ func (self *DAG) Dump(writer io.Writer) {
 		}
 		fmt.Fprintf(writer, "%04d: %s (%T, %v)\n",
 			id, desc, node, node.State())
-		if action != nil {
-			fmt.Fprintf(writer, "  action: %v\n", action)
+		if rule != nil {
+			fmt.Fprintf(writer, "  action: %s\n", rule.ActionString())
 		}
 		parents := self.parents[id]
 		if !parents.IsEmpty() {

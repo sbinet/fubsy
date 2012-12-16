@@ -10,8 +10,6 @@ import (
 	"strings"
 
 	"code.google.com/p/go-bit/bit"
-
-	"fubsy/types"
 )
 
 type BuildState struct {
@@ -37,18 +35,15 @@ type BuildError struct {
 // (if anything) went wrong; error details are reported "live" as
 // builds fail (e.g. to the console or a GUI window) so the user gets
 // timely feedback.
-func (self *BuildState) BuildTargets(stack types.NamespaceStack, targets NodeSet) error {
+func (self *BuildState) BuildTargets(targets NodeSet) error {
 	// What sort of nodes do we check for changes?
 	changestates := self.getChangeStates()
-
-	// Need an additional namespace for magic variables ($TARGET, $SOURCES, ...)
-	locals := types.NewValueMap()
-	stack.Push(locals)
-	defer stack.Pop()
+	//fmt.Printf("BuildTargets():\n")
 
 	builderr := new(BuildError)
 	visit := func(id int) error {
 		node := self.dag.nodes[id]
+		//fmt.Printf("  visiting node %d (%s)\n", id, node)
 		if node.State() == SOURCE {
 			// can't build original source nodes!
 			return nil
@@ -59,6 +54,8 @@ func (self *BuildState) BuildTargets(stack types.NamespaceStack, targets NodeSet
 		// do we need to build this node? can we?
 		missing, stale, tainted, err :=
 			self.inspectParents(changestates, id, node)
+		//fmt.Printf("  missing=%v, stale=%v, tainted=%v, err=%v\n",
+		//	missing, stale, tainted, err)
 		if err != nil {
 			return err
 		}
@@ -66,8 +63,7 @@ func (self *BuildState) BuildTargets(stack types.NamespaceStack, targets NodeSet
 		if tainted {
 			node.SetState(TAINTED)
 		} else if missing || stale {
-			self.setLocals(locals, id, node)
-			ok := self.buildNode(stack, id, node, builderr)
+			ok := self.buildNode(id, node, builderr)
 			if !ok && !self.keepGoing() {
 				// attempts counter is not very useful when we break
 				// out of the build early
@@ -164,40 +160,31 @@ func (self *BuildState) inspectParents(
 	return
 }
 
-func (self *BuildState) setLocals(ns types.Namespace, id int, node Node) {
-	// XXX how do we set $TARGETS? that requires knowing all nodes
-	// that will be built from the same Action as this node!
-
-	// collapsing Nodes to FuStrings loses information: would be nice
-	// if every Node type also implemented FuObject!
-	pnodes := self.dag.parentNodes(id)
-	parents := make([]types.FuObject, len(pnodes))
-	for i, pnode := range pnodes {
-		parents[i] = types.FuString(pnode.String())
-	}
-
-	ns.Assign("TARGET", types.FuString(node.String()))
-	ns.Assign("SOURCES", types.FuList(parents))
-}
-
 // Build the specified node (caller has determined that it should be
 // built and can be built). On failure, report the error (e.g. to the
 // console, a GUI window, ...) and return false. On success, return
 // true.
 func (self *BuildState) buildNode(
-	ns types.Namespace, id int, node Node, builderr *BuildError) bool {
+	id int, node Node, builderr *BuildError) bool {
+	rule := node.BuildRule()
+	//fmt.Printf("  building node %d (%s); rule=%#v, action=%s\n",
+	//	id, node, rule, rule.ActionString())
 	node.SetState(BUILDING)
 	builderr.attempts++
-	err := node.Action().Execute(ns)
+	targets, err := rule.Execute()
 	if err != nil {
 		// Normal, everyday build failure: report the precise problem
 		// immediately, and accumulate summary info in the caller.
-		node.SetState(FAILED)
+		for _, tnode := range targets {
+			tnode.SetState(FAILED)
+		}
 		self.reportFailure(err)
 		builderr.addFailure(node)
 		return false
 	}
-	node.SetState(BUILT)
+	for _, tnode := range targets {
+		tnode.SetState(BUILT)
+	}
 	return true
 }
 

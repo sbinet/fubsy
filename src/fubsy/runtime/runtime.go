@@ -33,6 +33,12 @@ func NewRuntime(script string, ast dsl.AST) *Runtime {
 	globals := types.NewValueMap()
 	stack.Push(globals)
 
+	// Local variables are per-script, but we only support a single
+	// script right now. So might as well initialize the script-local
+	// namespace right here.
+	locals := types.NewValueMap()
+	stack.Push(locals)
+
 	return &Runtime{
 		script:  script,
 		ast:     ast,
@@ -67,8 +73,6 @@ func (self *Runtime) runMainPhase() []error {
 		return []error{
 			RuntimeError{self.ast.Location(), "no main phase defined"}}
 	}
-	locals := types.NewValueMap()
-	self.stack.Push(locals)
 
 	var errors []error
 	for _, node_ := range main.Children() {
@@ -145,25 +149,14 @@ func (self *Runtime) evaluateAdd(expr *dsl.ASTAdd) (types.FuObject, error) {
 	return obj1.Add(obj2)
 }
 
-func (self *Runtime) makeRule(node *dsl.ASTBuildRule) (*BuildRule, error) {
-	// Evaluate the target and source lists, so we get one FuObject
-	// each. It might be a string, a list of strings, or a
-	// FuFileFinder... we just need to be able to get one or more
-	// filenames out of each.
-	fmt.Printf("adding build rule\n")
-	targets, err := self.evaluate(node.Targets())
+func (self *Runtime) makeRule(astrule *dsl.ASTBuildRule) (*BuildRule, error) {
+	targets, sources, err := self.makeRuleNodes(astrule)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("targets = %T %v, err = %v\n", targets, targets, err)
-	sources, err := self.evaluate(node.Sources())
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("sources = %T %v, err = %v\n", sources, sources, err)
 
-	allactions := dag.NewSequenceAction()
-	for _, action_ := range node.Actions() {
+	allactions := NewSequenceAction()
+	for _, action_ := range astrule.Actions() {
 		switch action := action_.(type) {
 		case *dsl.ASTString:
 			allactions.AddCommand(action)
@@ -179,28 +172,44 @@ func (self *Runtime) makeRule(node *dsl.ASTBuildRule) (*BuildRule, error) {
 	return rule, nil
 }
 
-func (self *Runtime) addRule(rule *BuildRule) error {
-	// Convert a single FuObject representing the targets (sources) --
-	// could be a single string (filename), list of strings,
-	// FuFileFinder, or FuFinderList -- to a list of Nodes in the DAG.
-	targets := self.nodify(rule.targets)
-	sources := self.nodify(rule.sources)
+func (self *Runtime) makeRuleNodes(astrule *dsl.ASTBuildRule) (
+	targets, sources []dag.Node, err error) {
 
-	// Attach the rule's action to each target node.
-	for _, tnode := range targets {
-		tnode.SetAction(rule.action)
+	// Evaluate the target and source lists, so we get one FuObject
+	// each. It might be a string, a list of strings, a FuFileFinder
+	// ... anything, really.
+	var targetobj, sourceobj types.FuObject
+	targetobj, err = self.evaluate(astrule.Targets())
+	if err != nil {
+		return nil, nil, err
+	}
+	fmt.Printf("targets = %T %v, err = %v\n", targetobj, targetobj, err)
+	sourceobj, err = self.evaluate(astrule.Sources())
+	if err != nil {
+		return nil, nil, err
+	}
+	fmt.Printf("sources = %T %v, err = %v\n", sourceobj, sourceobj, err)
+
+	// Convert each of those FuObjects to a list of DAG nodes.
+	targets = self.nodify(targetobj)
+	sources = self.nodify(sourceobj)
+	return
+}
+
+func (self *Runtime) addRule(rule *BuildRule) {
+
+	// Attach the rule to each target node.
+	for _, tnode := range rule.targets {
+		tnode.SetBuildRule(rule)
 	}
 
 	// And connect the nodes to each other (every source is a parent
 	// of every target).
-	self.dag.AddManyParents(targets, sources)
-
-	// umm: when can this fail?
-	return nil
+	self.dag.AddManyParents(rule.targets, rule.sources)
 }
 
-// Convert a single FuObject (possibly a FuList or FuFinderList) to a
-// list of Nodes in the DAG.
+// Convert a single FuObject (possibly a FuList) to a list of Nodes and
+// add them to the DAG.
 func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 	// Blecchh: specially handling every type here limits the
 	// extensibility of the type system. But I don't want each type to
@@ -248,7 +257,7 @@ func (self *Runtime) runBuildPhase() []error {
 
 	bstate := self.dag.NewBuildState()
 	goal = self.dag.FindFinalTargets()
-	err := bstate.BuildTargets(self.stack, goal)
+	err := bstate.BuildTargets(goal)
 	if err != nil {
 		errors = append(errors, err)
 	}

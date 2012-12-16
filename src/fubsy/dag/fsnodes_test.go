@@ -96,13 +96,15 @@ func Test_FileNode_parents_order(t *testing.T) {
 	assertParents(t, expect, dag, node)
 }
 
-func Test_FileNode_action(t *testing.T) {
+func Test_FileNode_buildrule(t *testing.T) {
+	// this really tests the implementation in nodebase (node.go)
 	dag := NewDAG()
 	node := MakeFileNode(dag, "foo")
+	assert.Nil(t, node.BuildRule())
 
-	action := &CommandAction{raw: types.FuString("ls -l")}
-	node.SetAction(action)
-	assert.Equal(t, action, node.Action())
+	rule := &stubrule{targets: []Node{node}}
+	node.SetBuildRule(rule)
+	assert.Equal(t, rule, node.BuildRule())
 }
 
 func Test_FileNode_Exists(t *testing.T) {

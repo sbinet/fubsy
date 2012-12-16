@@ -62,16 +62,15 @@ type Node interface {
 	// thing is that String() does not *necessarily* return a unique
 	// representation, whereas Name() does
 
-	// Set the action that must be executed to build this node from
-	// its parents. (This is a single Action because actions can be
-	// compound: in particular, SequenceAction is an implementation of
-	// Action that is just a sequence of other Actions.)
-	SetAction(action Action)
+	// Set the BuildRule that tells how to build this node (i.e. for
+	// which this node is a target). Non-target nodes (original
+	// sources) have no BuildRule.
+	SetBuildRule(rule BuildRule)
 
-	// Return the action previously passed to SetAction() (nil if no
-	// action has ever been set, which implies that this is an
+	// Return the build rule previously passed to SetBuildRule() (nil
+	// if no rule has ever been set, which implies that this is an
 	// original source node).
-	Action() Action
+	BuildRule() BuildRule
 
 	// Expand() generates new nodes that represent the same resources
 	// as this node, only more concretely. Returns nil if no expansion
@@ -103,6 +102,18 @@ type Node interface {
 	State() NodeState
 }
 
+// a build rule relates source(s) to target(s) by way of action(s)
+type BuildRule interface {
+	// Run this rule's action(s) to build its targets from their
+	// sources. Return the rule's list of target nodes, whether they
+	// built successfully or not, and an error. Caller must not mutate
+	// targets, since it may be internal state of the BuildRule.
+	Execute() (targets []Node, err error)
+
+	// Return a string describing this rule's action(s).
+	ActionString() string
+}
+
 // Convenient base type for Node implementations -- provides the
 // basics right out of the box. Real Node implementations still have
 // to take care of:
@@ -111,9 +122,9 @@ type Node interface {
 //   Changed()
 
 type nodebase struct {
-	name   string
-	action Action
-	state  NodeState
+	name  string
+	rule  BuildRule
+	state NodeState
 }
 
 func makenodebase(name string) nodebase {
@@ -126,12 +137,12 @@ func (self *nodebase) Name() string {
 	return self.name
 }
 
-func (self *nodebase) SetAction(action Action) {
-	self.action = action
+func (self *nodebase) SetBuildRule(rule BuildRule) {
+	self.rule = rule
 }
 
-func (self *nodebase) Action() Action {
-	return self.action
+func (self *nodebase) BuildRule() BuildRule {
+	return self.rule
 }
 
 func (self *nodebase) Expand(ns types.Namespace) (types.FuObject, error) {

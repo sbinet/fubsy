@@ -7,12 +7,9 @@ package dag
 import (
 	"testing"
 	//"fmt"
-	"errors"
 
 	"code.google.com/p/go-bit/bit"
 	"github.com/stretchrcom/testify/assert"
-
-	"fubsy/types"
 )
 
 // full build (all targets), all actions succeed
@@ -29,9 +26,8 @@ func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 	}
 
 	bstate := dag.NewBuildState()
-	ns := types.NewValueStack()
 	goal := NodeSet(bit.New(0, 1))
-	err := bstate.BuildTargets(&ns, goal)
+	err := bstate.BuildTargets(goal)
 	assert.Nil(t, err)
 	assertBuild(t, dag, expect, *executed)
 
@@ -47,8 +43,8 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 	// fail to build misc.{c,h} -> misc.o: that will block building
 	// tool1, but not tool2 (since keepGoing() always returns true
 	// (for now))
-	action := dag.lookup("misc.o").Action().(*stubaction)
-	action.ok = false
+	rule := dag.lookup("misc.o").BuildRule().(*stubrule)
+	rule.fail = true
 
 	expect := []buildexpect{
 		{"tool1.o", BUILT},
@@ -59,9 +55,8 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 	}
 
 	bstate := dag.NewBuildState()
-	ns := types.NewValueStack()
 	goal := NodeSet(bit.New(0, 1))
-	err := bstate.BuildTargets(&ns, goal)
+	err := bstate.BuildTargets(goal)
 	assert.NotNil(t, err)
 	assertBuild(t, dag, expect, *executed)
 
@@ -72,16 +67,16 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 func setupBuild() (*DAG, *[]string) {
 	dag := makeSimpleGraph()
 
-	// add a stub action to every target node, so we know when each
-	// action's Execute() method is called
+	// add a stub build rule to every target node, so we track when
+	// each rule's Execute() method is called
 	executed := []string{}
 	callback := func(name string) {
 		executed = append(executed, name)
 	}
 	for id, node := range dag.nodes {
 		if !dag.parents[id].IsEmpty() {
-			action := newstubaction(node.Name(), callback, true)
-			node.SetAction(action)
+			rule := makestubrule(callback, node)
+			node.SetBuildRule(rule)
 		}
 	}
 
@@ -112,32 +107,6 @@ func assertBuild(
 type buildexpect struct {
 	name  string
 	state NodeState
-}
-
-type stubaction struct {
-	desc string
-
-	// takes desc -- used for recording order in which targets are built
-	callback func(string)
-
-	// true if this action should succeed
-	ok bool
-}
-
-func newstubaction(desc string, callback func(string), ok bool) *stubaction {
-	return &stubaction{desc, callback, ok}
-}
-
-func (self stubaction) String() string {
-	return self.desc
-}
-
-func (self stubaction) Execute(ns types.Namespace) error {
-	self.callback(self.desc)
-	if !self.ok {
-		return errors.New("action failed")
-	}
-	return nil
 }
 
 func Test_BuildError_Error(t *testing.T) {
