@@ -52,7 +52,7 @@ func (self *BuildRule) setLocals(ns types.Namespace) {
 		targets[i] = tnode
 	}
 	sources := make(types.FuList, len(self.sources))
-	for i, snode := range self.targets {
+	for i, snode := range self.sources {
 		sources[i] = snode
 	}
 
