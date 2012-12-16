@@ -8,18 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"testing"
 )
-
-func AssertError(t *testing.T, expect string, actual error) {
-	if actual == nil {
-		t.Fatal("expected error, but got nil")
-	}
-	if actual.Error() != expect {
-		t.Errorf("expected error message\n%s\nbut got\n%s",
-			expect, actual.Error())
-	}
-}
 
 // Create a temporary directory. Return the name of the directory and
 // a function to clean it up when you're done with it. Panics on any

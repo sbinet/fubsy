@@ -4,6 +4,12 @@
 
 package runtime
 
+// High-level executive code. This is the home of Runtime, which
+// manages everything about the execution of a Fubsy build script (or
+// collection of build scripts, once we support hierarchical build
+// scripts). There should be exactly one instance of Runtime in one
+// Fubsy process.
+
 import (
 	"fmt"
 	"os"
@@ -79,7 +85,7 @@ func (self *Runtime) runMainPhase() []error {
 		var err error
 		switch node := node_.(type) {
 		case *dsl.ASTAssignment:
-			err = self.assign(node, self.stack)
+			err = assign(self.stack, node)
 		case *dsl.ASTBuildRule:
 			var rule *BuildRule
 			rule, err = self.makeRule(node)
@@ -94,59 +100,6 @@ func (self *Runtime) runMainPhase() []error {
 	}
 
 	return errors
-}
-
-// node represents code like "NAME = EXPR": evaluate EXPR and store
-// the result in ns
-func (self *Runtime) assign(node *dsl.ASTAssignment, ns types.Namespace) error {
-	value, err := self.evaluate(node.Expression())
-	if err != nil {
-		return err
-	}
-	ns.Assign(node.Target(), value)
-	return nil
-}
-
-func (self *Runtime) evaluate(expr_ dsl.ASTExpression) (types.FuObject, error) {
-	switch expr := expr_.(type) {
-	case *dsl.ASTString:
-		return types.FuString(expr.Value()), nil
-	case *dsl.ASTName:
-		return self.evaluateName(expr)
-	case *dsl.ASTFileList:
-		return types.NewFileFinder(expr.Patterns()), nil
-	case *dsl.ASTAdd:
-		return self.evaluateAdd(expr)
-	default:
-		panic(fmt.Sprintf("unknown expression type: %T", expr))
-	}
-	panic("unreachable code")
-}
-
-func (self *Runtime) evaluateName(expr *dsl.ASTName) (types.FuObject, error) {
-	name := expr.Name()
-	value, ok := self.stack.Lookup(name)
-	if !ok {
-		err := RuntimeError{
-			location: expr.Location(),
-			message:  fmt.Sprintf("undefined variable '%s'", name),
-		}
-		return nil, err
-	}
-	return value, nil
-}
-
-func (self *Runtime) evaluateAdd(expr *dsl.ASTAdd) (types.FuObject, error) {
-	op1, op2 := expr.Operands()
-	obj1, err := self.evaluate(op1)
-	if err != nil {
-		return nil, err
-	}
-	obj2, err := self.evaluate(op2)
-	if err != nil {
-		return nil, err
-	}
-	return obj1.Add(obj2)
 }
 
 func (self *Runtime) makeRule(astrule *dsl.ASTBuildRule) (*BuildRule, error) {
@@ -179,11 +132,11 @@ func (self *Runtime) makeRuleNodes(astrule *dsl.ASTBuildRule) (
 	// each. It might be a string, a list of strings, a FuFileFinder
 	// ... anything, really.
 	var targetobj, sourceobj types.FuObject
-	targetobj, err = self.evaluate(astrule.Targets())
+	targetobj, err = evaluate(self.stack, astrule.Targets())
 	if err != nil {
 		return nil, nil, err
 	}
-	sourceobj, err = self.evaluate(astrule.Sources())
+	sourceobj, err = evaluate(self.stack, astrule.Sources())
 	if err != nil {
 		return nil, nil, err
 	}
