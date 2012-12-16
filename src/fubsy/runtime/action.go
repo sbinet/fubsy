@@ -148,7 +148,7 @@ func (self *AssignmentAction) String() string {
 }
 
 func (self *AssignmentAction) Execute(ns types.Namespace) error {
-	panic("assignment in build rule not implemented yet")
+	return assign(ns, self.assignment)
 }
 
 func (self *FunctionCallAction) String() string {
@@ -156,5 +156,5 @@ func (self *FunctionCallAction) String() string {
 }
 
 func (self *FunctionCallAction) Execute(ns types.Namespace) error {
-	panic("function call in build rule not implemeneted yet")
+	panic("function call in build rule not implemented yet")
 }
