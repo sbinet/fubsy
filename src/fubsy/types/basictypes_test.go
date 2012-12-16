@@ -123,6 +123,11 @@ func Test_FuString_Expand(t *testing.T) {
 	output, err = input.Expand(ns)
 	assert.Nil(t, err)
 	assert.Equal(t, "hello hello blorf", output.String())
+
+	ns.Assign("foo", nil)
+	output, err = input.Expand(ns)
+	assert.Nil(t, err)
+	assert.Equal(t, "hello  blorf", output.String())
 }
 
 func Test_FuString_Expand_recursive(t *testing.T) {

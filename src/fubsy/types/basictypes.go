@@ -136,20 +136,26 @@ func (self FuString) Expand(ns Namespace) (FuObject, error) {
 			return self, nil
 		}
 
-		// XXX it's possible for Lookup() to return (nil, true), if
-		// someone puts a nil value into a ValueMap
 		value, ok := ns.Lookup(name)
+		var cstring string
 		if !ok {
 			// XXX very similar to error reported by runtime.evaluateName()
 			// XXX location?
 			return self, fmt.Errorf("undefined variable '%s' in string", name)
-		}
-		value, err := value.Expand(ns)
-		if err != nil {
-			return self, nil
+		} else if value != nil {
+			xvalue, err := value.Expand(ns)
+			if err != nil {
+				return self, nil
+			}
+			if xvalue == nil {
+				// this violates the contract for FuObject.Expand()
+				panic(fmt.Sprintf(
+					"value.Expand() returned nil (value == %#v)", value))
+			}
+			cstring = xvalue.CommandString()
 		}
 
-		result += cur[:start] + value.CommandString()
+		result += cur[:start] + cstring
 		pos = end
 		cur = cur[pos:]
 		match = expand_re.FindStringSubmatchIndex(cur)
