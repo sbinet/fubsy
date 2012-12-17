@@ -73,11 +73,6 @@ func (self FuString) Equal(other_ FuObject) bool {
 	return ok && other == self
 }
 
-// XXX still needed?
-func (self FuString) Value() string {
-	return string(self)
-}
-
 func (self FuString) Add(other_ FuObject) (FuObject, error) {
 	switch other := other_.(type) {
 	case FuString:
@@ -169,7 +164,11 @@ func (self FuString) Typename() string {
 }
 
 func (self FuList) String() string {
-	return "[" + strings.Join(self.Values(), ",") + "]"
+	result := make([]string, len(self))
+	for i, obj := range self {
+		result[i] = obj.String()
+	}
+	return "[" + strings.Join(result, ",") + "]"
 }
 
 func (self FuList) CommandString() string {
@@ -186,15 +185,6 @@ func (self FuList) CommandString() string {
 func (self FuList) Equal(other_ FuObject) bool {
 	other, ok := other_.(FuList)
 	return ok && reflect.DeepEqual(self, other)
-}
-
-// XXX still needed?
-func (self FuList) Values() []string {
-	result := make([]string, len(self))
-	for i, obj := range self {
-		result[i] = obj.String()
-	}
-	return result
 }
 
 func (self FuList) Add(other FuObject) (FuObject, error) {

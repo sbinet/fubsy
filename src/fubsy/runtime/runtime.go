@@ -169,7 +169,7 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 	var result []dag.Node
 	switch targets := targets_.(type) {
 	case types.FuString:
-		result = []dag.Node{dag.MakeFileNode(self.dag, targets.Value())}
+		result = []dag.Node{dag.MakeFileNode(self.dag, targets.String())}
 	case types.FuList:
 		result = make([]dag.Node, 0, len(targets))
 		for _, val := range targets {
