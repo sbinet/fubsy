@@ -171,14 +171,14 @@ func (self *BuildState) buildNode(
 		id, node, rule, rule.ActionString())
 	node.SetState(BUILDING)
 	builderr.attempts++
-	targets, err := rule.Execute()
-	if err != nil {
+	targets, errs := rule.Execute()
+	if len(errs) > 0 {
 		// Normal, everyday build failure: report the precise problem
 		// immediately, and accumulate summary info in the caller.
 		for _, tnode := range targets {
 			tnode.SetState(FAILED)
 		}
-		self.reportFailure(err)
+		self.reportFailure(errs)
 		builderr.addFailure(node)
 		return false
 	}
@@ -188,8 +188,10 @@ func (self *BuildState) buildNode(
 	return true
 }
 
-func (self *BuildState) reportFailure(err error) {
-	fmt.Fprintf(os.Stderr, "build failure: %s\n", err)
+func (self *BuildState) reportFailure(errs []error) {
+	for _, err := range errs {
+		fmt.Fprintf(os.Stderr, "build failure: %s\n", err)
+	}
 }
 
 func (self *BuildState) keepGoing() bool {

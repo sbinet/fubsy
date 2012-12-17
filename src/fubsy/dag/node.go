@@ -107,9 +107,12 @@ type Node interface {
 type BuildRule interface {
 	// Run this rule's action(s) to build its targets from their
 	// sources. Return the rule's list of target nodes, whether they
-	// built successfully or not, and an error. Caller must not mutate
+	// built successfully or not, and a list of errors. (Multiple
+	// errors are possible because of builtin functions like mkdir()
+	// and remove(), which keep going after errors and thus must
+	// report all errors that they encounter.) Caller must not mutate
 	// targets, since it may be internal state of the BuildRule.
-	Execute() (targets []Node, err error)
+	Execute() (targets []Node, errs []error)
 
 	// Return a string describing this rule's action(s).
 	ActionString() string

@@ -19,7 +19,7 @@ import (
 
 // node represents code like "NAME = EXPR": evaluate EXPR and store
 // the result in ns
-func assign(ns types.Namespace, node *dsl.ASTAssignment) error {
+func assign(ns types.Namespace, node *dsl.ASTAssignment) []error {
 	value, err := evaluate(ns, node.Expression())
 	if err != nil {
 		return err
@@ -29,7 +29,7 @@ func assign(ns types.Namespace, node *dsl.ASTAssignment) error {
 }
 
 func evaluate(
-	ns types.Namespace, expr_ dsl.ASTExpression) (types.FuObject, error) {
+	ns types.Namespace, expr_ dsl.ASTExpression) (types.FuObject, []error) {
 	switch expr := expr_.(type) {
 	case *dsl.ASTString:
 		return types.FuString(expr.Value()), nil
@@ -42,13 +42,13 @@ func evaluate(
 	case *dsl.ASTFunctionCall:
 		return evaluateCall(ns, expr)
 	default:
-		return nil, unsupportedAST(expr_)
+		return nil, []error{unsupportedAST(expr_)}
 	}
 	panic("unreachable code")
 }
 
 func evaluateName(
-	ns types.Namespace, expr *dsl.ASTName) (types.FuObject, error) {
+	ns types.Namespace, expr *dsl.ASTName) (types.FuObject, []error) {
 	name := expr.Name()
 	value, ok := ns.Lookup(name)
 	if !ok {
@@ -56,51 +56,56 @@ func evaluateName(
 			location: expr.Location(),
 			message:  fmt.Sprintf("name not defined: '%s'", name),
 		}
-		return nil, err
+		return nil, []error{err}
 	}
 	return value, nil
 }
 
 func evaluateAdd(
-	ns types.Namespace, expr *dsl.ASTAdd) (types.FuObject, error) {
+	ns types.Namespace, expr *dsl.ASTAdd) (types.FuObject, []error) {
 	op1, op2 := expr.Operands()
-	obj1, err := evaluate(ns, op1)
-	if err != nil {
-		return nil, err
+	obj1, errs := evaluate(ns, op1)
+	if len(errs) > 0 {
+		return nil, errs
 	}
-	obj2, err := evaluate(ns, op2)
-	if err != nil {
-		return nil, err
+	obj2, errs := evaluate(ns, op2)
+	if len(errs) > 0 {
+		return nil, errs
 	}
-	return obj1.Add(obj2)
+	result, err := obj1.Add(obj2)
+	if err != nil {
+		return nil, []error{err}
+	}
+	return result, nil
 }
 
 func evaluateCall(
-	ns types.Namespace, expr *dsl.ASTFunctionCall) (types.FuObject, error) {
-	value, err := evaluate(ns, expr.Function())
-	if err != nil {
-		return nil, err
+	ns types.Namespace, expr *dsl.ASTFunctionCall) (types.FuObject, []error) {
+	value, errs := evaluate(ns, expr.Function())
+	if len(errs) > 0 {
+		return nil, errs
 	}
 	function, ok := value.(types.FuCallable)
 	if !ok {
-		return nil, RuntimeError{
+		err := RuntimeError{
 			expr.Location(),
 			fmt.Sprintf("not a function or method: '%s'", expr.Function()),
 		}
+		return nil, []error{err}
 	}
 	astargs := expr.Args() // slice of ASTExpression
 	args := make(types.FuList, len(astargs))
 	for i, astarg := range astargs {
-		args[i], err = evaluate(ns, astarg)
-		if err != nil {
-			return nil, err
+		args[i], errs = evaluate(ns, astarg)
+		if len(errs) > 0 {
+			return nil, errs
 		}
 	}
 
 	fmt.Printf("function = %v, args = %v\n", function, args)
-	err = function.CheckArgs(args)
+	err := function.CheckArgs(args)
 	if err != nil {
-		return nil, err
+		return nil, []error{err}
 	}
 	return function.Code()(args, nil)
 }

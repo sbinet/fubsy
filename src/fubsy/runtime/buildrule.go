@@ -28,7 +28,7 @@ func NewBuildRule(runtime *Runtime, targets, sources []dag.Node) *BuildRule {
 	}
 }
 
-func (self *BuildRule) Execute() ([]dag.Node, error) {
+func (self *BuildRule) Execute() ([]dag.Node, []error) {
 	stack := self.runtime.stack
 	locals := types.NewValueMap()
 	stack.Push(locals)

@@ -18,15 +18,15 @@ func Test_assign(t *testing.T) {
 	node := dsl.NewASTAssignment("a", stringnode("foo"))
 	ns := types.NewValueMap()
 
-	err := assign(ns, node)
-	assert.Nil(t, err)
+	errs := assign(ns, node)
+	assert.Equal(t, 0, len(errs))
 	expect := types.FuString("foo")
 	assertIn(t, ns, "a", expect)
 
 	// AST for a = foo (another variable, to provoke an error)
 	node = dsl.NewASTAssignment("b", dsl.NewASTName("foo"))
-	err = assign(ns, node)
-	assert.Equal(t, "name not defined: 'foo'", err.Error())
+	errs = assign(ns, node)
+	assert.Equal(t, "name not defined: 'foo'", errs[0].Error())
 	_, ok := ns.Lookup("b")
 	assert.False(t, ok)
 }
@@ -95,7 +95,7 @@ func assertEvaluateFail(
 	expecterr string,
 	input dsl.ASTExpression) {
 
-	obj, err := evaluate(ns, input)
-	assert.Equal(t, expecterr, err.Error())
+	obj, errs := evaluate(ns, input)
+	assert.Equal(t, expecterr, errs[0].Error())
 	assert.Nil(t, obj)
 }

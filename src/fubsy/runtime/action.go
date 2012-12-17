@@ -22,7 +22,7 @@ type Action interface {
 	// first error; they do not continue executing. (The global
 	// "--keep-going" option is irrelevant at this level; the caller
 	// of Execute() is responsible for respecting that option.)
-	Execute(ns types.Namespace) error
+	Execute(ns types.Namespace) []error
 }
 
 type actionbase struct {
@@ -78,12 +78,11 @@ func (self *SequenceAction) String() string {
 	return strings.Join(result, " && ") + tail
 }
 
-func (self *SequenceAction) Execute(ns types.Namespace) error {
-	var err error
+func (self *SequenceAction) Execute(ns types.Namespace) []error {
 	for _, sub := range self.subactions {
-		err = sub.Execute(ns)
-		if err != nil {
-			return err
+		errs := sub.Execute(ns)
+		if len(errs) > 0 {
+			return errs
 		}
 	}
 	return nil
@@ -110,13 +109,13 @@ func (self *CommandAction) String() string {
 	return self.raw.String()
 }
 
-func (self *CommandAction) Execute(ns types.Namespace) error {
+func (self *CommandAction) Execute(ns types.Namespace) []error {
 	//fmt.Println(self.raw)
 
 	var err error
 	self.expanded, err = self.raw.Expand(ns)
 	if err != nil {
-		return err
+		return []error{err}
 	}
 	fmt.Println(self.expanded)
 
@@ -139,7 +138,10 @@ func (self *CommandAction) Execute(ns types.Namespace) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
-	return err
+	if err != nil {
+		return []error{err}
+	}
+	return nil
 }
 
 func (self *AssignmentAction) String() string {
@@ -147,7 +149,7 @@ func (self *AssignmentAction) String() string {
 	//return self.assignment.String()
 }
 
-func (self *AssignmentAction) Execute(ns types.Namespace) error {
+func (self *AssignmentAction) Execute(ns types.Namespace) []error {
 	return assign(ns, self.assignment)
 }
 
@@ -155,6 +157,6 @@ func (self *FunctionCallAction) String() string {
 	return self.fcall.String() + "(...)"
 }
 
-func (self *FunctionCallAction) Execute(ns types.Namespace) error {
+func (self *FunctionCallAction) Execute(ns types.Namespace) []error {
 	panic("function call in build rule not implemented yet")
 }

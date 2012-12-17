@@ -9,7 +9,8 @@ import (
 )
 
 // the inner heart of a function or method, the code that is actually called
-type FuCode func(args []FuObject, kwargs map[string]FuObject) (FuObject, error)
+// XXX should we allow multiple return values ([]FuObject)?
+type FuCode func(args []FuObject, kwargs map[string]FuObject) (FuObject, []error)
 
 // Every function (method) may take required (positional) arguments
 // and optional (keyword) arguments. Each function specifies how many

@@ -5,8 +5,6 @@
 package runtime
 
 import (
-	"errors"
-	"fmt"
 	"os"
 
 	"fubsy/types"
@@ -29,14 +27,15 @@ func defineBuiltins(ns types.Namespace) {
 
 func fn_println(
 	args []types.FuObject, kwargs map[string]types.FuObject) (
-	types.FuObject, error) {
+	types.FuObject, []error) {
 	for i, val := range args {
 		if i > 0 {
 			os.Stdout.WriteString(" ")
 		}
 		_, err := os.Stdout.WriteString(val.String())
 		if err != nil {
-			return nil, err
+			// this shouldn't happen, so bail immediately
+			return nil, []error{err}
 		}
 	}
 	os.Stdout.WriteString("\n")
@@ -45,46 +44,26 @@ func fn_println(
 
 func fn_mkdir(
 	args []types.FuObject, kwargs map[string]types.FuObject) (
-	types.FuObject, error) {
-	patherrors := make([]error, 0)
+	types.FuObject, []error) {
+	errs := make([]error, 0)
 	for _, name := range args {
 		err := os.MkdirAll(name.String(), 0755)
 		if err != nil {
-			patherrors = append(patherrors, err)
+			errs = append(errs, err)
 		}
 	}
-	if len(patherrors) == 1 {
-		return nil, patherrors[0]
-	} else if len(patherrors) > 1 {
-		message := fmt.Sprintf(
-			"error creating %d directories:", len(patherrors))
-		for _, err := range patherrors {
-			message += "\n  " + err.Error()
-		}
-		return nil, errors.New(message)
-	}
-	return nil, nil
+	return nil, errs
 }
 
 func fn_remove(
 	args []types.FuObject, kwargs map[string]types.FuObject) (
-	types.FuObject, error) {
-	patherrors := make([]error, 0)
+	types.FuObject, []error) {
+	errs := make([]error, 0)
 	for _, name := range args {
 		err := os.RemoveAll(name.String())
 		if err != nil {
-			patherrors = append(patherrors, err)
+			errs = append(errs, err)
 		}
 	}
-	if len(patherrors) == 1 {
-		return nil, patherrors[0]
-	} else if len(patherrors) > 1 {
-		message := fmt.Sprintf(
-			"error creating %d directories:", len(patherrors))
-		for _, err := range patherrors {
-			message += "\n  " + err.Error()
-		}
-		return nil, errors.New(message)
-	}
-	return nil, nil
+	return nil, errs
 }

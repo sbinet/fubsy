@@ -80,36 +80,33 @@ func (self *Runtime) runMainPhase() []error {
 			RuntimeError{self.ast.Location(), "no main phase defined"}}
 	}
 
-	var errors []error
+	var allerrors []error // from the entire phase
+	var errs []error      // from a single statement
 	for _, node_ := range main.Children() {
-		var err error
 		switch node := node_.(type) {
 		case *dsl.ASTAssignment:
-			err = assign(self.stack, node)
+			errs = assign(self.stack, node)
 		case *dsl.ASTBuildRule:
 			var rule *BuildRule
-			rule, err = self.makeRule(node)
-			if err == nil {
+			rule, errs = self.makeRule(node)
+			if len(errs) == 0 {
 				self.addRule(rule)
 			}
 		case dsl.ASTExpression:
-			_, err = evaluate(self.stack, node)
+			_, errs = evaluate(self.stack, node)
 		default:
-			err = unsupportedAST(node)
+			errs = append(errs, unsupportedAST(node))
 		}
-
-		if err != nil {
-			errors = append(errors, err)
-		}
+		allerrors = append(allerrors, errs...)
 	}
 
-	return errors
+	return allerrors
 }
 
-func (self *Runtime) makeRule(astrule *dsl.ASTBuildRule) (*BuildRule, error) {
-	targets, sources, err := self.makeRuleNodes(astrule)
-	if err != nil {
-		return nil, err
+func (self *Runtime) makeRule(astrule *dsl.ASTBuildRule) (*BuildRule, []error) {
+	targets, sources, errs := self.makeRuleNodes(astrule)
+	if len(errs) > 0 {
+		return nil, errs
 	}
 
 	allactions := NewSequenceAction()
@@ -130,19 +127,19 @@ func (self *Runtime) makeRule(astrule *dsl.ASTBuildRule) (*BuildRule, error) {
 }
 
 func (self *Runtime) makeRuleNodes(astrule *dsl.ASTBuildRule) (
-	targets, sources []dag.Node, err error) {
+	targets, sources []dag.Node, errs []error) {
 
 	// Evaluate the target and source lists, so we get one FuObject
 	// each. It might be a string, a list of strings, a FuFileFinder
 	// ... anything, really.
 	var targetobj, sourceobj types.FuObject
-	targetobj, err = evaluate(self.stack, astrule.Targets())
-	if err != nil {
-		return nil, nil, err
+	targetobj, errs = evaluate(self.stack, astrule.Targets())
+	if len(errs) > 0 {
+		return
 	}
-	sourceobj, err = evaluate(self.stack, astrule.Sources())
-	if err != nil {
-		return nil, nil, err
+	sourceobj, errs = evaluate(self.stack, astrule.Sources())
+	if len(errs) > 0 {
+		return
 	}
 
 	// Convert each of those FuObjects to a list of DAG nodes.

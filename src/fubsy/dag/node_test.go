@@ -22,12 +22,13 @@ func makestubrule(callback func(string), target ...Node) *stubrule {
 	}
 }
 
-func (self *stubrule) Execute() ([]Node, error) {
+func (self *stubrule) Execute() ([]Node, []error) {
 	self.callback(self.targets[0].String())
+	errs := []error{}
 	if self.fail {
-		return self.targets, errors.New("action failed")
+		errs = append(errs, errors.New("action failed"))
 	}
-	return self.targets, nil
+	return self.targets, errs
 }
 
 func (self *stubrule) ActionString() string {
