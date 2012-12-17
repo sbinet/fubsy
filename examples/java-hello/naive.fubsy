@@ -11,6 +11,7 @@ main {
     # jar file when any production source file changes
     mainjar: mainsrc {
         classdir = "classes/main"
+        mkdir(classdir)
         "javac -d $classdir $mainsrc"
         "jar -cf $TARGET -C $classdir ."
         remove(classdir)
@@ -22,6 +23,7 @@ main {
     # code
     testjar: testsrc + mainjar {
         classdir = "classes/test"
+        mkdir(classdir)
         "javac -d $classdir -classpath $mainjar $testsrc"
         "jar -cf $TARGET -C $classdir ."
         remove(classdir)

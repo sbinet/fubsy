@@ -51,6 +51,7 @@ First, here's the naive way to do it, using only core Fubsy features
         # jar file when any production source file changes
         mainjar: mainsrc {
             classdir = "classes/main"
+            mkdir(classdir)
             "javac -d $classdir $mainsrc"
             "jar -cf $TARGET -C $classdir ."
             remove(classdir)
@@ -62,6 +63,7 @@ First, here's the naive way to do it, using only core Fubsy features
         # code
         testjar: testsrc + mainjar {
             classdir = "classes/test"
+            mkdir(classdir)
             "javac -d $classdir -classpath $mainjar $testsrc"
             "jar -cf $TARGET -C $classdir ."
             remove(classdir)
