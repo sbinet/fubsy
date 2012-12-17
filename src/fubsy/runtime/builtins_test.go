@@ -26,6 +26,11 @@ func Test_defineBuiltins(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, fn)
 	assert.Equal(t, fn.(types.FuCallable).Code(), types.FuCode(fn_println))
+
+	fn, ok = ns.Lookup("remove")
+	assert.True(t, ok)
+	assert.NotNil(t, fn)
+	assert.Equal(t, fn.(types.FuCallable).Code(), types.FuCode(fn_remove))
 }
 
 func Test_println(t *testing.T) {
@@ -133,6 +138,53 @@ func Test_mkdir(t *testing.T) {
 			"  mkdir meep/zap: not a directory\n"+
 			"  mkdir meep/zap: not a directory",
 		err.Error())
+}
+
+func Test_remove(t *testing.T) {
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	args := types.MakeFuList()
+	kwargs := make(map[string]types.FuObject)
+
+	// remove() doesn't care about empty arg list (same reason as mkdir())
+	result, err := fn_remove(args, kwargs)
+	assert.Nil(t, result)
+	assert.Nil(t, err)
+
+	// remove() ignores non-existent files
+	args = types.MakeFuList("foo", "bar/bleep/meep", "qux")
+	result, err = fn_remove(args, kwargs)
+	assert.Nil(t, result)
+	assert.Nil(t, err)
+
+	// remove() removes regular files
+	testutils.TouchFiles("foo", "bar/bleep/meep", "bar/bleep/feep", "qux")
+	args = types.MakeFuList("foo", "bar/bleep/meep", "bogus")
+	result, err = fn_remove(args, kwargs)
+	assert.Nil(t, result)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"bar", "qux"}, dirContents("."))
+	assert.Equal(t, []string{"bleep"}, dirContents("bar"))
+	assert.Equal(t, []string{"feep"}, dirContents("bar/bleep"))
+
+	// remove() removes files and directories too
+	testutils.TouchFiles("foo", "bar/bleep/meep", "qux")
+	args = types.MakeFuList("bogus", "bar", "morebogus", "qux")
+	result, err = fn_remove(args, kwargs)
+	assert.Nil(t, result)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"foo"}, dirContents("."))
+
+	// remove() fails if it tries to delete from an unwriteable directory
+	testutils.TouchFiles("bar/bong", "qux/bip")
+	testutils.ChmodRO("bar")
+	defer testutils.ChmodOwnerAll("bar")
+
+	args = types.MakeFuList("bar", "qux")
+	result, err = fn_remove(args, kwargs)
+	assert.Nil(t, result)
+	assert.Equal(t, "remove bar/bong: permission denied", err.Error())
 }
 
 func dirContents(dir string) []string {

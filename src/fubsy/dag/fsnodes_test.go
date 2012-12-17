@@ -6,7 +6,6 @@ package dag
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchrcom/testify/assert"
@@ -121,8 +120,8 @@ func Test_FileNode_Exists(t *testing.T) {
 
 	testutils.TouchFiles("foo.txt", "a/a/a/a/foo.txt", "a/b/unreadable")
 
-	makeUnreadable("a/b")
-	defer makeReadable("a/b")
+	testutils.ChmodNoAccess("a/b")
+	defer testutils.ChmodOwnerAll("a/b")
 
 	dag := NewDAG()
 	tests := []struct {
@@ -230,25 +229,4 @@ func assertParents(t *testing.T, expect []string, dag *DAG, node Node) {
 		actualnames[i] = node.Name()
 	}
 	assert.Equal(t, expect, actualnames)
-}
-
-func makeUnreadable(name string) {
-	chmodMask(name, ^os.ModePerm, 0)
-}
-
-func makeReadable(name string) {
-	chmodMask(name, 0, 0700)
-}
-
-func chmodMask(name string, andmask, ormask os.FileMode) {
-	// hmmm: does this work on windows?
-	info, err := os.Stat(name)
-	if err != nil {
-		panic(err)
-	}
-	mode := info.Mode()&andmask | ormask
-	err = os.Chmod(name, mode)
-	if err != nil {
-		panic(err)
-	}
 }

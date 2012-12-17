@@ -87,3 +87,33 @@ func Mkdirs(dirs ...string) {
 		}
 	}
 }
+
+// Modify the permissions of the specified file so that it's
+// inaccessible (no read, no write, no execute) to all users. Panic on
+// error.
+func ChmodNoAccess(name string) {
+	chmodMask(name, os.ModePerm, 0)
+}
+
+func ChmodRO(name string) {
+	chmodMask(name, os.FileMode(0222), 0)
+}
+
+// Modify the permissions of the specified file so that it's
+// readable/writeable/executable by the owner.
+func ChmodOwnerAll(name string) {
+	chmodMask(name, 0, 0700)
+}
+
+func chmodMask(name string, offbits, onbits os.FileMode) {
+	// hmmm: does this work on windows?
+	info, err := os.Stat(name)
+	if err != nil {
+		panic(err)
+	}
+	mode := (info.Mode() & ^offbits) | onbits
+	err = os.Chmod(name, mode)
+	if err != nil {
+		panic(err)
+	}
+}
