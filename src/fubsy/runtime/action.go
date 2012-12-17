@@ -158,5 +158,6 @@ func (self *FunctionCallAction) String() string {
 }
 
 func (self *FunctionCallAction) Execute(ns types.Namespace) []error {
-	panic("function call in build rule not implemented yet")
+	_, errs := evaluateCall(ns, self.fcall)
+	return errs
 }
