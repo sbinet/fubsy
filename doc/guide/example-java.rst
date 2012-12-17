@@ -42,6 +42,9 @@ First, here's the naive way to do it, using only core Fubsy features
 (no plugins)::
 
     main {
+        # assume a Debian-ish system with junit4 installed
+        junit = "/usr/share/java/junit4.jar"
+
         mainsrc = <src/main/**/*.java>
         testsrc = <src/test/**/*.java>
         mainjar = "example.jar"
@@ -64,7 +67,7 @@ First, here's the naive way to do it, using only core Fubsy features
         testjar: testsrc + mainjar {
             classdir = "classes/test"
             mkdir(classdir)
-            "javac -d $classdir -classpath $mainjar $testsrc"
+            "javac -d $classdir -classpath $mainjar:$junit $testsrc"
             "jar -cf $TARGET -C $classdir ."
             remove(classdir)
         }
