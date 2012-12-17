@@ -447,12 +447,19 @@ func (self *ASTFunctionCall) Equal(other_ ASTNode) bool {
 }
 
 func (self *ASTFunctionCall) String() string {
-	// args := make([]string, len(self.args))
-	// for i, arg := range self.args {
-	// 	args[i] = arg.String()
-	// }
-	// return fmt.Sprintf("%s(%s)", self.function, strings.Join(args, ", "))
-	return fmt.Sprintf("%s(%d args)", self.function, len(self.args))
+	args := make([]string, len(self.args))
+	for i, arg := range self.args {
+		args[i] = arg.String()
+	}
+	return fmt.Sprintf("%s(%s)", self.function, strings.Join(args, ", "))
+}
+
+func (self *ASTFunctionCall) Function() ASTExpression {
+	return self.function
+}
+
+func (self *ASTFunctionCall) Args() []ASTExpression {
+	return self.args
 }
 
 func NewASTSelection(container ASTExpression, member string, location ...Locatable) *ASTSelection {

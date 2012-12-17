@@ -322,7 +322,7 @@ func assertExpand(t *testing.T, expect []string, obj FuObject) {
 	actual, err := obj.Expand(ns)
 	assert.Nil(t, err)
 
-	expectobj := makeFuList(expect...)
+	expectobj := MakeFuList(expect...)
 	if !reflect.DeepEqual(expectobj, actual) {
 		t.Errorf("%v Expand(): "+
 			"expected\n%v\nbut got\n%v",

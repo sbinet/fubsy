@@ -39,8 +39,10 @@ func evaluate(
 		return types.NewFileFinder(expr.Patterns()), nil
 	case *dsl.ASTAdd:
 		return evaluateAdd(ns, expr)
+	case *dsl.ASTFunctionCall:
+		return evaluateCall(ns, expr)
 	default:
-		panic(fmt.Sprintf("unknown expression type: %T", expr))
+		return nil, unsupportedAST(expr_)
 	}
 	panic("unreachable code")
 }
@@ -52,7 +54,7 @@ func evaluateName(
 	if !ok {
 		err := RuntimeError{
 			location: expr.Location(),
-			message:  fmt.Sprintf("undefined variable '%s'", name),
+			message:  fmt.Sprintf("name not defined: '%s'", name),
 		}
 		return nil, err
 	}
@@ -71,4 +73,34 @@ func evaluateAdd(
 		return nil, err
 	}
 	return obj1.Add(obj2)
+}
+
+func evaluateCall(
+	ns types.Namespace, expr *dsl.ASTFunctionCall) (types.FuObject, error) {
+	value, err := evaluate(ns, expr.Function())
+	if err != nil {
+		return nil, err
+	}
+	function, ok := value.(types.FuCallable)
+	if !ok {
+		return nil, RuntimeError{
+			expr.Location(),
+			fmt.Sprintf("not a function or method: '%s'", expr.Function()),
+		}
+	}
+	astargs := expr.Args() // slice of ASTExpression
+	args := make(types.FuList, len(astargs))
+	for i, astarg := range astargs {
+		args[i], err = evaluate(ns, astarg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	fmt.Printf("function = %v, args = %v\n", function, args)
+	err = function.CheckArgs(args)
+	if err != nil {
+		return nil, err
+	}
+	return function.Code()(args, nil)
 }

@@ -100,7 +100,7 @@ func (self *FuFileFinder) Expand(ns Namespace) (FuObject, error) {
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, makeFuList(matches...)...)
+		result = append(result, MakeFuList(matches...)...)
 	}
 	return result, nil
 }

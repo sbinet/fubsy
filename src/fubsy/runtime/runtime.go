@@ -32,11 +32,11 @@ type Runtime struct {
 func NewRuntime(script string, ast dsl.AST) *Runtime {
 	stack := types.NewValueStack()
 
-	// The globals namespace is not currently used in production,
+	// The globals namespace is currently used only for builtins,
 	// because the right syntax for assigning globals is not yet
-	// decided. But the unit tests use globals, and this serves as a
-	// placeholder to fill in once the syntax is settled.
+	// decided.
 	globals := types.NewValueMap()
+	defineBuiltins(globals)
 	stack.Push(globals)
 
 	// Local variables are per-script, but we only support a single
@@ -92,6 +92,10 @@ func (self *Runtime) runMainPhase() []error {
 			if err == nil {
 				self.addRule(rule)
 			}
+		case dsl.ASTExpression:
+			_, err = evaluate(self.stack, node)
+		default:
+			err = unsupportedAST(node)
 		}
 
 		if err != nil {
@@ -210,6 +214,13 @@ func (self *Runtime) runBuildPhase() []error {
 		errors = append(errors, err)
 	}
 	return errors
+}
+
+func unsupportedAST(node dsl.ASTNode) error {
+	return RuntimeError{
+		location: node.Location(),
+		message:  fmt.Sprintf("support not implemented for: %v", node),
+	}
 }
 
 // XXX this is identical to TypeError in types/basictypes.go:

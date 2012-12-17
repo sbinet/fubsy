@@ -73,7 +73,7 @@ func Test_Runtime_runMainPhase_error(t *testing.T) {
 	errors := rt.runMainPhase()
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
-		"test.fubsy:2: undefined variable 'bogus'",
+		"test.fubsy:2: name not defined: 'bogus'",
 		errors[0].Error())
 }
 

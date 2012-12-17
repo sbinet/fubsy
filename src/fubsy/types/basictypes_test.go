@@ -79,7 +79,7 @@ func Test_FuString_Add_strings(t *testing.T) {
 
 func Test_FuString_Add_list(t *testing.T) {
 	cmd := FuString("ls")
-	args := makeFuList("-l", "-a", "foo")
+	args := MakeFuList("-l", "-a", "foo")
 	result, err := cmd.Add(args)
 	assert.Nil(t, err)
 	assert.Equal(t, "[ls,-l,-a,foo]", result.String())
@@ -154,46 +154,46 @@ func Test_FuString_Expand_recursive(t *testing.T) {
 }
 
 func Test_FuList_String(t *testing.T) {
-	l := makeFuList("beep", "meep")
+	l := MakeFuList("beep", "meep")
 	assert.Equal(t, "[beep,meep]", l.String())
 
-	l = makeFuList("beep", "", "meep")
+	l = MakeFuList("beep", "", "meep")
 	assert.Equal(t, "[beep,,meep]", l.String())
 }
 
 func Test_FuList_CommandString(t *testing.T) {
-	l := makeFuList("foo", "*.c", "ding dong", "")
+	l := MakeFuList("foo", "*.c", "ding dong", "")
 	assert.Equal(t, "foo '*.c' 'ding dong' ''", l.CommandString())
 }
 
 func Test_FuList_Add_list(t *testing.T) {
-	l1 := makeFuList("foo", "bar")
-	l2 := makeFuList("qux")
+	l1 := MakeFuList("foo", "bar")
+	l2 := MakeFuList("qux")
 
 	result, err := l1.Add(l2)
-	expect := makeFuList("foo", "bar", "qux")
+	expect := MakeFuList("foo", "bar", "qux")
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
 
 	result, err = l2.Add(l1)
-	expect = makeFuList("qux", "foo", "bar")
+	expect = MakeFuList("qux", "foo", "bar")
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
 }
 
 func Test_FuList_Add_string(t *testing.T) {
-	cmd := makeFuList("ls", "-la")
+	cmd := MakeFuList("ls", "-la")
 	arg := FuString("stuff/")
 
 	result, err := cmd.Add(arg)
-	expect := makeFuList("ls", "-la", "stuff/")
+	expect := MakeFuList("ls", "-la", "stuff/")
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
 }
 
 func Test_FuList_Expand(t *testing.T) {
 	ns := makeNamespace()
-	input := makeFuList("gob", "mob")
+	input := MakeFuList("gob", "mob")
 	output, err := input.Expand(ns)
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)

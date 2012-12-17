@@ -26,7 +26,7 @@ func Test_assign(t *testing.T) {
 	// AST for a = foo (another variable, to provoke an error)
 	node = dsl.NewASTAssignment("b", dsl.NewASTName("foo"))
 	err = assign(ns, node)
-	assert.Equal(t, "undefined variable 'foo'", err.Error())
+	assert.Equal(t, "name not defined: 'foo'", err.Error())
 	_, ok := ns.Lookup("b")
 	assert.False(t, ok)
 }
@@ -48,7 +48,7 @@ func Test_evaluate_simple(t *testing.T) {
 
 	// ... and to an error if the variable is not defined
 	nnode = dsl.NewASTName("boo")
-	assertEvaluateFail(t, ns, "undefined variable 'boo'", nnode)
+	assertEvaluateFail(t, ns, "name not defined: 'boo'", nnode)
 
 	// expression <*.c blah> evaluates to a FileFinder with two
 	// include patterns
