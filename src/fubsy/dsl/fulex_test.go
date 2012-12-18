@@ -210,7 +210,7 @@ func TestScan_inline_consecutive(t *testing.T) {
 	assertScan(t, expect, scan(input))
 }
 
-func TestScan_internal_newlines(t *testing.T) {
+func TestScan_internal_newlines_1(t *testing.T) {
 	input := "hello\n(\"beep\" +\n\"bop\"\n)\n foo"
 	expect := []minitok{
 		{NAME, "hello"},
@@ -237,6 +237,30 @@ func TestScan_internal_newlines(t *testing.T) {
 		23, 24, 4,
 		25, 28, 5,
 		28, 28, 5)
+}
+
+func TestScan_internal_newlines_2(t *testing.T) {
+	// similar to previous, but with [ ... ] too
+	input := "a\n\n[b\n  (c d\ne\n  f) g\n]\n\nh"
+	expect := []minitok{
+		{NAME, "a"},
+		{EOL, "\n"},
+		{'[', "["},
+		{NAME, "b"},
+		{'(', "("},
+		{NAME, "c"},
+		{NAME, "d"},
+		{NAME, "e"},
+		{NAME, "f"},
+		{')', ")"},
+		{NAME, "g"},
+		{']', "]"},
+		{EOL, "\n"},
+		{NAME, "h"},
+		{EOL, ""},
+	}
+	tokens := scan(input)
+	assertScan(t, expect, tokens)
 }
 
 func TestScan_invalid(t *testing.T) {

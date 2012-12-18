@@ -236,6 +236,8 @@ func (self *Scanner) scan() {
 \}							self.tokfound('}')
 \(							self.depth++; self.tokfound('(')
 \)							self.depth--; self.tokfound(')')
+\[							self.depth++; self.tokfound('[')
+\]							self.depth--; self.tokfound(']')
 \.							self.tokfound('.')
 \,							self.tokfound(',')
 =							self.tokfound('=')
