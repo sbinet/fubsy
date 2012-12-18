@@ -238,7 +238,7 @@ func Test_fuParse_funccall_3(t *testing.T) {
 	assertParses(t, _funccall_expect, tokens)
 }
 
-func Test_fuParse_filelist(t *testing.T) {
+func Test_fuParse_filefinder(t *testing.T) {
 	// parse "main { x = [**/*.c]; }"
 	tokens := []minitok{
 		{NAME, "main"},

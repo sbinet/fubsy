@@ -44,7 +44,7 @@ const BADTOKEN = -1
 %type <expr> functioncall
 %type <exprlist> arglist
 %type <expr> selection
-%type <expr> filelist
+%type <expr> filefinder
 %type <tokenlist> patternlist
 
 %token <token> IMPORT PLUGIN INLINE NAME QSTRING FILEPATTERN R3BRACE
@@ -167,9 +167,9 @@ primaryexpr:
 	'(' expr ')'			{ $$ = $2 }
 |	NAME					{ $$ = NewASTName($1.text, $1) }
 |	QSTRING					{ $$ = NewASTString($1.text, $1)}
-|	filelist				{ $$ = $1}
+|	filefinder				{ $$ = $1}
 
-filelist:
+filefinder:
 	'<' patternlist '>'
 	{
 		$$ = NewASTFileFinder(extractText($2), $1, $3)

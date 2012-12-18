@@ -83,7 +83,7 @@ func (self *Scanner) scan() {
 	const (
 		SC_INITIAL = iota
 		SC_INLINE
-		SC_FILELIST
+		SC_FILEFINDER
 		maxsc
 	)
 
@@ -181,14 +181,14 @@ func (self *Scanner) scan() {
 		inline = append(inline, self.buf...)
 	}
 
-	startfilelist := func() {
-		begin(SC_FILELIST)
+	startfilefinder := func() {
+		begin(SC_FILEFINDER)
 		tokfound('<')
 	}
 	filepattern := func() {
 		tokfound(FILEPATTERN)
 	}
-	stopfilelist := func() {
+	stopfilefinder := func() {
 		begin(SC_INITIAL)
 		self.startpos = self.pos - 2
 		tokfound('>')
@@ -205,7 +205,7 @@ func (self *Scanner) scan() {
 
 /* start conditions (lexical modes) */
 %x SC_INLINE
-%x SC_FILELIST
+%x SC_FILEFINDER
 
 %%
 
@@ -237,10 +237,10 @@ func (self *Scanner) scan() {
 <SC_INLINE>.*				inlinecontent()
 <SC_INLINE>\n				inlinecontent()
 
-\<							startfilelist()
-<SC_FILELIST>[^ \t\n\>]+	filepattern()
-<SC_FILELIST>[ \t\n]		skip()
-<SC_FILELIST>\>				stopfilelist()
+\<							startfilefinder()
+<SC_FILEFINDER>[^ \t\n\>]+	filepattern()
+<SC_FILEFINDER>[ \t\n]		skip()
+<SC_FILEFINDER>\>			stopfilefinder()
 
 .							badchar()
 

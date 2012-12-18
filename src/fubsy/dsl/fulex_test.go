@@ -51,7 +51,7 @@ func TestScan_eof(t *testing.T) {
 		14, 14, 2)
 }
 
-func TestScan_filelist(t *testing.T) {
+func TestScan_filefinder(t *testing.T) {
 	input := "bop { \n<**/*.[ch] [a-z]*.o\n>}"
 	expect := []minitok{
 		{NAME, "bop"},
