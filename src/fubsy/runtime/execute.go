@@ -30,22 +30,26 @@ func assign(ns types.Namespace, node *dsl.ASTAssignment) []error {
 }
 
 func evaluate(
-	ns types.Namespace, expr_ dsl.ASTExpression) (types.FuObject, []error) {
+	ns types.Namespace, expr_ dsl.ASTExpression) (
+	result types.FuObject, errs []error) {
 	switch expr := expr_.(type) {
 	case *dsl.ASTString:
-		return types.FuString(expr.Value()), nil
+		result = types.FuString(expr.Value())
 	case *dsl.ASTName:
-		return evaluateName(ns, expr)
+		result, errs = evaluateName(ns, expr)
 	case *dsl.ASTFileFinder:
-		return dag.NewFinderNode(expr.Patterns()), nil
+		result = dag.NewFinderNode(expr.Patterns())
 	case *dsl.ASTAdd:
-		return evaluateAdd(ns, expr)
+		result, errs = evaluateAdd(ns, expr)
 	case *dsl.ASTFunctionCall:
-		return evaluateCall(ns, expr)
+		result, errs = evaluateCall(ns, expr)
 	default:
 		return nil, []error{unsupportedAST(expr_)}
 	}
-	panic("unreachable code")
+	for i, err := range errs {
+		errs[i] = MakeLocationError(expr_, err)
+	}
+	return
 }
 
 func evaluateName(
@@ -53,10 +57,7 @@ func evaluateName(
 	name := expr.Name()
 	value, ok := ns.Lookup(name)
 	if !ok {
-		err := RuntimeError{
-			location: expr.Location(),
-			message:  fmt.Sprintf("name not defined: '%s'", name),
-		}
+		err := fmt.Errorf("name not defined: '%s'", name)
 		return nil, []error{err}
 	}
 	return value, nil
@@ -88,10 +89,7 @@ func evaluateCall(
 	}
 	function, ok := value.(types.FuCallable)
 	if !ok {
-		err := RuntimeError{
-			expr.Location(),
-			fmt.Sprintf("not a function or method: '%s'", expr.Function()),
-		}
+		err := fmt.Errorf("not a function or method: '%s'", expr.Function())
 		return nil, []error{err}
 	}
 	astargs := expr.Args() // slice of ASTExpression
@@ -109,4 +107,20 @@ func evaluateCall(
 		return nil, []error{err}
 	}
 	return function.Code()(args, nil)
+}
+
+type LocationError struct {
+	location dsl.Location
+	err      error
+}
+
+func MakeLocationError(loc dsl.Locatable, err error) error {
+	if _, ok := err.(LocationError); ok {
+		return err
+	}
+	return LocationError{loc.Location(), err}
+}
+
+func (self LocationError) Error() string {
+	return self.location.ErrorPrefix() + self.err.Error()
 }

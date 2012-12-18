@@ -11,6 +11,7 @@ package runtime
 // Fubsy process.
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -77,7 +78,7 @@ func (self *Runtime) runMainPhase() []error {
 	main := self.ast.FindPhase("main")
 	if main == nil {
 		return []error{
-			RuntimeError{self.ast.Location(), "no main phase defined"}}
+			MakeLocationError(self.ast, errors.New("no main phase defined"))}
 	}
 
 	var allerrors []error // from the entire phase
@@ -95,7 +96,7 @@ func (self *Runtime) runMainPhase() []error {
 		case dsl.ASTExpression:
 			_, errs = evaluate(self.stack, node)
 		default:
-			errs = append(errs, unsupportedAST(node))
+			errs = append(errs, MakeLocationError(node, unsupportedAST(node)))
 		}
 		allerrors = append(allerrors, errs...)
 	}
@@ -214,19 +215,5 @@ func (self *Runtime) runBuildPhase() []error {
 }
 
 func unsupportedAST(node dsl.ASTNode) error {
-	return RuntimeError{
-		location: node.Location(),
-		message:  fmt.Sprintf("support not implemented for: %v", node),
-	}
-}
-
-// XXX this is identical to TypeError in types/basictypes.go:
-// factor out a common error type?
-type RuntimeError struct {
-	location dsl.Location
-	message  string
-}
-
-func (self RuntimeError) Error() string {
-	return self.location.ErrorPrefix() + self.message
+	return fmt.Errorf("support not implemented for: %v", node)
 }

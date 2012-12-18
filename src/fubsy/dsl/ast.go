@@ -623,3 +623,28 @@ func exprlistsEqual(aexprs []ASTExpression, bexprs []ASTExpression) bool {
 
 	return listsEqual(nodes(aexprs), nodes(bexprs))
 }
+
+// for tests in other packages
+type StubLocation struct {
+	message string
+}
+
+func NewStubLocation(message string) StubLocation {
+	return StubLocation{message}
+}
+
+func (self StubLocation) Location() Location {
+	return self
+}
+
+func (self StubLocation) String() string {
+	return self.message
+}
+
+func (self StubLocation) ErrorPrefix() string {
+	return self.message + ": "
+}
+
+func (self StubLocation) merge(other Location) Location {
+	return NewStubLocation(self.message + other.(StubLocation).message)
+}

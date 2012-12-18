@@ -48,8 +48,9 @@ func Test_evaluate_simple(t *testing.T) {
 	assertEvaluateOK(t, ns, expect, nnode)
 
 	// ... and to an error if the variable is not defined
-	nnode = dsl.NewASTName("boo")
-	assertEvaluateFail(t, ns, "name not defined: 'boo'", nnode)
+	location := dsl.NewStubLocation("hello, sailor")
+	nnode = dsl.NewASTName("boo", location)
+	assertEvaluateFail(t, ns, "hello, sailor: name not defined: 'boo'", nnode)
 
 	// expression <*.c blah> evaluates to a FileFinder with two
 	// include patterns
@@ -57,6 +58,32 @@ func Test_evaluate_simple(t *testing.T) {
 	fnode := dsl.NewASTFileFinder(patterns)
 	expect = dag.NewFinderNode([]string{"*.c", "blah"})
 	assertEvaluateOK(t, ns, expect, fnode)
+}
+
+// evaluate more complex expressions
+func Test_evaluate_complex(t *testing.T) {
+	// a + b evaluates to various things, depending on the value
+	// of those two variables
+	addnode := dsl.NewASTAdd(
+		dsl.NewASTName("a", dsl.NewStubLocation("loc1")),
+		dsl.NewASTName("b", dsl.NewStubLocation("loc2")))
+
+	// case 1: two strings just get concatenated
+	ns := types.NewValueMap()
+	ns.Assign("a", types.FuString("foo"))
+	ns.Assign("b", types.FuString("bar"))
+	expect := types.FuString("foobar")
+	assertEvaluateOK(t, ns, expect, addnode)
+
+	// case 2: adding a function to a string fails
+	ns.Assign("b", types.NewFixedFunction("b", 0, nil))
+	assertEvaluateFail(t, ns,
+		"loc1loc2: unsupported operation: cannot add function to string",
+		addnode)
+
+	// case 3: undefined name
+	delete(ns, "b")
+	assertEvaluateFail(t, ns, "loc2: name not defined: 'b'", addnode)
 }
 
 func stringnode(value string) *dsl.ASTString {

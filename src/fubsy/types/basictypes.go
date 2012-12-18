@@ -12,8 +12,6 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-
-	"fubsy/dsl"
 )
 
 type FuObject interface {
@@ -216,9 +214,8 @@ func (self FuList) Typename() string {
 }
 
 func unsupportedOperation(self FuObject, other FuObject, detail string) error {
-	message := fmt.Sprintf("unsupported operation: "+detail,
+	return fmt.Errorf("unsupported operation: "+detail,
 		other.Typename(), self.Typename())
-	return TypeError{message: message}
 }
 
 // Convert a variable number of strings to a FuList of FuString.
@@ -228,15 +225,6 @@ func MakeFuList(strings ...string) FuList {
 		result[i] = FuString(s)
 	}
 	return result
-}
-
-type TypeError struct {
-	location dsl.Location
-	message  string
-}
-
-func (self TypeError) Error() string {
-	return self.location.ErrorPrefix() + self.message
 }
 
 const shellmeta = "# `\"'\\&?*[]{}();$><|"
