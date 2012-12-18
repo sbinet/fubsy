@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE.txt file.
 
-package types
+package dag
 
 import (
 	"errors"
@@ -11,81 +11,103 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+
+	"fubsy/types"
 )
 
-// file-finding type; another implementation of FuObject, but more
-// elaborate than the basic types in basictypes.go
-type FuFileFinder struct {
+// Node type that represents filefinders. Code like
+//    a = <**/*.c>
+// results in one FinderNode being created and assigned to variable
+// 'a'. (It's *not* added to the DAG, though, until it's mentioned in
+// a build rule.)
+
+type FinderNode struct {
+	nodebase
+
 	// include patterns: e.g. for <*.c foo/*.h>, includes will be
 	// {"*.c", "foo/*.h"}
 	includes []string
 
 	// exclude patterns (can only be added by exclude() method)
+	// (currently unused)
 	excludes []string
 }
 
-func NewFileFinder(includes []string) *FuFileFinder {
-	return &FuFileFinder{includes: includes}
+func NewFinderNode(includes []string) *FinderNode {
+	// XXX what if the include list changes? what about excludes?
+	name := strings.Join(includes, "+")
+	node := &FinderNode{
+		nodebase: makenodebase(name),
+		includes: includes,
+	}
+	return node
 }
 
-func (self *FuFileFinder) String() string {
+func MakeFinderNode(dag *DAG, includes []string) *FinderNode {
+	node := NewFinderNode(includes)
+	node = dag.AddNode(node).(*FinderNode)
+	return node
+}
+
+func (self *FinderNode) String() string {
 	return "<" + strings.Join(self.includes, " ") + ">"
 }
 
-func (self *FuFileFinder) CommandString() string {
+func (self *FinderNode) CommandString() string {
 	// ummm: what about excludes?
 	result := make([]string, len(self.includes))
 	for i, pattern := range self.includes {
-		result[i] = ShellQuote(pattern)
+		result[i] = types.ShellQuote(pattern)
 	}
 	return strings.Join(result, " ")
 }
 
-func (self *FuFileFinder) Equal(other_ FuObject) bool {
-	other, ok := other_.(*FuFileFinder)
+func (self *FinderNode) Equal(other_ types.FuObject) bool {
+	other, ok := other_.(*FinderNode)
 	return (ok &&
 		reflect.DeepEqual(self.includes, other.includes) &&
 		reflect.DeepEqual(self.excludes, other.excludes))
 }
 
-func (self *FuFileFinder) Add(other_ FuObject) (FuObject, error) {
-	var result FuObject
+func (self *FinderNode) Add(other_ types.FuObject) (types.FuObject, error) {
+	var result types.FuObject
 	switch other := other_.(type) {
-	case *FuFileFinder:
-		// <p1> + <p2>
-		list := FuList{self, other}
-		result = list
-	case FuString:
-		// <pat> + "a"
-		list := FuList{self, other}
-		result = list
-	case FuList:
-		// <pat> + ["a", "b", "c"]
-		list := make(FuList, 1+len(other))
+	case types.FuList:
+		// <pat> + ["a", "b", "c"] = [<pat>, "a", "b", "c"]
+		list := make(types.FuList, 1+len(other))
 		list[0] = self
 		copy(list[1:], other)
 		result = list
 	default:
-		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
+		// <pat> + anything = [<pat>, anything]
+		list := make(types.FuList, 2)
+		list[0] = self
+		list[1] = other
+		result = list
 	}
 	return result, nil
 }
 
-func (self *FuFileFinder) List() []FuObject {
-	// tempting to return a list of self.includes... but what about
-	// self.excludes?
-	return []FuObject{self}
+func (self *FinderNode) List() []types.FuObject {
+	// You might think it makes sense to return self.includes here,
+	// but you'd be wrong. For one thing, that ignores self.excludes.
+	// More importantly, a FinderNode is a lazy list of filenames, not
+	// a list of patterns. And we should only go expanding the
+	// wildcard and searching for filenames when the FinderNode is
+	// explicitly Expand()ed, not before. So the only sensible list
+	// representation is a singleton.
+	return []types.FuObject{self}
 }
 
-func (self *FuFileFinder) Typename() string {
-	return "filefinder"
+func (self *FinderNode) Typename() string {
+	return "FinderNode"
 }
 
 // Walk the filesystem for files matching this FileFinder's include
 // patterns. Return the list of matching filenames as a FuList of
-// FuString.
-func (self *FuFileFinder) Expand(ns Namespace) (FuObject, error) {
-	result := make(FuList, 0)
+// FileNode.
+func (self *FinderNode) Expand(ns types.Namespace) (types.FuObject, error) {
+	result := make(types.FuList, 0)
 	var matches []string
 	for _, pattern := range self.includes {
 		recursive, prefix, tail, err := splitPattern(pattern)
@@ -100,10 +122,30 @@ func (self *FuFileFinder) Expand(ns Namespace) (FuObject, error) {
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, MakeFuList(matches...)...)
+		for _, filename := range matches {
+			result = append(result, newFileNode(filename))
+		}
 	}
 	return result, nil
 }
+
+// Node methods
+
+func (self *FinderNode) Exists() (bool, error) {
+	// hmmm: it's perfectly meaningful to ask if a FinderNode exists,
+	// just unexpected and expensive (have to expand the wildcards)
+	panic("Exists() should not be called on a FinderNode " +
+		"(graph should have been rebuilt by this point)")
+}
+
+func (self *FinderNode) Changed() (bool, error) {
+	panic("Changed() should never be called on a FinderNode " +
+		"(graph should have been rebuilt by this point)")
+}
+
+// Wildcard expansion -- nothing past here has anything to do with
+// FuObject, Node, FinderNode, or any of that high-level stuff. It's
+// purely about filename patterns and walking the filesystem.
 
 // Scan pattern for the recursive glob pattern "**". If any are found,
 // return recursive = true, prefix = pattern up to the first "**/" and

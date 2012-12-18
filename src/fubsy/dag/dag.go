@@ -317,6 +317,11 @@ func (self *DAG) lookupId(node Node) int {
 // has different type, panic. (Thus, while the static return type of
 // this method is Node, the runtime type of the return value is
 // guaranteed to be the same runtime type as the node passed in.)
+func (self *DAG) AddNode(node Node) Node {
+	_, node = self.addNode(node)
+	return node
+}
+
 func (self *DAG) addNode(node Node) (int, Node) {
 	name := node.Name()
 	if id, ok := self.index[name]; ok {

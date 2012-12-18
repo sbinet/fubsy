@@ -176,8 +176,8 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 		for _, val := range targets {
 			result = append(result, self.nodify(val)...)
 		}
-	case *types.FuFileFinder:
-		result = []dag.Node{dag.MakeGlobNode(self.dag, targets)}
+	case *dag.FinderNode:
+		result = []dag.Node{self.dag.AddNode(targets)}
 	}
 	return result
 }

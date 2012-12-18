@@ -7,6 +7,7 @@ package runtime
 import (
 	"fmt"
 
+	"fubsy/dag"
 	"fubsy/dsl"
 	"fubsy/types"
 )
@@ -36,7 +37,7 @@ func evaluate(
 	case *dsl.ASTName:
 		return evaluateName(ns, expr)
 	case *dsl.ASTFileFinder:
-		return types.NewFileFinder(expr.Patterns()), nil
+		return dag.NewFinderNode(expr.Patterns()), nil
 	case *dsl.ASTAdd:
 		return evaluateAdd(ns, expr)
 	case *dsl.ASTFunctionCall:

@@ -87,8 +87,8 @@ func Test_nodify(t *testing.T) {
 	sval1 := types.FuString("hello.txt")
 	sval2 := types.FuString("foo.c")
 	lval1 := types.FuList([]types.FuObject{sval1, sval2})
-	ff1 := types.NewFileFinder([]string{"*.c", "*.h"})
-	ff2 := types.NewFileFinder([]string{"**/*.java"})
+	finder1 := dag.NewFinderNode([]string{"*.c", "*.h"})
+	finder2 := dag.NewFinderNode([]string{"**/*.java"})
 
 	rt := NewRuntime("", nil)
 	nodes := rt.nodify(sval1)
@@ -100,14 +100,14 @@ func Test_nodify(t *testing.T) {
 	assert.Equal(t, "hello.txt", nodes[0].(*dag.FileNode).String())
 	assert.Equal(t, "foo.c", nodes[1].(*dag.FileNode).String())
 
-	nodes = rt.nodify(ff1)
+	nodes = rt.nodify(finder1)
 	assert.Equal(t, 1, len(nodes))
-	assert.Equal(t, "<*.c *.h>", nodes[0].(*dag.GlobNode).String())
+	assert.Equal(t, "<*.c *.h>", nodes[0].(*dag.FinderNode).String())
 
-	ffsum, err := ff1.Add(ff2)
+	findersum, err := finder1.Add(finder2)
 	assert.Nil(t, err)
-	nodes = rt.nodify(ffsum)
+	nodes = rt.nodify(findersum)
 	assert.Equal(t, 2, len(nodes))
-	assert.Equal(t, "<*.c *.h>", nodes[0].(*dag.GlobNode).String())
-	assert.Equal(t, "<**/*.java>", nodes[1].(*dag.GlobNode).String())
+	assert.Equal(t, "<*.c *.h>", nodes[0].(*dag.FinderNode).String())
+	assert.Equal(t, "<**/*.java>", nodes[1].(*dag.FinderNode).String())
 }

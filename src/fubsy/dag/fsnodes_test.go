@@ -166,61 +166,6 @@ func Benchmark_FileNode_AddParent(b *testing.B) {
 	}
 }
 
-func Test_GlobNode_basics(t *testing.T) {
-	dag := NewDAG()
-	glob0 := types.NewFileFinder([]string{"**/*.java"})
-	glob1 := types.NewFileFinder([]string{"doc/*/*.html"})
-	glob2, err := glob0.Add(glob1) // it's a FuFinderList
-	assert.Nil(t, err)
-
-	node0 := MakeGlobNode(dag, glob0)
-	node1 := MakeGlobNode(dag, glob1)
-	node2 := MakeGlobNode(dag, glob2)
-
-	// correctly reuse existing entries
-	assert.Equal(t, dag.nodes[0], MakeGlobNode(dag, glob0))
-	var obj types.FuObject = glob0
-	assert.Equal(t, dag.nodes[0], MakeGlobNode(dag, obj))
-
-	assert.Equal(t, "<**/*.java>", node0.String())
-	assert.Equal(t, "<doc/*/*.html>", node1.String())
-	assert.Equal(t, "[<**/*.java>,<doc/*/*.html>]", node2.String())
-
-	assert.True(t, node0.Equal(node0))
-	assert.False(t, node0.Equal(node1))
-	assert.False(t, node0.Equal(node2))
-
-	glob2b, err := glob0.Add(glob1)
-	assert.Nil(t, err)
-	assert.True(t, glob2b.Equal(glob2))
-	node2b := MakeGlobNode(dag, glob2b)
-	assert.True(t, node2b.Equal(node2))
-}
-
-func Test_GlobNode_Expand(t *testing.T) {
-	cleanup := testutils.Chtemp()
-	defer cleanup()
-
-	testutils.TouchFiles(
-		"src/util.c",
-		"src/util.h",
-		"src/util-test.c",
-		"doc/README.txt",
-		"main.c",
-	)
-	dag := NewDAG()
-	node0 := MakeGlobNode(dag, types.NewFileFinder([]string{"*.c", "**/*.h"}))
-	node1 := MakeGlobNode(dag, types.NewFileFinder([]string{"**/*.java"}))
-	_ = node1
-
-	expobj, err := node0.Expand(types.NewValueMap())
-	assert.Nil(t, err)
-	expnodes := expobj.List()
-	assert.Equal(t, 2, len(expnodes))
-	assert.Equal(t, "main.c", expnodes[0].(*FileNode).name)
-	assert.Equal(t, "src/util.h", expnodes[1].(*FileNode).name)
-}
-
 func assertParents(t *testing.T, expect []string, dag *DAG, node Node) {
 	id := dag.lookupId(node)
 	actual := dag.parentNodes(id)
