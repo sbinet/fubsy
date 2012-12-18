@@ -23,14 +23,14 @@ import (
 
 type Runtime struct {
 	script string // filename
-	ast    dsl.AST
+	ast    *dsl.ASTRoot
 
 	globals types.ValueMap
 	stack   *types.ValueStack
 	dag     *dag.DAG
 }
 
-func NewRuntime(script string, ast dsl.AST) *Runtime {
+func NewRuntime(script string, ast *dsl.ASTRoot) *Runtime {
 	stack := types.NewValueStack()
 
 	// The globals namespace is currently used only for builtins,
