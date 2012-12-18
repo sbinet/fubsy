@@ -83,9 +83,9 @@ func Test_ASTPhase_Equal(t *testing.T) {
 	assert.True(t, phase1.Equal(phase2), "phase nodes not equal")
 }
 
-func Test_ASTFileList_Equal(t *testing.T) {
-	node1 := &ASTFileList{}
-	node2 := &ASTFileList{}
+func Test_ASTFileFinder_Equal(t *testing.T) {
+	node1 := &ASTFileFinder{}
+	node2 := &ASTFileFinder{}
 	assert.True(t, node1.Equal(node1),
 		"list node not equal to itself")
 	assert.True(t, node1.Equal(node2),

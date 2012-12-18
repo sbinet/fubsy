@@ -34,9 +34,9 @@ func Test_checkActions_bad(t *testing.T) {
 	location := Location{fileinfo, 11, 18} // line 2-4
 
 	nodes := []ASTNode{
-		&ASTString{value: "foo bar"},               // good
-		&ASTFileList{patterns: []string{"*.java"}}, // bad
-		&ASTFunctionCall{},                         // good
+		&ASTString{value: "foo bar"},                 // good
+		&ASTFileFinder{patterns: []string{"*.java"}}, // bad
+		&ASTFunctionCall{},                           // good
 		&ASTBuildRule{ // bad
 			astbase:  astbase{location},
 			targets:  &ASTString{value: "target"},

@@ -53,7 +53,7 @@ func Test_evaluate_simple(t *testing.T) {
 	// expression <*.c blah> evaluates to a FileFinder with two
 	// include patterns
 	patterns := []string{"*.c", "blah"}
-	flnode := dsl.NewASTFileList(patterns)
+	flnode := dsl.NewASTFileFinder(patterns)
 	expect = types.NewFileFinder([]string{"*.c", "blah"})
 	assertEvaluateOK(t, ns, expect, flnode)
 }

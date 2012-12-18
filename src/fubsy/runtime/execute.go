@@ -35,7 +35,7 @@ func evaluate(
 		return types.FuString(expr.Value()), nil
 	case *dsl.ASTName:
 		return evaluateName(ns, expr)
-	case *dsl.ASTFileList:
+	case *dsl.ASTFileFinder:
 		return types.NewFileFinder(expr.Patterns()), nil
 	case *dsl.ASTAdd:
 		return evaluateAdd(ns, expr)

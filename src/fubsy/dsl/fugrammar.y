@@ -172,7 +172,7 @@ primaryexpr:
 filelist:
 	'<' patternlist '>'
 	{
-		$$ = NewASTFileList(extractText($2), $1, $3)
+		$$ = NewASTFileFinder(extractText($2), $1, $3)
 	}
 
 patternlist:

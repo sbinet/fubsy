@@ -261,7 +261,7 @@ func Test_fuParse_filelist(t *testing.T) {
 				children: []ASTNode{
 					&ASTAssignment{
 						target: "x",
-						expr: &ASTFileList{
+						expr: &ASTFileFinder{
 							patterns: []string{
 								"**/*.c",
 							}}}}}}}

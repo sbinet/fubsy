@@ -160,7 +160,7 @@ type ASTString struct {
 }
 
 // a list of filename patterns, e.g. [foo*.c **/*.h]
-type ASTFileList struct {
+type ASTFileFinder struct {
 	astbase
 	patterns []string
 }
@@ -558,29 +558,29 @@ func (self *ASTString) Value() string {
 	return self.value
 }
 
-func NewASTFileList(patterns []string, location ...Locatable) *ASTFileList {
-	return &ASTFileList{
+func NewASTFileFinder(patterns []string, location ...Locatable) *ASTFileFinder {
+	return &ASTFileFinder{
 		astbase:  astLocation(location),
 		patterns: patterns}
 }
 
-func (self *ASTFileList) Dump(writer io.Writer, indent string) {
+func (self *ASTFileFinder) Dump(writer io.Writer, indent string) {
 	fmt.Fprintln(writer,
-		indent+"ASTFileList["+strings.Join(self.patterns, " ")+"]")
+		indent+"ASTFileFinder["+strings.Join(self.patterns, " ")+"]")
 }
 
-func (self *ASTFileList) Equal(other_ ASTNode) bool {
-	if other, ok := other_.(*ASTFileList); ok {
+func (self *ASTFileFinder) Equal(other_ ASTNode) bool {
+	if other, ok := other_.(*ASTFileFinder); ok {
 		return other != nil && reflect.DeepEqual(self.patterns, other.patterns)
 	}
 	return false
 }
 
-func (self *ASTFileList) String() string {
+func (self *ASTFileFinder) String() string {
 	return "[" + strings.Join(self.patterns, " ") + "]"
 }
 
-func (self *ASTFileList) Patterns() []string {
+func (self *ASTFileFinder) Patterns() []string {
 	return self.patterns
 }
 

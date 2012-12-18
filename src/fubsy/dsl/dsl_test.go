@@ -43,7 +43,7 @@ func TestParse_valid_1(t *testing.T) {
 
 	expect := &ASTRoot{children: []ASTNode{
 		&ASTPhase{name: "main", children: []ASTNode{
-			&ASTFileList{patterns: []string{"meep"}}}}}}
+			&ASTFileFinder{patterns: []string{"meep"}}}}}}
 	ast, err := Parse(fn)
 	assert.Equal(t, 0, len(err))
 	assertASTEquals(t, expect, ast)
@@ -187,7 +187,7 @@ func TestParse_omnibus_1(t *testing.T) {
 			"    ASTAssignment[c]\n" +
 			"      ASTFunctionCall[d.e] (0 args)\n" +
 			"    ASTSelection[x.y: z]\n" +
-			"    ASTFileList[lib1/*.c lib2/**/*.c]\n" +
+			"    ASTFileFinder[lib1/*.c lib2/**/*.c]\n" +
 			"  }\n" +
 			"}\n"
 	var actual_ bytes.Buffer
@@ -221,7 +221,7 @@ func TestParse_omnibus_2(t *testing.T) {
 		"ASTRoot {\n" +
 			"  ASTPhase[main] {\n" +
 			"    ASTAssignment[headers]\n" +
-			"      ASTFileList[*.h]\n" +
+			"      ASTFileFinder[*.h]\n" +
 			"    ASTBuildRule {\n" +
 			"    targets:\n" +
 			"      ASTAdd\n" +
@@ -232,7 +232,7 @@ func TestParse_omnibus_2(t *testing.T) {
 			"    sources:\n" +
 			"      ASTAdd\n" +
 			"      op1:\n" +
-			"        ASTFileList[*.c]\n" +
+			"        ASTFileFinder[*.c]\n" +
 			"      op2:\n" +
 			"        ASTName[headers]\n" +
 			"    actions:\n" +
