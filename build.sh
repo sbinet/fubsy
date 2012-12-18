@@ -40,15 +40,6 @@ packages="fubsy/dsl fubsy/types fubsy/dag fubsy/runtime"
 #packages="fubsy/dag"
 #packages="fubsy/runtime"
 
-# make sure all source files are gofmt-compliant
-echo "gofmt -l src/fubsy"
-needfmt=`gofmt -l src/fubsy`
-if [ "$needfmt" ]; then
-    echo "error: gofmt found non-compliant files"
-    echo "you probably need to run: gofmt -w" $needfmt
-    exit 1
-fi
-
 run "go install -v -gcflags '-N -l' $packages"
 run "go test -v -gcflags '-N -l' -i $packages"
 
@@ -67,3 +58,12 @@ fi
 
 run "go vet $packages"
 run "go install -v -gcflags '-N -l' fubsy"
+
+# make sure all source files are gofmt-compliant
+echo "gofmt -l src/fubsy"
+needfmt=`gofmt -l src/fubsy`
+if [ "$needfmt" ]; then
+    echo "error: gofmt found non-compliant files"
+    echo "you probably need to run: gofmt -w" $needfmt
+    exit 1
+fi
