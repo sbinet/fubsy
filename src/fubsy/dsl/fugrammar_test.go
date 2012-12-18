@@ -368,18 +368,18 @@ func Test_fuParse_ast_locations(t *testing.T) {
 
 	fi := &fileinfo{"foo.txt", []int{0, 6, 17, 21, 23, 24}}
 	tokens := []token{
-		{Location{fi, 0, 4}, NAME, "main"},
-		{Location{fi, 4, 5}, '{', "{"},
-		{Location{fi, 5, 6}, EOL, "\n"},
-		{Location{fi, 6, 9}, NAME, "foo"},
-		{Location{fi, 10, 11}, '=', "="},
-		{Location{fi, 12, 15}, NAME, "bar"},
-		{Location{fi, 15, 16}, '(', "("},
-		{Location{fi, 19, 20}, ')', ")"},
-		{Location{fi, 20, 21}, EOL, "\n"},
-		{Location{fi, 21, 22}, '}', "}"},
-		{Location{fi, 22, 23}, EOL, "\n"},
-		{Location{fi, 23, 23}, EOF, ""},
+		{FileLocation{fi, 0, 4}, NAME, "main"},
+		{FileLocation{fi, 4, 5}, '{', "{"},
+		{FileLocation{fi, 5, 6}, EOL, "\n"},
+		{FileLocation{fi, 6, 9}, NAME, "foo"},
+		{FileLocation{fi, 10, 11}, '=', "="},
+		{FileLocation{fi, 12, 15}, NAME, "bar"},
+		{FileLocation{fi, 15, 16}, '(', "("},
+		{FileLocation{fi, 19, 20}, ')', ")"},
+		{FileLocation{fi, 20, 21}, EOL, "\n"},
+		{FileLocation{fi, 21, 22}, '}', "}"},
+		{FileLocation{fi, 22, 23}, EOL, "\n"},
+		{FileLocation{fi, 23, 23}, EOF, ""},
 	}
 
 	parser := NewParser(tokens)
@@ -390,9 +390,12 @@ func Test_fuParse_ast_locations(t *testing.T) {
 
 	assertLocation := func(node ASTNode, estart int, eend int) {
 		location := node.Location()
-		assert.True(t, location.start == estart && location.end == eend,
-			"%T: expected location %d:%d, but got %d:%d",
-			node, estart, eend, location.start, location.end)
+		assert.True(t, location.(FileLocation).start == estart,
+			"%T: expected location %d:%d, but got %v",
+			node, estart, eend, location)
+		assert.True(t, location.(FileLocation).end == eend,
+			"%T: expected location %d:%d, but got %v",
+			node, estart, eend, location)
 	}
 
 	root := parser.ast

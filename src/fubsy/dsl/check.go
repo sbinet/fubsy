@@ -12,7 +12,7 @@ type SemanticError struct {
 }
 
 func (self SemanticError) Error() string {
-	return self.node.Location().String() + self.message
+	return self.node.Location().ErrorPrefix() + self.message
 }
 
 func checkAST(ast *ASTRoot) []error {

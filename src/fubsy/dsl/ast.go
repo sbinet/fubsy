@@ -40,7 +40,7 @@ type ASTNode interface {
 	// unit tests, and making unit tests worry about location is just
 	// too much to ask. Plus it makes intuitive sense that two AST
 	// nodes that both mean "foo = bar()" are the same wherever they
-	// originated.
+	// originated.)
 	Equal(other ASTNode) bool
 }
 
@@ -51,7 +51,15 @@ type ASTExpression interface {
 	fmt.Stringer
 }
 
-// implemented by every AST node via astbase, and also by token
+// describe the physical location (e.g. filename and line number(s))
+// of a piece of text, for use in error reporting
+type Location interface {
+	String() string
+	ErrorPrefix() string
+	merge(other Location) Location
+}
+
+// something with a location: every token and AST node implements this
 type Locatable interface {
 	Location() Location
 }
@@ -68,7 +76,7 @@ func mergeLocations(loc1 Locatable, loc2 Locatable) Location {
 	if loc1 == nil || loc2 == nil {
 		// so lazy test code can get away with not creating real
 		// Location objects
-		return newLocation(nil)
+		return newFileLocation(nil)
 	}
 	return loc1.Location().merge(loc2.Location())
 }
@@ -525,7 +533,7 @@ func NewASTString(toktext string, location ...Locatable) *ASTString {
 func astLocation(locations []Locatable) astbase {
 	switch len(locations) {
 	case 0:
-		return astbase{Location{}}
+		return astbase{FileLocation{}}
 	case 1:
 		return astbase{locations[0].Location()}
 	case 2:

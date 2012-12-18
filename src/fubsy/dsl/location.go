@@ -20,7 +20,7 @@ type fileinfo struct {
 }
 
 // physical location of a token or AST node
-type Location struct {
+type FileLocation struct {
 	fileinfo *fileinfo
 	// [start:end] is a slice into the file contents, i.e.
 	// start is the offset of the first byte of this location,
@@ -29,18 +29,29 @@ type Location struct {
 	end   int
 }
 
-func newLocation(fileinfo *fileinfo) Location {
-	return Location{fileinfo, -1, -1}
+func newFileLocation(fileinfo *fileinfo) FileLocation {
+	return FileLocation{fileinfo, -1, -1}
 }
 
-// this is so Location implements Locatable, just like Token and ASTNode
-func (self Location) Location() Location {
+// so FileLocation implements Location
+func (self FileLocation) Location() Location {
 	return self
 }
 
-func (self Location) String() string {
+func (self FileLocation) String() string {
 	if self.fileinfo == nil {
-		// don't panic on uninitialized Location object
+		return "(uninitialized)"
+	}
+	filename := self.fileinfo.filename
+	if filename == "" {
+		filename = "(unknown)"
+	}
+	return fmt.Sprintf("%s[%d:%d]", filename, self.start, self.end)
+}
+
+func (self FileLocation) ErrorPrefix() string {
+	if self.fileinfo == nil {
+		// don't panic on uninitialized FileLocation object
 		return ""
 	}
 	var chunks []string
@@ -62,8 +73,9 @@ func (self Location) String() string {
 	return strings.Join(chunks, ":") + ": "
 }
 
-// Return a new Location that spans self and other.
-func (self Location) merge(other Location) Location {
+// Return a new FileLocation that spans self and other.
+func (self FileLocation) merge(other_ Location) Location {
+	other := other_.(FileLocation)
 	if self.fileinfo == nil {
 		return other
 	} else if other.fileinfo == nil {
@@ -72,11 +84,11 @@ func (self Location) merge(other Location) Location {
 
 	if self.fileinfo != other.fileinfo {
 		panic(fmt.Sprintf(
-			"cannot merge Locations from different files"+
+			"cannot merge FileLocations from different files"+
 				" (self.fileinfo = %#v, other.fileinfo = %#v)",
 			self.fileinfo, other.fileinfo))
 	}
-	result := newLocation(self.fileinfo)
+	result := newFileLocation(self.fileinfo)
 	if self.start <= other.end {
 		result.start = self.start
 		result.end = other.end
@@ -87,11 +99,11 @@ func (self Location) merge(other Location) Location {
 	return result
 }
 
-func (self Location) span() (int, int) {
+func (self FileLocation) span() (int, int) {
 	return self.start, self.end
 }
 
-func (self Location) linerange() (startline int, endline int) {
+func (self FileLocation) linerange() (startline int, endline int) {
 	// don't try to call this with uninitialized lineoffsets!
 	offsets := self.fileinfo.lineoffsets
 	if len(offsets) < 2 {

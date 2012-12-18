@@ -236,7 +236,7 @@ type TypeError struct {
 }
 
 func (self TypeError) Error() string {
-	return self.location.String() + self.message
+	return self.location.ErrorPrefix() + self.message
 }
 
 const shellmeta = "# `\"'\\&?*[]{}();$><|"

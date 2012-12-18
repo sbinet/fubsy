@@ -17,7 +17,7 @@ func Test_linerange_basic(t *testing.T) {
 	// lineoffsets for this file has 6 elements, the last one pointing
 	// just past EOF, as a convenience.)
 	fi := &fileinfo{lineoffsets: []int{0, 4, 5, 17, 26, 27}}
-	loc := Location{fi, 0, 0} // empty token at start of line 1
+	loc := FileLocation{fi, 0, 0} // empty token at start of line 1
 	assertLines(t, 1, 1, loc)
 
 	loc.end = 3 // still entirely in line 1
@@ -61,7 +61,7 @@ func Test_linerange_oneline(t *testing.T) {
 	//   "foobar"
 	// (1 line, no newlines)
 	fi := &fileinfo{lineoffsets: []int{0, 6}}
-	loc := Location{fi, 0, 0} // empty token at start of line 1
+	loc := FileLocation{fi, 0, 0} // empty token at start of line 1
 	assertLines(t, 1, 1, loc)
 
 	loc.end = 6 // span all of line 1
@@ -79,14 +79,14 @@ func Test_linerange_oneline(t *testing.T) {
 
 func Test_linerange_panic_lineoffsets(t *testing.T) {
 	fi := &fileinfo{lineoffsets: []int{}}
-	location := newLocation(fi)
+	location := newFileLocation(fi)
 	defer wantpanic(t)
 	location.linerange()
 }
 
 func Test_linerange_panic_aftereof_1(t *testing.T) {
 	fi := &fileinfo{lineoffsets: []int{0, 10}}
-	location := newLocation(fi)
+	location := newFileLocation(fi)
 	location.start = 10
 	location.end = 15
 	defer wantpanic(t)
@@ -95,33 +95,33 @@ func Test_linerange_panic_aftereof_1(t *testing.T) {
 
 func Test_linerange_panic_aftereof_2(t *testing.T) {
 	fi := &fileinfo{lineoffsets: []int{0, 10}}
-	location := newLocation(fi)
+	location := newFileLocation(fi)
 	location.start = 5
 	location.end = 11
 	defer wantpanic(t)
 	location.linerange()
 }
 
-func Test_Location_String(t *testing.T) {
+func Test_FileLocation_ErrorPrefix(t *testing.T) {
 	fi := &fileinfo{lineoffsets: []int{0, 4, 5, 17, 26, 27}}
-	loc := newLocation(fi)
-	assert.Equal(t, "(unknown): ", loc.String())
+	loc := newFileLocation(fi)
+	assert.Equal(t, "(unknown): ", loc.ErrorPrefix())
 
 	fi.filename = "foo.txt"
-	assert.Equal(t, "foo.txt: ", loc.String())
+	assert.Equal(t, "foo.txt: ", loc.ErrorPrefix())
 
 	loc.start = 2
 	loc.end = 3
-	assert.Equal(t, "foo.txt:1: ", loc.String())
+	assert.Equal(t, "foo.txt:1: ", loc.ErrorPrefix())
 
 	loc.end = 6
-	assert.Equal(t, "foo.txt:1-3: ", loc.String())
+	assert.Equal(t, "foo.txt:1-3: ", loc.ErrorPrefix())
 
 	fi.filename = ""
-	assert.Equal(t, "(unknown):1-3: ", loc.String())
+	assert.Equal(t, "(unknown):1-3: ", loc.ErrorPrefix())
 }
 
-func assertLines(t *testing.T, start int, end int, location Location) {
+func assertLines(t *testing.T, start int, end int, location FileLocation) {
 	actualstart, actualend := location.linerange()
 	assert.True(t, start == actualstart && end == actualend,
 		"bad location.linerange(): "+

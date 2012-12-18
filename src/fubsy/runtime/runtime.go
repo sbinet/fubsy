@@ -228,5 +228,5 @@ type RuntimeError struct {
 }
 
 func (self RuntimeError) Error() string {
-	return self.location.String() + self.message
+	return self.location.ErrorPrefix() + self.message
 }

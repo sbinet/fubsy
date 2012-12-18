@@ -31,7 +31,7 @@ func (self SyntaxError) Error() string {
 		badtext = "'" + badtext + "'"
 	}
 	return fmt.Sprintf("%s%s (near %s)",
-		self.badtoken.location, self.message, badtext)
+		self.badtoken.Location().ErrorPrefix(), self.message, badtext)
 }
 
 func Parse(filename string) (*ASTRoot, []error) {

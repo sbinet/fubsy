@@ -219,7 +219,7 @@ selection:
 
 // a token together with its location, text, etc.
 type token struct {
-	location Location
+	location FileLocation
 	id int
 	text string
 }
