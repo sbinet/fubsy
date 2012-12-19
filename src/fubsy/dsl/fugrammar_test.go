@@ -505,7 +505,7 @@ func assertParses(t *testing.T, expect *ASTRoot, tokens []minitok) {
 	assert.Nil(t, parser.syntaxerror)
 	assert.Equal(t, 0, result)
 	assert.NotNil(t, parser.ast)
-	assertASTEquals(t, expect, parser.ast)
+	assertASTEqual(t, expect, parser.ast)
 }
 
 func assertParseFailure(t *testing.T, result int, parser *Parser) {
@@ -524,7 +524,7 @@ func assertSyntaxError(t *testing.T, badtext string, parser *Parser) {
 		badtext, actual.badtoken.text)
 }
 
-func assertASTEquals(t *testing.T, expect *ASTRoot, actual *ASTRoot) {
+func assertASTEqual(t *testing.T, expect *ASTRoot, actual *ASTRoot) {
 	if !expect.Equal(actual) {
 		expectbuf := new(bytes.Buffer)
 		actualbuf := new(bytes.Buffer)
