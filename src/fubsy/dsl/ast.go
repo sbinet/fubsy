@@ -124,6 +124,12 @@ type ASTAdd struct {
 	op2 ASTExpression
 }
 
+// [expr, expr, ...]
+type ASTList struct {
+	astbase
+	elements []ASTExpression
+}
+
 // FUNC(arg, arg, ...) (N.B. FUNC is an expr to allow for code like
 // "(a.b.c())(stuff))"
 type ASTFunctionCall struct {
@@ -411,6 +417,31 @@ func (self *ASTAdd) Operands() (ASTExpression, ASTExpression) {
 	return self.op1, self.op2
 }
 
+func NewASTList(elements []ASTExpression, location ...Locatable) *ASTList {
+	result := &ASTList{
+		astbase:  astLocation(location),
+		elements: elements,
+	}
+	return result
+}
+
+func (self *ASTList) Dump(writer io.Writer, indent string) {
+	fmt.Fprintf(writer, "%sASTList (%d elements)\n", indent, len(self.elements))
+	for _, elem := range self.elements {
+		elem.Dump(writer, indent+"  ")
+	}
+}
+
+func (self *ASTList) Equal(other_ ASTNode) bool {
+	other, ok := other_.(*ASTList)
+	return ok && exprlistsEqual(self.elements, other.elements)
+}
+
+func (self *ASTList) String() string {
+	elements := toStrings(self.elements)
+	return "[" + strings.Join(elements, ", ") + "]"
+}
+
 func NewASTFunctionCall(
 	function ASTExpression,
 	args []ASTExpression,
@@ -439,10 +470,7 @@ func (self *ASTFunctionCall) Equal(other_ ASTNode) bool {
 }
 
 func (self *ASTFunctionCall) String() string {
-	args := make([]string, len(self.args))
-	for i, arg := range self.args {
-		args[i] = arg.String()
-	}
+	args := toStrings(self.args)
 	return fmt.Sprintf("%s(%s)", self.function, strings.Join(args, ", "))
 }
 
@@ -574,6 +602,14 @@ func (self *ASTFileFinder) String() string {
 
 func (self *ASTFileFinder) Patterns() []string {
 	return self.patterns
+}
+
+func toStrings(expressions []ASTExpression) []string {
+	result := make([]string, len(expressions))
+	for i, expr := range expressions {
+		result[i] = expr.String()
+	}
+	return result
 }
 
 func listsEqual(alist []ASTNode, blist []ASTNode) bool {

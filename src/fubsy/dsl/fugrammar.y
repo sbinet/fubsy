@@ -41,14 +41,15 @@ const BADTOKEN = -1
 %type <expr> addexpr
 %type <expr> postfixexpr
 %type <expr> primaryexpr
+%type <expr> list
 %type <expr> functioncall
-%type <exprlist> arglist
+%type <exprlist> exprlist
 %type <expr> selection
 %type <expr> filefinder
 %type <tokenlist> patternlist
 
 %token <token> IMPORT PLUGIN INLINE NAME QSTRING FILEPATTERN R3BRACE
-%token <token> '(' ')' '<' '>' '{' '}'
+%token <token> '(' ')' '[' ']' '<' '>' '{' '}'
 %token EOL EOF PLUGIN L3BRACE R3BRACE
 
 %%
@@ -160,6 +161,7 @@ addexpr:
 
 postfixexpr:
 	primaryexpr
+|	list
 |	functioncall
 |	selection
 
@@ -185,22 +187,36 @@ patternlist:
 		$$ = []token {$1}
 	}
 
+list:
+	'[' ']'
+	{
+		$$ = NewASTList([]ASTExpression{}, $1, $2)
+	}
+|	'[' exprlist ']'
+	{
+		$$ = NewASTList($2, $1, $3)
+	}
+|	'[' exprlist ',' ']'
+	{
+		$$ = NewASTList($2, $1, $4)
+	}
+
 functioncall:
 	postfixexpr '(' ')'
 	{
 		$$ = NewASTFunctionCall($1, []ASTExpression {}, $1, $3)
 	}
-|	postfixexpr '(' arglist ')'
+|	postfixexpr '(' exprlist ')'
 	{
 		$$ = NewASTFunctionCall($1, $3, $1, $4)
 	}
-|	postfixexpr '(' arglist ',' ')'
+|	postfixexpr '(' exprlist ',' ')'
 	{
 		$$ = NewASTFunctionCall($1, $3, $1, $5)
 	}
 
-arglist:
-	arglist ',' expr
+exprlist:
+	exprlist ',' expr
 	{
 		$$ = append($1, $3)
 	}
