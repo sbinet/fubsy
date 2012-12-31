@@ -36,8 +36,6 @@ want to run the tests too, but that'll come later.)
 Java the naive way
 ------------------
 
-.. note:: Not working yet. On the to-do list for Fubsy 0.0.1.
-
 First, here's the naive way to do it, using only core Fubsy features
 (no plugins)::
 
