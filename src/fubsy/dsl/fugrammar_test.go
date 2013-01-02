@@ -6,7 +6,9 @@ package dsl
 
 import (
 	"bytes"
+
 	"github.com/stretchrcom/testify/assert"
+
 	"testing"
 )
 
@@ -151,6 +153,73 @@ func Test_fuParse_expr_2(t *testing.T) {
 	assertParses(t, expect, tokens)
 }
 
+func Test_FuParse_list(t *testing.T) {
+	var tokens []minitok
+	var expect *ASTRoot
+
+	// empty list: "[]"
+	tokens = []minitok{
+		{NAME, "murp"},
+		{'{', "{"},
+		{EOL, "\n"},
+		{'[', "["},
+		{']', "]"},
+		{EOL, "\n"},
+		{'}', "}"},
+		{EOL, "\n"},
+		{EOF, ""},
+	}
+	expect = &ASTRoot{
+		children: []ASTNode{
+			&ASTPhase{
+				name: "murp",
+				children: []ASTNode{
+					&ASTList{elements: []ASTExpression{}},
+				}}}}
+	assertParses(t, expect, tokens)
+
+	// parse "[a, b(), foo + bar,]"
+	tokens = []minitok{
+		{NAME, "murp"},
+		{'{', "{"},
+		{EOL, "\n"},
+		{'[', "["},
+		{NAME, "a"},
+		{',', ","},
+		{NAME, "b"},
+		{'(', "("},
+		{')', ")"},
+		{',', ","},
+		{NAME, "foo"},
+		{'+', "+"},
+		{NAME, "bar"},
+		{',', ","},
+		{']', "]"},
+		{EOL, "\n"},
+		{'}', "}"},
+		{EOL, "\n"},
+		{EOF, ""},
+	}
+	expect = &ASTRoot{
+		children: []ASTNode{
+			&ASTPhase{
+				name: "murp",
+				children: []ASTNode{
+					&ASTList{
+						elements: []ASTExpression{
+							&ASTName{name: "a"},
+							&ASTFunctionCall{
+								function: &ASTName{name: "b"},
+								args:     []ASTExpression{},
+							},
+							&ASTAdd{
+								op1: &ASTName{name: "foo"},
+								op2: &ASTName{name: "bar"},
+							},
+						}}}}}}
+	assertParses(t, expect, tokens)
+}
+
 func Test_fuParse_funccall_1(t *testing.T) {
 	// parse "frob { foo(); }"
 	tokens := []minitok{
@@ -238,7 +307,7 @@ func Test_fuParse_funccall_3(t *testing.T) {
 	assertParses(t, _funccall_expect, tokens)
 }
 
-func Test_fuParse_filelist(t *testing.T) {
+func Test_fuParse_filefinder(t *testing.T) {
 	// parse "main { x = [**/*.c]; }"
 	tokens := []minitok{
 		{NAME, "main"},
@@ -432,14 +501,11 @@ func assertParses(t *testing.T, expect *ASTRoot, tokens []minitok) {
 	reset()
 	parser := NewParser(toklist(tokens))
 	result := fuParse(parser)
-	//assertNoError(t, parser.syntaxerror)
+
 	assert.Nil(t, parser.syntaxerror)
-	// if parser.syntaxerror != nil {
-	// 	t.Fatal(fmt.Sprintf("unexpected syntax error: %s", parser.syntaxerror))
-	// }
 	assert.Equal(t, 0, result)
 	assert.NotNil(t, parser.ast)
-	assertASTEquals(t, expect, parser.ast)
+	assertASTEqual(t, expect, parser.ast)
 }
 
 func assertParseFailure(t *testing.T, result int, parser *Parser) {
@@ -458,7 +524,7 @@ func assertSyntaxError(t *testing.T, badtext string, parser *Parser) {
 		badtext, actual.badtoken.text)
 }
 
-func assertASTEquals(t *testing.T, expect *ASTRoot, actual *ASTRoot) {
+func assertASTEqual(t *testing.T, expect *ASTRoot, actual *ASTRoot) {
 	if !expect.Equal(actual) {
 		expectbuf := new(bytes.Buffer)
 		actualbuf := new(bytes.Buffer)

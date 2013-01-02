@@ -39,7 +39,6 @@ Java the naive way
 .. note:: As of Fubsy 0.0.1, this mostly works! (Fubsy currently has
           no memory of previous builds, so it always thinks that all
           files have changed.)
-
 First, here's the naive way to do it, using only core Fubsy features
 (no plugins)::
 

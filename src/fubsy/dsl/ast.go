@@ -11,22 +11,6 @@ import (
 	"strings"
 )
 
-// interface for the whole AST, not just a particular node
-// (implemented by ASTRoot)
-type AST interface {
-	Locatable
-
-	// Return the list of external plugins imported by this script.
-	// Does not include inline plugins. Each plugin is represented as
-	// a []string, e.g. "import foo.bar.baz" becomes {"foo", "bar",
-	// "baz"}.
-	ListPlugins() [][]string
-
-	// Return the AST node for the specified phase, or nil if no such
-	// phase in this script.
-	FindPhase(name string) *ASTPhase
-}
-
 // interface for any particular node in the AST (root, internal,
 // leaves, whatever)
 type ASTNode interface {
@@ -138,6 +122,12 @@ type ASTAdd struct {
 	astbase
 	op1 ASTExpression
 	op2 ASTExpression
+}
+
+// [expr, expr, ...]
+type ASTList struct {
+	astbase
+	elements []ASTExpression
 }
 
 // FUNC(arg, arg, ...) (N.B. FUNC is an expr to allow for code like
@@ -427,6 +417,31 @@ func (self *ASTAdd) Operands() (ASTExpression, ASTExpression) {
 	return self.op1, self.op2
 }
 
+func NewASTList(elements []ASTExpression, location ...Locatable) *ASTList {
+	result := &ASTList{
+		astbase:  astLocation(location),
+		elements: elements,
+	}
+	return result
+}
+
+func (self *ASTList) Dump(writer io.Writer, indent string) {
+	fmt.Fprintf(writer, "%sASTList (%d elements)\n", indent, len(self.elements))
+	for _, elem := range self.elements {
+		elem.Dump(writer, indent+"  ")
+	}
+}
+
+func (self *ASTList) Equal(other_ ASTNode) bool {
+	other, ok := other_.(*ASTList)
+	return ok && exprlistsEqual(self.elements, other.elements)
+}
+
+func (self *ASTList) String() string {
+	elements := toStrings(self.elements)
+	return "[" + strings.Join(elements, ", ") + "]"
+}
+
 func NewASTFunctionCall(
 	function ASTExpression,
 	args []ASTExpression,
@@ -455,10 +470,7 @@ func (self *ASTFunctionCall) Equal(other_ ASTNode) bool {
 }
 
 func (self *ASTFunctionCall) String() string {
-	args := make([]string, len(self.args))
-	for i, arg := range self.args {
-		args[i] = arg.String()
-	}
+	args := toStrings(self.args)
 	return fmt.Sprintf("%s(%s)", self.function, strings.Join(args, ", "))
 }
 
@@ -590,6 +602,14 @@ func (self *ASTFileFinder) String() string {
 
 func (self *ASTFileFinder) Patterns() []string {
 	return self.patterns
+}
+
+func toStrings(expressions []ASTExpression) []string {
+	result := make([]string, len(expressions))
+	for i, expr := range expressions {
+		result[i] = expr.String()
+	}
+	return result
 }
 
 func listsEqual(alist []ASTNode, blist []ASTNode) bool {

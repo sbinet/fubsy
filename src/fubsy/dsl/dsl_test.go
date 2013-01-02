@@ -22,7 +22,7 @@ func Test_ParseString(t *testing.T) {
 			children: []ASTNode{
 				&ASTName{name: "a"}}}}}
 	assert.Equal(t, 0, len(err))
-	assertASTEquals(t, expect, ast)
+	assertASTEqual(t, expect, ast)
 }
 
 // now with a syntax error
@@ -46,7 +46,7 @@ func TestParse_valid_1(t *testing.T) {
 			&ASTFileFinder{patterns: []string{"meep"}}}}}}
 	ast, err := Parse(fn)
 	assert.Equal(t, 0, len(err))
-	assertASTEquals(t, expect, ast)
+	assertASTEqual(t, expect, ast)
 }
 
 func TestParse_valid_sequence(t *testing.T) {
@@ -73,7 +73,7 @@ func TestParse_valid_sequence(t *testing.T) {
 			name:     "blob",
 			children: []ASTNode{&ASTString{value: "meep"}}},
 	}}
-	assertASTEquals(t, expect, ast)
+	assertASTEqual(t, expect, ast)
 }
 
 func TestParse_internal_newlines(t *testing.T) {
@@ -107,7 +107,7 @@ func TestParse_internal_newlines(t *testing.T) {
 								member:    "b",
 							}}}},
 			}}}
-	assertASTEquals(t, expect, ast)
+	assertASTEqual(t, expect, ast)
 }
 
 func TestParse_invalid_1(t *testing.T) {

@@ -180,6 +180,18 @@ func Test_ASTName_Equal_location(t *testing.T) {
 		"equality fails with name1.location and name2.location set to equal values")
 }
 
+func Test_ASTList_Equal(t *testing.T) {
+	val1 := NewASTName("a")
+	val2 := NewASTName("b", NewStubLocation("loc1"))
+	val3 := NewASTName("b", NewStubLocation("loc2"))
+	list1 := &ASTList{elements: []ASTExpression{val1, val2}}
+	list2 := &ASTList{elements: []ASTExpression{val1, val3}}
+	list3 := &ASTList{elements: []ASTExpression{val3, val1}}
+
+	assert.True(t, list1.Equal(list2))
+	assert.False(t, list1.Equal(list3))
+}
+
 func Test_ASTFunctionCall_Equal_location(t *testing.T) {
 	// location is irrelevant to comparison
 	fcall1 := &ASTFunctionCall{
