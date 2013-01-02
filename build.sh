@@ -34,7 +34,7 @@ run "gofmt -w src/fubsy/dsl/fulex.go src/fubsy/dsl/fugrammar.go"
 #coverage=y
 
 # only explicitly build packages with tests
-packages="fubsy/dsl fubsy/types fubsy/dag fubsy/runtime"
+packages="fubsy/dsl fubsy/types fubsy/dag fubsy/runtime fubsy"
 #packages="fubsy/dsl"
 #packages="fubsy/types"
 #packages="fubsy/dag"
@@ -57,7 +57,6 @@ else
 fi
 
 run "go vet $packages"
-run "go install -v -gcflags '-N -l' fubsy"
 
 # make sure all source files are gofmt-compliant
 echo "gofmt -l src/fubsy"
