@@ -42,8 +42,8 @@ type FuObject interface {
 	// final form seen in the build phase. For example, expansion
 	// might convert a string "$CC $CFLAGS" to "/usr/bin/gcc -Wall
 	// -O2". Expansion can involve conversions within Fubsy's type
-	// system: e.g. expanding a FuFileFinder might result in a FuList
-	// of file nodes.
+	// system: e.g. expanding a FinderNode might result in a FuList of
+	// file nodes.
 	Expand(ns Namespace) (FuObject, error)
 
 	// Return a brief, human-readable description of the type of this

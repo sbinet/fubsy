@@ -131,8 +131,8 @@ func (self *Runtime) makeRuleNodes(astrule *dsl.ASTBuildRule) (
 	targets, sources []dag.Node, errs []error) {
 
 	// Evaluate the target and source lists, so we get one FuObject
-	// each. It might be a string, a list of strings, a FuFileFinder
-	// ... anything, really.
+	// each. It might be a string, a list of strings, a FinderNode...
+	// anything, really.
 	var targetobj, sourceobj types.FuObject
 	targetobj, errs = evaluate(self.stack, astrule.Targets())
 	if len(errs) > 0 {
