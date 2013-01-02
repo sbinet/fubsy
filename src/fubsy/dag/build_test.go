@@ -54,6 +54,38 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 		{"tool2", BUILT},
 	}
 
+	opts := BuildOptions{}
+	bstate := dag.NewBuildState(opts)
+	goal := NodeSet(bit.New(0, 1))
+	err := bstate.BuildTargets(goal)
+	assert.NotNil(t, err)
+	assertBuild(t, dag, expect, *executed)
+
+	// we don't even look at tool1, since an earlier node failed and
+	// the build terminates on first failure
+	assert.Equal(t, UNKNOWN, dag.lookup("tool1").State())
+}
+
+// full build (all targets), one action fails, --keep-going true
+func Test_BuildState_BuildTargets_full_failure_keep_going(t *testing.T) {
+	// this is the same as the previous test except that
+	// opts.KeepGoing == true: we don't terminate the build on first
+	// failure, but carry on and consider building tool1, then mark it
+	// TAINTED because one of its ancestors (misc.o) failed to build
+
+	dag, executed := setupBuild()
+
+	rule := dag.lookup("misc.o").BuildRule().(*stubrule)
+	rule.fail = true
+
+	expect := []buildexpect{
+		{"tool1.o", BUILT},
+		{"misc.o", FAILED},
+		{"util.o", BUILT},
+		{"tool2.o", BUILT},
+		{"tool2", BUILT},
+	}
+
 	opts := BuildOptions{KeepGoing: true}
 	bstate := dag.NewBuildState(opts)
 	goal := NodeSet(bit.New(0, 1))
@@ -61,7 +93,6 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 	assert.NotNil(t, err)
 	assertBuild(t, dag, expect, *executed)
 
-	// we don't even try to build tool1, since one of its parents failed
 	assert.Equal(t, TAINTED, dag.lookup("tool1").State())
 }
 
