@@ -46,7 +46,7 @@ Author, copyright, license
 
 Fubsy was written by Greg Ward <greg at gerg dot ca>.
 
-Copyright © 2012, Greg Ward. All rights reserved.
+Copyright © 2012-2013, Greg Ward. All rights reserved.
 
 Use of this software is governed by a BSD-style license that can be
 found in the LICENSE.txt file.
