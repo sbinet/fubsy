@@ -22,15 +22,16 @@ import (
 )
 
 type Runtime struct {
-	script string // filename
-	ast    *dsl.ASTRoot
+	options dag.BuildOptions
+	script  string // filename
+	ast     *dsl.ASTRoot
 
 	globals types.ValueMap
 	stack   *types.ValueStack
 	dag     *dag.DAG
 }
 
-func NewRuntime(script string, ast *dsl.ASTRoot) *Runtime {
+func NewRuntime(options dag.BuildOptions, script string, ast *dsl.ASTRoot) *Runtime {
 	stack := types.NewValueStack()
 
 	// The globals namespace is currently used only for builtins,
@@ -47,6 +48,7 @@ func NewRuntime(script string, ast *dsl.ASTRoot) *Runtime {
 	stack.Push(locals)
 
 	return &Runtime{
+		options: options,
 		script:  script,
 		ast:     ast,
 		globals: globals,
@@ -205,7 +207,7 @@ func (self *Runtime) runBuildPhase() []error {
 	fmt.Println("\nrebuilt dag:")
 	self.dag.Dump(os.Stdout)
 
-	bstate := self.dag.NewBuildState()
+	bstate := self.dag.NewBuildState(self.options)
 	goal = self.dag.FindFinalTargets()
 	err := bstate.BuildTargets(goal)
 	if err != nil {

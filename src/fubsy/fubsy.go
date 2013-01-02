@@ -12,13 +12,13 @@ import (
 
 	"github.com/ogier/pflag"
 
+	"fubsy/dag"
 	"fubsy/dsl"
 	"fubsy/runtime"
 )
 
 type args struct {
-	keepGoing  bool
-	checkAll   bool
+	options    dag.BuildOptions
 	scriptFile string
 	targets    []string
 }
@@ -39,7 +39,7 @@ func main() {
 	fmt.Printf("ast:\n")
 	ast.Dump(os.Stdout, "")
 
-	rt := runtime.NewRuntime(script, ast)
+	rt := runtime.NewRuntime(args.options, script, ast)
 	errors = rt.RunScript()
 	checkErrors("error:", errors)
 }
@@ -61,8 +61,8 @@ Options:
 func parseArgs() args {
 	result := args{}
 	pflag.Usage = usage
-	pflag.BoolVarP(&result.keepGoing, "keep-going", "k", false, "")
-	pflag.BoolVar(&result.checkAll, "check-all", false, "")
+	pflag.BoolVarP(&result.options.KeepGoing, "keep-going", "k", false, "")
+	pflag.BoolVar(&result.options.CheckAll, "check-all", false, "")
 	pflag.StringVarP(&result.scriptFile, "file", "f", "", "")
 	pflag.Parse()
 	result.targets = pflag.Args()

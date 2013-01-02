@@ -13,11 +13,20 @@ import (
 )
 
 type BuildState struct {
-	dag *DAG
+	dag     *DAG
+	options BuildOptions
+}
 
-	// not much else here now, but at some point we're going to need a
-	// place to put user options -- how do we transfer "--keep-going"
-	// from the command line to keepGoing() below?
+// user options, typically from the command line
+type BuildOptions struct {
+	// keep building even after one target fails (default: stop on
+	// first failure)
+	KeepGoing bool
+
+	// pessimistically assume that someone might have modified
+	// intermediate targets behind our back (default: check only
+	// original sources)
+	CheckAll bool
 }
 
 type BuildError struct {
@@ -195,16 +204,11 @@ func (self *BuildState) reportFailure(errs []error) {
 }
 
 func (self *BuildState) keepGoing() bool {
-	// eventually this should come from command-line option -k
-	return true
+	return self.options.KeepGoing
 }
 
 func (self *BuildState) checkAll() bool {
-	// similarly, this should come from --check-all option
-	// (pessimistically assume that someone might have modified
-	// intermediate targets behind our back, not just original
-	// sources)
-	return false
+	return self.options.CheckAll
 }
 
 func (self *BuildError) addFailure(node Node) {

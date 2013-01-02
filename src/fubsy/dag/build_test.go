@@ -25,7 +25,7 @@ func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 		{"tool2", BUILT},
 	}
 
-	bstate := dag.NewBuildState()
+	bstate := dag.NewBuildState(BuildOptions{})
 	goal := NodeSet(bit.New(0, 1))
 	err := bstate.BuildTargets(goal)
 	assert.Nil(t, err)
@@ -54,7 +54,8 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 		{"tool2", BUILT},
 	}
 
-	bstate := dag.NewBuildState()
+	opts := BuildOptions{KeepGoing: true}
+	bstate := dag.NewBuildState(opts)
 	goal := NodeSet(bit.New(0, 1))
 	err := bstate.BuildTargets(goal)
 	assert.NotNil(t, err)

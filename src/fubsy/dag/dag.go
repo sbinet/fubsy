@@ -228,8 +228,8 @@ func (self CycleError) Error() string {
 	return strings.Join(result, "\n")
 }
 
-func (self *DAG) NewBuildState() *BuildState {
-	return &BuildState{dag: self}
+func (self *DAG) NewBuildState(options BuildOptions) *BuildState {
+	return &BuildState{dag: self, options: options}
 }
 
 // Build a new DAG that is ready to start building targets. The new
