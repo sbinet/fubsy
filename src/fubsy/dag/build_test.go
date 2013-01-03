@@ -6,7 +6,6 @@ package dag
 
 import (
 	"testing"
-	//"fmt"
 
 	"code.google.com/p/go-bit/bit"
 	"github.com/stretchrcom/testify/assert"

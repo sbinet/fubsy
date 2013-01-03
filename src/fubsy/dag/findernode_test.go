@@ -5,7 +5,6 @@
 package dag
 
 import (
-	//"fmt"
 	"reflect"
 	"regexp"
 	"testing"
@@ -52,7 +51,6 @@ func Test_FinderNode_Add_Expand(t *testing.T) {
 	expect := []string{
 		"main.c", "src/foo.c", "doc/stuff.txt"}
 	sum, err := finder1.Add(finder2)
-	//fmt.Printf("finder1 = %v\nfinder2 = %v\nsum = %v\n", finder1, finder2, sum)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 

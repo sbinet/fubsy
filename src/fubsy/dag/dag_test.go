@@ -10,9 +10,6 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
-	//"fmt"
-	//"os"
-	//"os/exec"
 
 	"code.google.com/p/go-bit/bit"
 	"github.com/stretchrcom/testify/assert"
@@ -207,12 +204,6 @@ func Test_DAG_Rebuild_simple(t *testing.T) {
 
 	// this just gives us a known set of filenames for FinderNode to search
 	dag := makeSimpleGraph()
-	touchSourceFiles(dag)
-	// fmt.Println("after touchSourceFiles: pwd && ls -lR")
-	// cmd := exec.Command("/bin/sh", "-c", "pwd && ls -lR")
-	// output, err := cmd.CombinedOutput()
-	// _ = err
-	// fmt.Print(string(output))
 
 	// dag.Rebuild() just copies the DAG, because it consists
 	// entirely of FileNodes -- nothing to expand here
@@ -242,17 +233,11 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	dag.addParent(node2, node0)
 	assert.Equal(t, 3, dag.length())
 
-	//fmt.Println("dag before rebuild:")
-	//dag.Dump(os.Stdout)
-
 	// relevant = {0} so we only expand the first FinderNode, and the
 	// new DAG contains only nodes derived from that expansion
 	relevant := bit.New(0)
 	ns := types.NewValueMap()
 	rdag, err := dag.Rebuild(relevant, ns)
-
-	//fmt.Println("rebuild #1:")
-	//rdag.Dump(os.Stdout)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(rdag.nodes))
@@ -268,9 +253,6 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	rdag, err = dag.Rebuild(relevant, ns)
 	assert.Nil(t, err)
 
-	//fmt.Println("rebuild #2:")
-	//dag.Dump(os.Stdout)
-
 	assert.Equal(t, 4, len(rdag.nodes))
 	assert.Equal(t, "util.c", rdag.nodes[0].(*FileNode).name)
 	assert.Equal(t, "util.h", rdag.nodes[1].(*FileNode).name)
@@ -283,17 +265,6 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	assert.Equal(t, "util.c", parents[0].Name())
 	assert.Equal(t, "util.h", parents[1].Name())
 }
-
-// func Test_NodeSet_String(t *testing.T) {
-// 	var empty NodeSet
-// 	assert.Equal(t, "{}", empty.String())
-
-// 	empty = NodeSet(bit.New())
-// 	assert.Equal(t, "{}", empty.String())
-
-// 	s := bit.new(0)
-// 	assert.Equal(t, "{0}", NodeSet(s).String())
-// }
 
 func makeSimpleGraph() *DAG {
 	// dependency graph for a simple C project
@@ -392,16 +363,4 @@ func setToString(set_ NodeSet) string {
 	})
 	result[len(result)-1] = '}'
 	return string(result)
-}
-
-// Return the list of node names corresponding the nodes in set.
-func setToNames(dag *DAG, set_ NodeSet) []string {
-	set := (*bit.Set)(set_)
-	result := make([]string, set.Size())
-	i := 0
-	set.Do(func(id int) {
-		result[i] = dag.nodes[id].Name()
-		i++
-	})
-	return result
 }
