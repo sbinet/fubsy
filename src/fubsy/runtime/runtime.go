@@ -18,6 +18,7 @@ import (
 
 	"fubsy/dag"
 	"fubsy/dsl"
+	"fubsy/log"
 	"fubsy/types"
 )
 
@@ -60,7 +61,7 @@ func NewRuntime(options dag.BuildOptions, script string, ast *dsl.ASTRoot) *Runt
 func (self *Runtime) RunScript() []error {
 	var errors []error
 	for _, plugin := range self.ast.ListPlugins() {
-		fmt.Printf("loading plugin %s\n", strings.Join(plugin, "."))
+		log.Debug("plugins", "loading plugin '%s'", strings.Join(plugin, "."))
 	}
 
 	errors = self.runMainPhase()

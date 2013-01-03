@@ -62,7 +62,7 @@ Options:
   --check-all              check all files for changes, not just sources
   -f FILE, --file=FILE     read build script from FILE (default: main.fubsy)
   --debug=TOPIC,...        print detailed debug info about TOPIC: one of
-                           ast, dag (specify multiple topics as a
+                           ast, dag, plugins (specify multiple topics as a
                            comma-separated list)
 `)
 }
