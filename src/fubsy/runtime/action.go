@@ -155,7 +155,7 @@ func (self *AssignmentAction) Execute(ns types.Namespace) []error {
 }
 
 func (self *FunctionCallAction) String() string {
-	return self.fcall.String() + "(...)"
+	return self.fcall.String()
 }
 
 func (self *FunctionCallAction) Execute(ns types.Namespace) []error {
