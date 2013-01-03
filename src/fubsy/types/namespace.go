@@ -43,7 +43,8 @@ func (self ValueMap) Assign(name string, value FuObject) {
 
 func (self ValueMap) Dump(writer io.Writer, indent string) {
 	for name, val := range self {
-		fmt.Fprintf(writer, "%s%s = %T %s\n", indent, name, val, val)
+		fmt.Fprintf(writer, "%s%s = %s: %s\n",
+			indent, name, val.Typename(), val)
 	}
 }
 
