@@ -87,26 +87,35 @@ func evaluateCall(
 	if len(errs) > 0 {
 		return nil, errs
 	}
+	var err error
 	function, ok := value.(types.FuCallable)
 	if !ok {
-		err := fmt.Errorf("not a function or method: '%s'", expr.Function())
+		err = fmt.Errorf("not a function or method: '%s'", expr.Function())
 		return nil, []error{err}
 	}
-	astargs := expr.Args() // slice of ASTExpression
-	args := make(types.FuList, len(astargs))
+
+	var astargs []dsl.ASTExpression
+	var arglist types.FuList
+	var argobj types.FuObject
+	astargs = expr.Args()
+	arglist = make(types.FuList, len(astargs))
 	for i, astarg := range astargs {
-		args[i], errs = evaluate(ns, astarg)
+		arglist[i], errs = evaluate(ns, astarg)
 		if len(errs) > 0 {
 			return nil, errs
 		}
 	}
 
-	fmt.Printf("function = %v, args = %v\n", function, args)
-	err := function.CheckArgs(args)
+	argobj, err = arglist.Expand(ns)
 	if err != nil {
 		return nil, []error{err}
 	}
-	return function.Code()(args, nil)
+	arglist = argobj.List()
+	err = function.CheckArgs(arglist)
+	if err != nil {
+		return nil, []error{err}
+	}
+	return function.Code()(arglist, nil)
 }
 
 type LocationError struct {

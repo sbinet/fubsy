@@ -5,7 +5,7 @@
 package runtime
 
 import (
-	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchrcom/testify/assert"
@@ -106,7 +106,8 @@ func Test_evaluateCall(t *testing.T) {
 			panic("bar() called with wrong number of args")
 		}
 		calls = append(calls, "bar")
-		return nil, []error{errors.New("bar failed")}
+		return nil, []error{
+			fmt.Errorf("bar failed (%s)", args[0])}
 	}
 
 	ns := types.NewValueMap()
@@ -121,6 +122,7 @@ func Test_evaluateCall(t *testing.T) {
 	barname := dsl.NewASTName("bar")
 	noargs := []dsl.ASTExpression{}
 	onearg := []dsl.ASTExpression{dsl.NewASTString("\"meep\"")}
+	exparg := []dsl.ASTExpression{dsl.NewASTString("\">$src<\"")}
 
 	// call foo() correctly (no args)
 	ast := dsl.NewASTFunctionCall(fooname, noargs)
@@ -142,8 +144,25 @@ func Test_evaluateCall(t *testing.T) {
 	result, errors = evaluateCall(ns, ast)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
-	assert.Equal(t, "bar failed", errors[0].Error())
+	assert.Equal(t, "bar failed (meep)", errors[0].Error())
 	assert.Equal(t, []string{"foo", "bar"}, calls)
+
+	// call bar() with an arg that needs to be expanded
+	ast = dsl.NewASTFunctionCall(barname, exparg)
+	result, errors = evaluateCall(ns, ast)
+	assert.Nil(t, result)
+	assert.Equal(t, 1, len(errors))
+	assert.Equal(t, "bar failed (>main.c<)", errors[0].Error())
+	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
+
+	// again, but this time expansion fails (undefined name)
+	exparg = []dsl.ASTExpression{dsl.NewASTString("\"a $bogus value\"")}
+	ast = dsl.NewASTFunctionCall(barname, exparg)
+	result, errors = evaluateCall(ns, ast)
+	assert.Nil(t, result)
+	assert.Equal(t, 1, len(errors))
+	assert.Equal(t, "undefined variable 'bogus' in string", errors[0].Error())
+	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
 
 	// call bar() incorrectly (no args)
 	ast = dsl.NewASTFunctionCall(barname, noargs)
@@ -152,7 +171,7 @@ func Test_evaluateCall(t *testing.T) {
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
 		"function bar() takes exactly 1 arguments (got 0)", errors[0].Error())
-	assert.Equal(t, []string{"foo", "bar"}, calls)
+	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
 
 	// call bar() incorrectly (1 arg, but it's an undefined name)
 	ast = dsl.NewASTFunctionCall(
@@ -179,7 +198,7 @@ func Test_evaluateCall(t *testing.T) {
 	assert.Equal(t,
 		"not a function or method: 'src'", errors[0].Error())
 
-	assert.Equal(t, []string{"foo", "bar"}, calls)
+	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
 }
 
 func stringnode(value string) *dsl.ASTString {
