@@ -9,8 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"code.google.com/p/go-bit/bit"
-
 	"fubsy/log"
 )
 
@@ -230,17 +228,6 @@ func (self *BuildError) Error() string {
 			len(self.failed), self.attempts, failed)
 	}
 	return fmt.Sprintf("failed to build target: %s", self.failed[0])
-}
-
-// (hopefully) temporary, pending acceptance of my patches to go-bit
-func setToSlice(set *bit.Set) []int {
-	result := make([]int, set.Size())
-	j := 0
-	set.Do(func(n int) {
-		result[j] = n
-		j++
-	})
-	return result
 }
 
 func joinNodes(delim string, max int, nodes []Node) string {
