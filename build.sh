@@ -34,7 +34,7 @@ run "gofmt -w src/fubsy/dsl/fulex.go src/fubsy/dsl/fugrammar.go"
 #coverage=y
 
 # only explicitly build packages with tests
-packages="fubsy/dsl fubsy/types fubsy/dag fubsy/runtime fubsy"
+packages="fubsy/log fubsy/dsl fubsy/types fubsy/dag fubsy/runtime fubsy"
 #packages="fubsy/dsl"
 #packages="fubsy/types"
 #packages="fubsy/dag"

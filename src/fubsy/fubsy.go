@@ -9,18 +9,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ogier/pflag"
 
 	"fubsy/dag"
 	"fubsy/dsl"
+	"fubsy/log"
 	"fubsy/runtime"
 )
 
 type args struct {
-	options    dag.BuildOptions
-	scriptFile string
-	targets    []string
+	options     dag.BuildOptions
+	scriptFile  string
+	debugTopics []string
+	targets     []string
 }
 
 func main() {
@@ -30,14 +33,17 @@ func main() {
 		fmt.Fprintln(os.Stderr, "fubsy: error: "+err.Error())
 		os.Exit(2)
 	}
+	for _, topic := range args.debugTopics {
+		log.EnableDebug(topic)
+	}
 
 	ast, errors := dsl.Parse(script)
 	if ast == nil && len(errors) == 0 {
 		panic("ast == nil && len(errors) == 0")
 	}
 	checkErrors("parse error:", errors)
-	fmt.Printf("ast:\n")
-	ast.Dump(os.Stdout, "")
+	log.Debug("ast", "ast:\n")
+	log.DebugDump("ast", ast)
 
 	rt := runtime.NewRuntime(args.options, script, ast)
 	errors = rt.RunScript()
@@ -55,6 +61,9 @@ Options:
   -k, --keep-going         continue building even when some targets fail
   --check-all              check all files for changes, not just sources
   -f FILE, --file=FILE     read build script from FILE (default: main.fubsy)
+  --debug=TOPIC,...        print detailed debug info about TOPIC: one of
+                           ast, dag (specify multiple topics as a
+                           comma-separated list)
 `)
 }
 
@@ -64,8 +73,10 @@ func parseArgs() args {
 	pflag.BoolVarP(&result.options.KeepGoing, "keep-going", "k", false, "")
 	pflag.BoolVar(&result.options.CheckAll, "check-all", false, "")
 	pflag.StringVarP(&result.scriptFile, "file", "f", "", "")
+	topics := pflag.String("debug", "", "")
 	pflag.Parse()
 	result.targets = pflag.Args()
+	result.debugTopics = strings.Split(*topics, ",")
 	return result
 }
 
