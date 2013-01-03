@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"code.google.com/p/go-bit/bit"
+
+	"fubsy/log"
 )
 
 type BuildState struct {
@@ -176,8 +178,8 @@ func (self *BuildState) inspectParents(
 func (self *BuildState) buildNode(
 	id int, node Node, builderr *BuildError) bool {
 	rule := node.BuildRule()
-	fmt.Printf("  building node %d (%s); rule=%v, action=%s\n",
-		id, node, rule, rule.ActionString())
+	log.Verbose("building node %d: %s, action=%s\n",
+		id, node, rule.ActionString())
 	node.SetState(BUILDING)
 	builderr.attempts++
 	targets, errs := rule.Execute()

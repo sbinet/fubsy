@@ -23,6 +23,7 @@ type args struct {
 	options     dag.BuildOptions
 	scriptFile  string
 	debugTopics []string
+	verbosity   uint
 	targets     []string
 }
 
@@ -33,6 +34,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "fubsy: error: "+err.Error())
 		os.Exit(2)
 	}
+	log.SetVerbosity(args.verbosity)
 	for _, topic := range args.debugTopics {
 		log.EnableDebug(topic)
 	}
@@ -61,6 +63,8 @@ Options:
   -k, --keep-going         continue building even when some targets fail
   --check-all              check all files for changes, not just sources
   -f FILE, --file=FILE     read build script from FILE (default: main.fubsy)
+  -v, --verbose            print more informative messages
+  -q, --quiet              suppress all non-error output
   --debug=TOPIC,...        print detailed debug info about TOPIC: one of
                            ast, dag, plugins (specify multiple topics as a
                            comma-separated list)
@@ -73,10 +77,22 @@ func parseArgs() args {
 	pflag.BoolVarP(&result.options.KeepGoing, "keep-going", "k", false, "")
 	pflag.BoolVar(&result.options.CheckAll, "check-all", false, "")
 	pflag.StringVarP(&result.scriptFile, "file", "f", "", "")
+	verbose := pflag.BoolP("verbose", "v", false, "")
+	quiet := pflag.BoolP("quiet", "q", false, "")
 	topics := pflag.String("debug", "", "")
 	pflag.Parse()
 	result.targets = pflag.Args()
 	result.debugTopics = strings.Split(*topics, ",")
+
+	// argh: really, we just want a callback for each occurence of -q
+	// or -v, which decrements or increments verbosity
+	if *quiet {
+		result.verbosity = 0
+	} else if *verbose {
+		result.verbosity = 2
+	} else {
+		result.verbosity = 1
+	}
 	return result
 }
 

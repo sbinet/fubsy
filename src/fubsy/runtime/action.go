@@ -5,12 +5,13 @@
 package runtime
 
 import (
-	"fmt"
+	//"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
 	"fubsy/dsl"
+	"fubsy/log"
 	"fubsy/types"
 )
 
@@ -117,7 +118,7 @@ func (self *CommandAction) Execute(ns types.Namespace) []error {
 	if err != nil {
 		return []error{err}
 	}
-	fmt.Println(self.expanded)
+	log.Info("%s", self.expanded)
 
 	// Run commands with the shell because people expect redirection,
 	// pipes, etc. to work from their build scripts. (And besides, all
