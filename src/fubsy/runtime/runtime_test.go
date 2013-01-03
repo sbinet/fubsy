@@ -6,7 +6,6 @@ package runtime
 
 import (
 	"bytes"
-	"os"
 	"testing"
 	//"fmt"
 	//"reflect"
@@ -46,7 +45,6 @@ func Test_Runtime_runMainPhase_valid(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, types.FuString("foo.c"), val)
 	assert.NotNil(t, rt.dag)
-	rt.dag.Dump(os.Stdout, "")
 
 	// this seems *awfully* detailed and brittle, but DAG doesn't
 	// provide a good way to query what's in it (yet...)
