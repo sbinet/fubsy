@@ -205,7 +205,7 @@ func Test_DAG_Rebuild_simple(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
-	// this just gives us a known set of filenames for GlobNode to search
+	// this just gives us a known set of filenames for FinderNode to search
 	dag := makeSimpleGraph()
 	touchSourceFiles(dag)
 	// fmt.Println("after touchSourceFiles: pwd && ls -lR")
@@ -245,7 +245,7 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	//fmt.Println("dag before rebuild:")
 	//dag.Dump(os.Stdout)
 
-	// relevant = {0} so we only expand the first GlobNode, and the
+	// relevant = {0} so we only expand the first FinderNode, and the
 	// new DAG contains only nodes derived from that expansion
 	relevant := bit.New(0)
 	ns := types.NewValueMap()
@@ -262,7 +262,7 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	buf := new(bytes.Buffer)
 	dag.Dump(buf, "") // no panic
 
-	// all nodes are relevant, so the second GlobNode will be expanded
+	// all nodes are relevant, so the second FinderNode will be expanded
 	relevant.AddRange(0, len(dag.nodes))
 	ns = types.NewValueMap()
 	rdag, err = dag.Rebuild(relevant, ns)

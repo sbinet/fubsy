@@ -52,7 +52,7 @@ func Test_evaluate_simple(t *testing.T) {
 	nnode = dsl.NewASTName("boo", location)
 	assertEvaluateFail(t, ns, "hello, sailor: name not defined: 'boo'", nnode)
 
-	// expression <*.c blah> evaluates to a FileFinder with two
+	// expression <*.c blah> evaluates to a FinderNode with two
 	// include patterns
 	patterns := []string{"*.c", "blah"}
 	fnode := dsl.NewASTFileFinder(patterns)

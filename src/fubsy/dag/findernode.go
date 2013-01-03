@@ -103,7 +103,7 @@ func (self *FinderNode) Typename() string {
 	return "FinderNode"
 }
 
-// Walk the filesystem for files matching this FileFinder's include
+// Walk the filesystem for files matching this FinderNode's include
 // patterns. Return the list of matching filenames as a FuList of
 // FileNode.
 func (self *FinderNode) Expand(ns types.Namespace) (types.FuObject, error) {

@@ -76,7 +76,7 @@ type Node interface {
 	// as this node, only more concretely. Returns the receiver object
 	// (self) if no expansion is necessary (the normal case).
 	// Canonical use case: expanding wildcards by replacing one
-	// GlobNode with zero or more FileNodes. Note that Node.Expand()
+	// FinderNode with zero or more FileNodes. Note that Node.Expand()
 	// implementations are responsible only for creating new Node
 	// objects, *not* for wiring them into the DAG. That happens in
 	// DAG.Rebuild(), which has the option of reusing existing Nodes

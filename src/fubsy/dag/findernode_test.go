@@ -91,7 +91,7 @@ func Test_FinderNode_Add_Expand(t *testing.T) {
 	assertExpand(t, expect, sum)
 }
 
-// hmmmm: interface-wise, this tests that FileFinder.Add() returns an
+// hmmmm: interface-wise, this tests that FinderNode.Add() returns an
 // object whose CommandString() behaves sensibly... but in
 // implementation terms, it's really a test of FuList.CommandString()
 func Test_FinderNode_Add_CommandString(t *testing.T) {

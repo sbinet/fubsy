@@ -234,10 +234,10 @@ func (self *DAG) NewBuildState(options BuildOptions) *BuildState {
 
 // Build a new DAG that is ready to start building targets. The new
 // DAG preserves only relevant nodes and expands all expandable nodes
-// in the current DAG (e.g each GlobNode is replaced by FileNodes for
-// the files matching the glob's patterns). Any BuildState or NodeSet
-// objects derived from the old DAG are invalid with the new DAG:
-// throw them away and start over again.
+// in the current DAG (e.g each FinderNode is replaced by FileNodes
+// for the files matching the glob's patterns). Any BuildState or
+// NodeSet objects derived from the old DAG are invalid with the new
+// DAG: throw them away and start over again.
 func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) {
 	var errors []error
 	replacements := make(map[int]*bit.Set)
