@@ -43,7 +43,8 @@ type FuObject interface {
 	// might convert a string "$CC $CFLAGS" to "/usr/bin/gcc -Wall
 	// -O2". Expansion can involve conversions within Fubsy's type
 	// system: e.g. expanding a FinderNode might result in a FuList of
-	// file nodes.
+	// file nodes. Expand() never returns nil; a value that needs no
+	// expansion should just return itself.
 	Expand(ns Namespace) (FuObject, error)
 
 	// Return a brief, human-readable description of the type of this

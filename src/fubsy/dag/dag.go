@@ -249,19 +249,17 @@ func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) 
 		expansion, err := node.Expand(ns)
 		if err != nil {
 			errors = append(errors, err)
-		} else if expansion != nil {
-			repl := bit.New()
-			for _, expnode := range expansion.List() {
-				// if this type assertion panics, then node.Expand()
-				// returned FuObjects that don't implement Node
-				newid, _ := newdag.addNode(expnode.(Node))
-				repl.Add(newid)
-			}
-			replacements[id] = repl
-		} else {
-			newid, _ := newdag.addNode(node)
-			replacements[id] = bit.New(newid)
+		} else if expansion == nil {
+			panic("node.Expand() returned nil for node " + node.String())
 		}
+		repl := bit.New()
+		for _, expnode := range expansion.List() {
+			// if this type assertion panics, then node.Expand()
+			// returned FuObjects that don't implement Node
+			newid, _ := newdag.addNode(expnode.(Node))
+			repl.Add(newid)
+		}
+		replacements[id] = repl
 	}
 
 	// Second loop to rebuild parent info in the new DAG.
