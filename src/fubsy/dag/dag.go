@@ -110,10 +110,10 @@ func (self *DAG) Dump(writer io.Writer, indent string) {
 		parents := self.parents[id]
 		if !parents.IsEmpty() {
 			fmt.Fprintf(writer, indent+"  parents:\n")
-			parents.Do(func(parentid int) {
+			for parentid, ok := parents.Next(-1); ok; parentid, ok = parents.Next(parentid) {
 				pnode := self.nodes[parentid]
 				fmt.Fprintf(writer, indent+"    %04d: %s\n", parentid, pnode.Name())
-			})
+			}
 		}
 	}
 }
@@ -168,9 +168,9 @@ func (self *DAG) DFS(start NodeSet, visit DFSVisitor) error {
 		//fmt.Printf("entering node %d: %s (path = %v)\n", id, node, path)
 		var err error
 		parents := self.parents[id]
-		parents.Do(func(pid int) {
+		for pid, ok := parents.Next(-1); ok; pid, ok = parents.Next(pid) {
 			if err != nil {
-				return
+				break
 			}
 			if colour[pid] == GREY {
 				cycle := make([]int, len(path)+1)
@@ -181,7 +181,7 @@ func (self *DAG) DFS(start NodeSet, visit DFSVisitor) error {
 				colour[pid] = GREY
 				err = descend(pid)
 			}
-		})
+		}
 		if err != nil {
 			return err
 		}
@@ -195,12 +195,13 @@ func (self *DAG) DFS(start NodeSet, visit DFSVisitor) error {
 	}
 
 	var err error
-	(*bit.Set)(start).Do(func(id int) {
+	startbs := (*bit.Set)(start)
+	for id, ok := startbs.Next(-1); ok; id, ok = startbs.Next(id) {
 		if colour[id] == WHITE {
 			colour[id] = GREY
 			err = descend(id)
 		}
-	})
+	}
 	if err != nil {
 		return err
 	}
@@ -271,12 +272,12 @@ func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) 
 
 		oldparents := self.parents[oldid]
 		newparents := bit.New()
-		oldparents.Do(func(oldpid int) {
+		for oldpid, ok := oldparents.Next(-1); ok; oldpid, ok = oldparents.Next(oldpid) {
 			newparents.SetOr(newparents, replacements[oldpid])
-		})
-		newids.Do(func(newid int) {
+		}
+		for newid, ok := newids.Next(-1); ok; newid, ok = newids.Next(newid) {
 			newdag.parents[newid] = newparents
-		})
+		}
 	}
 
 	return newdag, errors
@@ -350,9 +351,9 @@ func (self *DAG) addNode(node Node) (int, Node) {
 func (self *DAG) parentNodes(id int) []Node {
 	parents := self.parents[id]
 	result := make([]Node, 0, parents.Size())
-	parents.Do(func(parentid int) {
+	for parentid, ok := parents.Next(-1); ok; parentid, ok = parents.Next(parentid) {
 		result = append(result, self.nodes[parentid])
-	})
+	}
 	return result
 }
 

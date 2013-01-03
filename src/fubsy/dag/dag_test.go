@@ -357,10 +357,10 @@ func setToString(set_ NodeSet) string {
 	set := (*bit.Set)(set_)
 	result := make([]byte, 1, set.Size()*3)
 	result[0] = '{'
-	set.Do(func(n int) {
+	for n, ok := set.Next(-1); ok; n, ok = set.Next(n) {
 		result = strconv.AppendInt(result, int64(n), 10)
 		result = append(result, ',')
-	})
+	}
 	result[len(result)-1] = '}'
 	return string(result)
 }
