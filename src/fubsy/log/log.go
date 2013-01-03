@@ -15,6 +15,7 @@ import (
 	"io"
 	stdlog "log"
 	"os"
+	"runtime"
 )
 
 type Logger struct {
@@ -40,6 +41,12 @@ type Dumper interface {
 // will be printed; all others wil be suppressed.
 func Debug(topic string, format string, arg ...interface{}) {
 	defaultlogger.Debug(topic, format, arg...)
+}
+
+// Print a debugging message related to topic, followed by a stack trace
+// that explains how we got to the code that called DebugStack().
+func DebugStack(topic string, format string, arg ...interface{}) {
+	defaultlogger.DebugStack(topic, format, arg...)
 }
 
 func DebugDump(topic string, object Dumper) {
@@ -80,19 +87,37 @@ func New(output io.Writer) *Logger {
 	}
 }
 
-func (self *Logger) Debug(topic string, format string, arg ...interface{}) {
+func (self *Logger) Debug(topic string, format string, arg ...interface{}) bool {
 	if self.verbosity >= 3 || self.debug[topic] {
 		self.stdlog.Output(2, fmt.Sprintf(format, arg...))
+		return true
 	}
+	return false
 }
 
-func (self *Logger) DebugDump(topic string, object Dumper) {
+func (self *Logger) DebugStack(topic string, format string, arg ...interface{}) bool {
+	if self.Debug(topic, format, arg...) {
+		depth := 2
+		_, file, line, ok := runtime.Caller(depth)
+		for ok {
+			fmt.Printf("  from %s:%d\n", file, line)
+			depth++
+			_, file, line, ok = runtime.Caller(depth)
+		}
+		return true
+	}
+	return false
+}
+
+func (self *Logger) DebugDump(topic string, object Dumper) bool {
 	if self.verbosity >= 3 || self.debug[topic] {
 		buf := &bytes.Buffer{}
 		object.Dump(buf, "")
 		fmt.Fprintln(buf)
 		self.stdlog.Output(2, string(buf.Bytes()))
+		return true
 	}
+	return false
 }
 
 func (self *Logger) Verbose(format string, arg ...interface{}) {
