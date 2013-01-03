@@ -46,7 +46,7 @@ func Test_Runtime_runMainPhase_valid(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, types.FuString("foo.c"), val)
 	assert.NotNil(t, rt.dag)
-	rt.dag.Dump(os.Stdout)
+	rt.dag.Dump(os.Stdout, "")
 
 	// this seems *awfully* detailed and brittle, but DAG doesn't
 	// provide a good way to query what's in it (yet...)
@@ -57,7 +57,7 @@ func Test_Runtime_runMainPhase_valid(t *testing.T) {
 		"    0001: foo.c\n" +
 		"0001: foo.c (*dag.FileNode, UNKNOWN)\n"
 	var buf bytes.Buffer
-	rt.dag.Dump(&buf)
+	rt.dag.Dump(&buf, "")
 	assert.Equal(t, expect, buf.String())
 }
 

@@ -88,8 +88,9 @@ func (self *Logger) Debug(topic string, format string, arg ...interface{}) {
 
 func (self *Logger) DebugDump(topic string, object Dumper) {
 	if self.verbosity >= 3 || self.debug[topic] {
-		var buf bytes.Buffer
-		object.Dump(&buf, "")
+		buf := &bytes.Buffer{}
+		object.Dump(buf, "")
+		fmt.Fprintln(buf)
 		self.stdlog.Output(2, string(buf.Bytes()))
 	}
 }

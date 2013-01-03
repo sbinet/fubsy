@@ -13,7 +13,6 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"fubsy/dag"
@@ -191,8 +190,8 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 func (self *Runtime) runBuildPhase() []error {
 	var errors []error
 
-	fmt.Println("\ninitial dag:")
-	self.dag.Dump(os.Stdout)
+	log.Debug("dag", "initial dag:")
+	log.DebugDump("dag", self.dag)
 
 	// eventually we should use the command line to figure out the
 	// user's desired targets... but the default will always be to
@@ -205,8 +204,8 @@ func (self *Runtime) runBuildPhase() []error {
 		return errors
 	}
 	self.dag.MarkSources()
-	fmt.Println("\nrebuilt dag:")
-	self.dag.Dump(os.Stdout)
+	log.Debug("dag", "rebuilt dag:")
+	log.DebugDump("dag", self.dag)
 
 	bstate := self.dag.NewBuildState(self.options)
 	goal = self.dag.FindFinalTargets()

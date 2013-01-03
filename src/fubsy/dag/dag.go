@@ -94,7 +94,7 @@ func (self *DAG) AddManyParents(targets, sources []Node) {
 // writer. This faithfully represents the data structure as it exists
 // in memory; it doesn't try to make a fancy recursive tree-like
 // structure.
-func (self *DAG) Dump(writer io.Writer) {
+func (self *DAG) Dump(writer io.Writer, indent string) {
 	for id, node := range self.nodes {
 		rule := node.BuildRule()
 		desc := node.Name()
@@ -102,17 +102,17 @@ func (self *DAG) Dump(writer io.Writer) {
 		if detail != desc {
 			desc += " (" + detail + ")"
 		}
-		fmt.Fprintf(writer, "%04d: %s (%T, %v)\n",
+		fmt.Fprintf(writer, indent+"%04d: %s (%T, %v)\n",
 			id, desc, node, node.State())
 		if rule != nil {
-			fmt.Fprintf(writer, "  action: %s\n", rule.ActionString())
+			fmt.Fprintf(writer, indent+"  action: %s\n", rule.ActionString())
 		}
 		parents := self.parents[id]
 		if !parents.IsEmpty() {
-			fmt.Fprintf(writer, "  parents:\n")
+			fmt.Fprintf(writer, indent+"  parents:\n")
 			parents.Do(func(parentid int) {
 				pnode := self.nodes[parentid]
-				fmt.Fprintf(writer, "    %04d: %s\n", parentid, pnode.Name())
+				fmt.Fprintf(writer, indent+"    %04d: %s\n", parentid, pnode.Name())
 			})
 		}
 	}

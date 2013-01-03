@@ -260,7 +260,7 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	assert.Equal(t, "util.h", rdag.nodes[1].(*FileNode).name)
 
 	buf := new(bytes.Buffer)
-	dag.Dump(buf) // no panic
+	dag.Dump(buf, "") // no panic
 
 	// all nodes are relevant, so the second GlobNode will be expanded
 	relevant.AddRange(0, len(dag.nodes))
