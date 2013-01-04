@@ -5,7 +5,6 @@
 package dag
 
 import (
-	"reflect"
 	"regexp"
 	"testing"
 
@@ -152,7 +151,6 @@ func Test_FinderNode_Expand_single_include(t *testing.T) {
 
 	finder.includes[0] = "**/*.c"
 	assertExpand(t, []string{"lib1/foo.c", "lib1/sub/blah.c"}, finder)
-	return
 
 	finder.includes[0] = "l?b?/**/*.c"
 	assertExpand(t, []string{"lib1/foo.c", "lib1/sub/blah.c"}, finder)
@@ -216,11 +214,7 @@ func assertExpand(t *testing.T, expect []string, obj types.FuObject) {
 	for i, obj := range actualobj.List() {
 		actualstr[i] = obj.String()
 	}
-	if !reflect.DeepEqual(expect, actualstr) {
-		t.Errorf("%v Expand(): "+
-			"expected\n%v\nbut got\n%v",
-			obj, expect, actualstr)
-	}
+	assert.Equal(t, expect, actualstr)
 }
 
 func Test_MakeFinderNode(t *testing.T) {
