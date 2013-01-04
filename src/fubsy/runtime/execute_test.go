@@ -57,7 +57,7 @@ func Test_evaluate_simple(t *testing.T) {
 	// include patterns
 	patterns := []string{"*.c", "blah"}
 	fnode := dsl.NewASTFileFinder(patterns)
-	expect = dag.NewFinderNode([]string{"*.c", "blah"})
+	expect = dag.NewFinderNode("*.c", "blah")
 	assertEvaluateOK(t, ns, expect, fnode)
 }
 

@@ -226,8 +226,8 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	touchSourceFiles(dag)
 
 	dag = NewDAG()
-	node0 := MakeFinderNode(dag, []string{"**/util.[ch]"})
-	node1 := MakeFinderNode(dag, []string{"*.h"})
+	node0 := MakeFinderNode(dag, "**/util.[ch]")
+	node1 := MakeFinderNode(dag, "*.h")
 	node2 := MakeFileNode(dag, "util.o")
 	_ = node1
 	dag.addParent(node2, node0)

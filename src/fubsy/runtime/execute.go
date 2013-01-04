@@ -38,7 +38,7 @@ func evaluate(
 	case *dsl.ASTName:
 		result, errs = evaluateName(ns, expr)
 	case *dsl.ASTFileFinder:
-		result = dag.NewFinderNode(expr.Patterns())
+		result = dag.NewFinderNode(expr.Patterns()...)
 	case *dsl.ASTAdd:
 		result, errs = evaluateAdd(ns, expr)
 	case *dsl.ASTFunctionCall:

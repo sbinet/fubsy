@@ -85,8 +85,8 @@ func Test_nodify(t *testing.T) {
 	sval1 := types.FuString("hello.txt")
 	sval2 := types.FuString("foo.c")
 	lval1 := types.FuList([]types.FuObject{sval1, sval2})
-	finder1 := dag.NewFinderNode([]string{"*.c", "*.h"})
-	finder2 := dag.NewFinderNode([]string{"**/*.java"})
+	finder1 := dag.NewFinderNode("*.c", "*.h")
+	finder2 := dag.NewFinderNode("**/*.java")
 
 	rt := NewRuntime(dag.BuildOptions{}, "", nil)
 	nodes := rt.nodify(sval1)

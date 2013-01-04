@@ -33,7 +33,7 @@ type FinderNode struct {
 	excludes []string
 }
 
-func NewFinderNode(includes []string) *FinderNode {
+func NewFinderNode(includes ...string) *FinderNode {
 	// XXX what if the include list changes? what about excludes?
 	name := strings.Join(includes, "+")
 	node := &FinderNode{
@@ -43,8 +43,8 @@ func NewFinderNode(includes []string) *FinderNode {
 	return node
 }
 
-func MakeFinderNode(dag *DAG, includes []string) *FinderNode {
-	node := NewFinderNode(includes)
+func MakeFinderNode(dag *DAG, includes ...string) *FinderNode {
+	node := NewFinderNode(includes...)
 	node = dag.AddNode(node).(*FinderNode)
 	return node
 }

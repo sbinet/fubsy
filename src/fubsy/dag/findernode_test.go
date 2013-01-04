@@ -27,9 +27,9 @@ func Test_FinderNode_CommandString(t *testing.T) {
 }
 
 func Test_FinderNode_Equal(t *testing.T) {
-	finder1 := NewFinderNode([]string{"*.c", "*.h"})
-	finder2 := NewFinderNode([]string{"*.c", "*.h"})
-	finder3 := NewFinderNode([]string{"*.h", "*.c"})
+	finder1 := NewFinderNode("*.c", "*.h")
+	finder2 := NewFinderNode("*.c", "*.h")
+	finder3 := NewFinderNode("*.h", "*.c")
 
 	assert.True(t, finder1.Equal(finder1))
 	assert.True(t, finder1.Equal(finder2))
@@ -43,8 +43,8 @@ func Test_FinderNode_Add_Expand(t *testing.T) {
 		"src/foo.c", "src/foo.h", "main.c", "include/bop.h",
 		"doc.txt", "doc/stuff.txt", "doc/blahblah.rst")
 
-	finder1 := NewFinderNode([]string{"**/*.c"})
-	finder2 := NewFinderNode([]string{"doc/*.txt"})
+	finder1 := NewFinderNode("**/*.c")
+	finder2 := NewFinderNode("doc/*.txt")
 
 	// sum = <**/*.c> + <doc/*.txt>
 	expect := []string{
@@ -54,7 +54,7 @@ func Test_FinderNode_Add_Expand(t *testing.T) {
 	assertExpand(t, expect, sum)
 
 	// sum = sum + <"*c*/?o?.h">
-	finder3 := NewFinderNode([]string{"*c*/?o?.h"})
+	finder3 := NewFinderNode("*c*/?o?.h")
 	expect = append(expect, "include/bop.h", "src/foo.h")
 	sum, err = sum.Add(finder3)
 	assert.Nil(t, err)
@@ -92,9 +92,9 @@ func Test_FinderNode_Add_Expand(t *testing.T) {
 // object whose CommandString() behaves sensibly... but in
 // implementation terms, it's really a test of FuList.CommandString()
 func Test_FinderNode_Add_CommandString(t *testing.T) {
-	finder1 := NewFinderNode([]string{"*.c", "*.h"})
-	finder2 := NewFinderNode([]string{"doc/???.txt"})
-	finder3 := NewFinderNode([]string{})
+	finder1 := NewFinderNode("*.c", "*.h")
+	finder2 := NewFinderNode("doc/???.txt")
+	finder3 := NewFinderNode()
 
 	sum1, err := finder1.Add(finder2)
 	assert.Nil(t, err)
@@ -146,7 +146,7 @@ func Test_FinderNode_Expand_single_include(t *testing.T) {
 	testutils.TouchFiles(
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
 
-	finder := &FinderNode{includes: []string{"*/*.c"}}
+	finder := NewFinderNode("*/*.c")
 	assertExpand(t, []string{"lib1/foo.c"}, finder)
 
 	finder.includes[0] = "**/*.c"
@@ -185,14 +185,14 @@ func Test_FinderNode_Expand_double_recursion(t *testing.T) {
 
 	var finder *FinderNode
 	var expect []string
-	finder = NewFinderNode([]string{"**/test/**/*.java"})
+	finder = NewFinderNode("**/test/**/*.java")
 	expect = []string{
 		"app1/src/test/org/example/app1/StuffTest.java",
 		"misc/app3/src/test/org/example/app3/TestHelpers.java",
 	}
 	assertExpand(t, expect, finder)
 
-	finder = NewFinderNode([]string{"**/test/**/*"})
+	finder = NewFinderNode("**/test/**/*")
 	expect = []string{
 		"app1/src/test/org/example/app1/StuffTest.java",
 		"misc/app3/src/test/org/example/app3/TestHelpers.java",
@@ -200,7 +200,7 @@ func Test_FinderNode_Expand_double_recursion(t *testing.T) {
 	}
 	assertExpand(t, expect, finder)
 
-	finder = NewFinderNode([]string{"**/test/**"})
+	finder = NewFinderNode("**/test/**")
 	assertExpand(t, expect, finder)
 }
 
@@ -219,13 +219,13 @@ func assertExpand(t *testing.T, expect []string, obj types.FuObject) {
 
 func Test_MakeFinderNode(t *testing.T) {
 	dag := NewDAG()
-	node0 := MakeFinderNode(dag, []string{"**/*.java"})
-	node1 := MakeFinderNode(dag, []string{"doc/*/*.html"})
+	node0 := MakeFinderNode(dag, "**/*.java")
+	node1 := MakeFinderNode(dag, "doc/*/*.html")
 	assert.Equal(t, node0.Name(), dag.nodes[0].Name())
 	assert.Equal(t, node1.Name(), dag.nodes[1].Name())
 
 	// correctly reuse existing entries
-	dupnode := MakeFinderNode(dag, []string{"**/*.java"})
+	dupnode := MakeFinderNode(dag, "**/*.java")
 	assert.Equal(t, dag.nodes[0].Name(), dupnode.Name())
 
 	assert.Equal(t, "<**/*.java>", node0.String())
