@@ -149,17 +149,28 @@ func Test_FinderNode_Expand_single_include(t *testing.T) {
 	finder := NewFinderNode("*/*.c")
 	assertExpand(t, []string{"lib1/foo.c"}, finder)
 
-	finder.includes[0] = "**/*.c"
+	finder = NewFinderNode("**/*.c")
 	assertExpand(t, []string{"lib1/foo.c", "lib1/sub/blah.c"}, finder)
 
-	finder.includes[0] = "l?b?/**/*.c"
+	finder = NewFinderNode("l?b?/**/*.c")
 	assertExpand(t, []string{"lib1/foo.c", "lib1/sub/blah.c"}, finder)
 
-	finder.includes[0] = "in?lu?e/*.h"
+	finder = NewFinderNode("in?lu?e/*.h")
 	assertExpand(t, []string{"include/bip.h", "include/bop.h"}, finder)
 
-	finder.includes[0] = "inc*/?i*.h"
+	finder = NewFinderNode("inc*/?i*.h")
 	assertExpand(t, []string{"include/bip.h"}, finder)
+
+	// adding new files changes nothing, because FinderNode caches the
+	// result of Expand()
+	testutils.TouchFiles("include/mip.h", "include/fibbb.h")
+	assertExpand(t, []string{"include/bip.h"}, finder)
+
+	// but a new FileFinder instance will see them
+	finder = NewFinderNode("inc*/?i*.h")
+	assertExpand(t,
+		[]string{"include/bip.h", "include/fibbb.h", "include/mip.h"},
+		finder)
 }
 
 func Test_FinderNode_Expand_double_recursion(t *testing.T) {

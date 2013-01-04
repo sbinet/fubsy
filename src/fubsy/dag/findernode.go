@@ -31,6 +31,10 @@ type FinderNode struct {
 	// exclude patterns (can only be added by exclude() method)
 	// (currently unused)
 	excludes []string
+
+	// cache the result of calling Expand(), so subsequent calls are
+	// cheap and consistent
+	expansion types.FuObject
 }
 
 func NewFinderNode(includes ...string) *FinderNode {
@@ -107,6 +111,10 @@ func (self *FinderNode) Typename() string {
 // patterns. Return the list of matching filenames as a FuList of
 // FileNode.
 func (self *FinderNode) Expand(ns types.Namespace) (types.FuObject, error) {
+	if self.expansion != nil {
+		return self.expansion, nil
+	}
+
 	result := make(types.FuList, 0)
 	var matches []string
 	for _, pattern := range self.includes {
@@ -126,6 +134,7 @@ func (self *FinderNode) Expand(ns types.Namespace) (types.FuObject, error) {
 			result = append(result, newFileNode(filename))
 		}
 	}
+	self.expansion = result
 	return result, nil
 }
 
