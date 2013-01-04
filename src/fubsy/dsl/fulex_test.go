@@ -141,11 +141,17 @@ func TestScan_inline_2(t *testing.T) {
 	// was newline (or indeed anything at all) after }}} -- I just
 	// threw a bunch of punctuation into the inline text to be sure
 	// that works too
-	input := "\n\nplugin\ntim{{{ any!chars\"are\nallowed'here\n}}}\n"
+	input := `
+
+plugin
+foo{{{ any!chars"are
+allowed'here
+}}}
+`
 	expect := []minitok{
 		{PLUGIN, "plugin"},
 		{EOL, "\n"},
-		{NAME, "tim"},
+		{NAME, "foo"},
 		{L3BRACE, "{{{"},
 		{INLINE, " any!chars\"are\nallowed'here\n"},
 		{R3BRACE, "}}}"},
