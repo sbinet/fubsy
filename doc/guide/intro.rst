@@ -67,10 +67,10 @@ like.
 Similarly, most Java programmers are familiar with Ant, which attempts
 to solve the problem in a radically different way. Ant doesn't provide
 much in the way of dependency management (which is surprisingly
-difficult to do with Java), but it is extensible in a real programming
-language (Java). As a result, it works the same across platforms,
-which is more than you can say for Make. Unfortunately, Ant takes
-"awkward syntax" to a whole new level by using XML rather than a
+difficult to do with Java) [1]_, but it is extensible in a real
+programming language (Java). As a result, it works the same across
+platforms, which is more than you can say for Make. Unfortunately, Ant
+takes "awkward syntax" to a whole new level by using XML rather than a
 custom language, and it is limited to the Java ecosystem, making it
 useless for programmers outside that universe.
 
@@ -99,3 +99,16 @@ you can implement plugins in that language. Finally, like SCons, Fubsy
 puts the graph of dependencies in the foreground. But unlike SCons,
 Fubsy has minimal runtime overhead, and allows you to modify the graph
 of dependencies even while the build is running.
+
+.. [1] Terminology note: most Java programmers understand "dependency"
+       in the sense of "my application depends on
+       ``commons-lang.jar``", so "dependency management" in the Java
+       world typically means "figure out a way to get
+       ``commons-lang.jar`` into the build environment". C/C++
+       programmers, however, usually speak of dependencies at the file
+       level: "``foo.c`` includes ``util.h``, so ``foo.o`` depends on
+       ``util.h``". That is, if ``util.h`` changes, we need to rebuild
+       ``foo.o``. In Fubsy, "dependency" takes the C/C++ programmer's
+       meaning: for example, ``MyApp.class`` depends on ``MyApp.java``
+       as well as ``commons-lang.jar``.
+
