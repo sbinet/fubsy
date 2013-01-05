@@ -12,6 +12,7 @@ User Guide
    example-c
    phases
    example-java
+   language
    internals
 
 Indices and tables
