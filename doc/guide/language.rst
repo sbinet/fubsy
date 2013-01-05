@@ -258,8 +258,8 @@ A statement can be one of the following:
         }
 
 Every Fubsy build script must contain a *main* phase, which defines
-sources and targets and the relationships between them. See `phases
-<phases.html>`_ for more information on the phases that Fubsy will
+sources and targets and the relationships between them. See
+:doc:`phases` for more information on the phases that Fubsy will
 eventually implement and the relationships between them.
 
 Local and global variables
