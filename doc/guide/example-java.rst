@@ -171,7 +171,6 @@ The second use of ``java.classes()`` shows our first explicit use of a
 *build variable*, which is a special type of variable defined by
 plugins and used by build actions. In this case, rather than having a
 single value of ``CLASSPATH``, we override it for one particular
-
 builder (and thus for all build rules defined by that builder). As
 usual, Fubsy is relaxed about the distinction between lists and atomic
 values: normally ``CLASSPATH`` is a list of filenames and directories,

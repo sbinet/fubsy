@@ -56,23 +56,22 @@ Similar tools
 -------------
 
 Of course, Fubsy is hardly the first piece of software that attempts
-to tackle this problem. Every C programmer is familiar with Make,
+to tackle this problem. Most C programmers are familiar with Make,
 which does a reasonable job for small-to-medium C/C++ projects on
-Unix-like systems (if you ignore the difficulty with header
-dependencies). However, Make has awkward syntax, poor extensibility,
-and confusing semantics, which have led many people over the years to
-paper over its difficulties by writing Makefile generators and the
-like.
+Unix-like systems. However, Make has awkward syntax, confusing
+semantics, is hard to extend, and is largely limited to Unix. These
+limitations have led many people over the years to paper over its
+difficulties by writing programs that generate Makefiles, without
+actually tackling the real problems with Make.
 
 Similarly, most Java programmers are familiar with Ant, which attempts
 to solve the problem in a radically different way. Ant doesn't provide
 much in the way of dependency management (which is surprisingly
-difficult to do with Java) [1]_, but it is extensible in a real
-programming language (Java). As a result, it works the same across
-platforms, which is more than you can say for Make. Unfortunately, Ant
-takes "awkward syntax" to a whole new level by using XML rather than a
-custom language, and it is limited to the Java ecosystem, making it
-useless for programmers outside that universe.
+difficult for Java) [1]_, but it is extensible in a real programming
+language (Java). As a result, it works the same across platforms,
+which is more than Make can say. Unfortunately, Ant takes "awkward
+syntax" to a whole new level by using XML rather than a custom
+language. And it's useless for programmers outside the Java ecosystem.
 
 Some C/C++ programmers are familiar with SCons, which brought a new
 level of rigour, consistency, and extensibility to build tools. SCons
@@ -84,21 +83,21 @@ trivial. Unfortunately, SCons suffers from poor performance, and its
 dependency engine is incapable of handling weird languages like Java
 where target filenames are not easily predicted from source filenames.
 
-Fubsy learns from the lessons of the past, finally delivering the
-build tool you've wanted all along. Like Make, Fubsy has a simple
-custom language designed specifically for writing build scripts, which
-makes most build scripts quite concise. Unlike Make, Fubsy uses a
-familiar syntax, has local variables, and distinguishes strings from
-lists. Like Ant, Fubsy has a small core with most interesting stuff
-happening in plugins. Unlike Ant, plugins are trivial to implement:
-you can write small "inline" plugins right in your build script for
-simple cases, and you can extend Fubsy in any high-level language that
-it supports: e.g. Python, Lua, Ruby, JavaScript, ... as long as
-someone has implemented a Fubsy "meta-plugin" for a given language,
-you can implement plugins in that language. Finally, like SCons, Fubsy
-puts the graph of dependencies in the foreground. But unlike SCons,
-Fubsy has minimal runtime overhead, and allows you to modify the graph
-of dependencies even while the build is running.
+Fubsy finally promises to be the build tool you've wanted all along.
+Like Make, Fubsy has a simple custom language designed specifically
+for writing build scripts, which makes most build scripts quite
+concise. Unlike Make, Fubsy uses a familiar syntax, has local
+variables, and distinguishes strings from lists. Like Ant, Fubsy has a
+small core with most interesting stuff happening in plugins. Unlike
+Ant, plugins are trivial to implement: you can write small "inline"
+plugins right in your build script for simple cases, and you can
+extend Fubsy in any high-level language that it supports: e.g. Python,
+Lua, Ruby, JavaScript, ... as long as someone has implemented a Fubsy
+"meta-plugin" for a given language, you can implement plugins in that
+language. Finally, like SCons, Fubsy puts the graph of dependencies in
+the foreground. But unlike SCons, Fubsy has minimal runtime overhead,
+and allows you to modify the graph of dependencies even while the
+build is running.
 
 .. [1] Terminology note: most Java programmers understand "dependency"
        in the sense of "my application depends on

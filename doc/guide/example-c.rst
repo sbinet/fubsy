@@ -32,8 +32,9 @@ present in every build script is *main*, whose purpose is to
 describe the graph of dependencies that drives everything Fubsy does.
 We'll see the other phases in a little while.
 
-Next we see two variable assignments::
+Next we see some variable assignments::
 
+    CC = "/usr/bin/gcc"
     headers = <*.h>
     source = <*.c>
 
@@ -113,11 +114,11 @@ C programs with Fubsy? There are several problems:
     and ``cc`` is a Unix convention
 
   * it won't scale: for a 3-file project, it's no big deal to
-    recompile the world on every change. But if ``headers`` contains
-    250 header files and ``source`` 300 source files, every rebuild
-    will recompile all of those files. You want an *incremental
-    build*, where Fubsy rebuilds the bare minimum based on your actual
-    source dependencies and which files have changed.
+    recompile the world on every change. But if you have 300 source
+    files, then this build script will cause Fubsy to recompile all of
+    them every time you change one of them. Not good. You want an
+    *incremental build*, where Fubsy rebuilds the bare minimum based
+    on your actual source dependencies and which files have changed.
 
 Incidentally, this build script isn't really *wrong*, as long as you
 only care about building on Unix. It will do the job, and it
@@ -149,7 +150,7 @@ compiling, and linking C libraries and programs, unsurprisingly called
         c.binary("myapp", <*.c>)
     }
 
-``c.binary()`` is a *builder*: a function that defines build rules. In
+``c.binary()`` is a *builder*, a function that defines build rules. In
 this case, the rule is "build binary executable ``myapp`` from
 ``*.c``". There's a lot going on behind the scenes here.
 
