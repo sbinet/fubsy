@@ -1,0 +1,57 @@
+Fubsy: The Universal Build Tool
+===============================
+
+I am pleased to announce version 0.0.1 of Fubsy, a new tool for
+efficiently building software. In concrete terms, it lets you
+conditionally (re)build targets from sources, based on which sources
+have changed since the last build. Typically, targets and sources are
+all files in a directory tree. In theory, they can be any resource on
+a computer.
+
+More abstractly, Fubsy is an engine for conditional execution of
+actions based on the dependencies between related resources.
+
+As you might guess from the version number, Fubsy is in the early
+stages of development. The basic ideas are in place, and the user
+guide provides a description of where the software is headed. But the
+goal of this release is to recruit developers who will contribute
+ideas, code, criticisms, bug reports, and even vague half-baked ideas.
+All are welcome.
+
+Some highlights of Fubsy:
+
+  * like Make, Fubsy has a simple scripting language of its own rather
+    than using an existing general-purpose language
+
+  * unlike Make, Fubsy has local variables, multiple data types,
+    expressions, and function calls
+
+  * also unlike Make, Fubsy doesn't care how you indent your code
+
+  * like SCons, Fubsy strongly encourages you to describe your
+    dependencies fully and accurately; in return for that effort,
+    Fubsy will guarantee a correct and optimal build
+
+  * unlike SCons, Fubsy has low overhead: it was written with careful
+    attention to performance and memory use, and my goal is that it
+    should handle builds with hundreds of thousands of files without
+    breaking a sweat
+
+  * Fubsy is designed to have a small, language/tool/policy-neutral
+    core, with all interesting decisions happening in plugins.
+    Someday, it will be possible to write plugins in multiple
+    languages (Python, Ruby, Lua, JavaScript, ... whatever someone
+    implements support for).
+
+  * Fubsy will provide first-class support for both C/C++ and Java in
+    standard plugins, making it one of the very few build tools to
+    support the world's most widely-used programming languages.
+
+For more information:
+
+    http://fubsy.gerg.ca/
+
+Or jump straight to the user guide:
+
+    http://fubsy.readthedocs.org/en/0.0.1/
+
