@@ -5,6 +5,8 @@
 package dag
 
 import (
+	"errors"
+
 	"fubsy/types"
 )
 
@@ -229,4 +231,37 @@ func NewStubNode(name string) *StubNode {
 func MakeStubNode(dag *DAG, name string) *StubNode {
 	_, node := dag.addNode(NewStubNode(name))
 	return node.(*StubNode)
+}
+
+// stub implementation of BuildRule for use in unit tests (similar to
+// StubNode, this has to be public so it can be used in other
+// packages' tests)
+type StubRule struct {
+	// takes name of first target -- used for recording order in which
+	// targets are built
+	callback func(string)
+
+	targets  []Node
+	fail     bool
+	executed bool
+}
+
+func MakeStubRule(callback func(string), target ...Node) *StubRule {
+	return &StubRule{
+		callback: callback,
+		targets:  target,
+	}
+}
+
+func (self *StubRule) Execute() ([]Node, []error) {
+	self.callback(self.targets[0].String())
+	errs := []error{}
+	if self.fail {
+		errs = append(errs, errors.New("action failed"))
+	}
+	return self.targets, errs
+}
+
+func (self *StubRule) ActionString() string {
+	return "build " + self.targets[0].String()
 }

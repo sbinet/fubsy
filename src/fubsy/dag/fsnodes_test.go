@@ -101,7 +101,7 @@ func Test_FileNode_buildrule(t *testing.T) {
 	node := MakeFileNode(dag, "foo")
 	assert.Nil(t, node.BuildRule())
 
-	rule := &stubrule{targets: []Node{node}}
+	rule := &StubRule{targets: []Node{node}}
 	node.SetBuildRule(rule)
 	assert.Equal(t, rule, node.BuildRule())
 }

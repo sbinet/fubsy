@@ -42,7 +42,7 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 	// fail to build misc.{c,h} -> misc.o: that will block building
 	// tool1, but not tool2 (since keepGoing() always returns true
 	// (for now))
-	rule := dag.Lookup("misc.o").BuildRule().(*stubrule)
+	rule := dag.Lookup("misc.o").BuildRule().(*StubRule)
 	rule.fail = true
 
 	expect := []buildexpect{
@@ -74,7 +74,7 @@ func Test_BuildState_BuildTargets_full_failure_keep_going(t *testing.T) {
 
 	dag, executed := setupBuild()
 
-	rule := dag.Lookup("misc.o").BuildRule().(*stubrule)
+	rule := dag.Lookup("misc.o").BuildRule().(*StubRule)
 	rule.fail = true
 
 	expect := []buildexpect{
@@ -106,7 +106,7 @@ func setupBuild() (*DAG, *[]string) {
 	}
 	for _, node := range dag.Nodes() {
 		if dag.HasParents(node) {
-			rule := makestubrule(callback, node)
+			rule := MakeStubRule(callback, node)
 			node.SetBuildRule(rule)
 		}
 	}
