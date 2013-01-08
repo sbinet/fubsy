@@ -208,8 +208,8 @@ func (self *DAG) FindFinalTargets() NodeSet {
 // other useful information discovered in the graph walk) in self.
 func (self *DAG) FindRelevantNodes(goal NodeSet) NodeSet {
 	relevant := bit.New()
-	self.DFS(goal, func(id int) error {
-		relevant.Add(id)
+	self.DFS(goal, func(node Node) error {
+		relevant.Add(node.id())
 		return nil
 	})
 
@@ -220,7 +220,7 @@ func (self *DAG) FindRelevantNodes(goal NodeSet) NodeSet {
 // Callback function to visit nodes from DFS(). Return a non-nil error
 // to abort the traversal and make DFS() return that error. DFS()
 // aborted this way does not report dependency cycles.
-type DFSVisitor func(id int) error
+type DFSVisitor func(node Node) error
 
 // Perform a partial depth-first search of the graph, exploring
 // ancestors of all nodes in 'start'. For each node visited, call
@@ -257,7 +257,7 @@ func (self *DAG) DFS(start NodeSet, visit DFSVisitor) error {
 			return err
 		}
 		path = path[0 : len(path)-1]
-		err = visit(id)
+		err = visit(self.nodes[id])
 		if err != nil {
 			return err
 		}

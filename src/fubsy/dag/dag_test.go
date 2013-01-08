@@ -64,8 +64,8 @@ func Test_DAG_DFS(t *testing.T) {
 	dag := tdag.finish()
 
 	actual := []string{}
-	visit := func(id int) error {
-		actual = append(actual, dag.nodes[id].Name())
+	visit := func(node Node) error {
+		actual = append(actual, node.Name())
 		return nil
 	}
 
@@ -96,7 +96,7 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 	var dag *DAG
 	var err error
 
-	visit := func(id int) error { return nil }
+	visit := func(node Node) error { return nil }
 
 	tdag = newtestdag()
 	tdag.add("0", "1")
@@ -152,7 +152,8 @@ func Test_DAG_DFS_error(t *testing.T) {
 	dag := tdag.finish()
 
 	visited := make([]int, 0)
-	visit := func(id int) error {
+	visit := func(node Node) error {
+		id := node.id()
 		visited = append(visited, id)
 		if id == 4 {
 			return errors.New("bite me")

@@ -50,9 +50,8 @@ func (self *BuildState) BuildTargets(targets NodeSet) error {
 	//fmt.Printf("BuildTargets():\n")
 
 	builderr := new(BuildError)
-	visit := func(id int) error {
-		node := self.dag.nodes[id]
-		//fmt.Printf("  visiting node %d (%s)\n", id, node)
+	visit := func(node Node) error {
+		//fmt.Printf("  visiting node %s\n", node)
 		if node.State() == SOURCE {
 			// can't build original source nodes!
 			return nil
@@ -62,7 +61,7 @@ func (self *BuildState) BuildTargets(targets NodeSet) error {
 
 		// do we need to build this node? can we?
 		missing, stale, tainted, err :=
-			self.inspectParents(changestates, id, node)
+			self.inspectParents(changestates, node)
 		//fmt.Printf("  missing=%v, stale=%v, tainted=%v, err=%v\n",
 		//	missing, stale, tainted, err)
 		if err != nil {
@@ -72,7 +71,7 @@ func (self *BuildState) BuildTargets(targets NodeSet) error {
 		if tainted {
 			node.SetState(TAINTED)
 		} else if missing || stale {
-			ok := self.buildNode(id, node, builderr)
+			ok := self.buildNode(node, builderr)
 			if !ok && !self.keepGoing() {
 				// attempts counter is not very useful when we break
 				// out of the build early
@@ -127,7 +126,7 @@ func checkInitialState(node Node) {
 // non-nil err if there were unexpected node errors (error checking
 // existence or change status).
 func (self *BuildState) inspectParents(
-	changestates map[NodeState]bool, id int, node Node) (
+	changestates map[NodeState]bool, node Node) (
 	missing, stale, tainted bool, err error) {
 
 	var exists, changed bool
@@ -173,11 +172,10 @@ func (self *BuildState) inspectParents(
 // built and can be built). On failure, report the error (e.g. to the
 // console, a GUI window, ...) and return false. On success, return
 // true.
-func (self *BuildState) buildNode(
-	id int, node Node, builderr *BuildError) bool {
+func (self *BuildState) buildNode(node Node, builderr *BuildError) bool {
 	rule := node.BuildRule()
-	log.Verbose("building node %d: %s, action=%s\n",
-		id, node, rule.ActionString())
+	log.Verbose("building node %s, action=%s\n",
+		node, rule.ActionString())
 	node.SetState(BUILDING)
 	builderr.attempts++
 	targets, errs := rule.Execute()
