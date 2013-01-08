@@ -478,6 +478,10 @@ func (self *NodeSet) String() string {
 	return string(result)
 }
 
+func (self *NodeSet) Length() int {
+	return (*bit.Set)(self).Size()
+}
+
 // string-based DAG that's easy to construct, and then gets converted
 // to the real thing -- for testing only, but public so it can be used
 // by other packages' tests

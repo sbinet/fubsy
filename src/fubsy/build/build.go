@@ -52,11 +52,10 @@ func NewBuildState(graph *dag.DAG, options BuildOptions) *BuildState {
 func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 	// What sort of nodes do we check for changes?
 	changestates := self.getChangeStates()
-	//fmt.Printf("BuildTargets():\n")
+	log.Debug("build", "building %d targets", targets.Length())
 
 	builderr := new(BuildError)
 	visit := func(node dag.Node) error {
-		//fmt.Printf("  visiting node %s\n", node)
 		if node.State() == dag.SOURCE {
 			// can't build original source nodes!
 			return nil
@@ -67,8 +66,9 @@ func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 		// do we need to build this node? can we?
 		missing, stale, tainted, err :=
 			self.inspectParents(changestates, node)
-		//fmt.Printf("  missing=%v, stale=%v, tainted=%v, err=%v\n",
-		//	missing, stale, tainted, err)
+		log.Debug("build",
+			"node %s: missing=%v, stale=%v, tainted=%v, err=%v\n",
+			node, missing, stale, tainted, err)
 		if err != nil {
 			return err
 		}
