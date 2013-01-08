@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE.txt file.
 
-package dag
+package build
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
+	"fubsy/dag"
 	"fubsy/log"
 )
 
 type BuildState struct {
-	dag     *DAG
+	graph   *dag.DAG
 	options BuildOptions
 }
 
@@ -31,10 +32,14 @@ type BuildOptions struct {
 
 type BuildError struct {
 	// nodes that failed to build
-	failed []Node
+	failed []dag.Node
 
 	// total number of nodes that we attempted to build
 	attempts int
+}
+
+func NewBuildState(graph *dag.DAG, options BuildOptions) *BuildState {
+	return &BuildState{graph: graph, options: options}
 }
 
 // The heart of Fubsy: do a depth-first walk of the dependency graph
@@ -44,15 +49,15 @@ type BuildError struct {
 // (if anything) went wrong; error details are reported "live" as
 // builds fail (e.g. to the console or a GUI window) so the user gets
 // timely feedback.
-func (self *BuildState) BuildTargets(targets NodeSet) error {
+func (self *BuildState) BuildTargets(targets dag.NodeSet) error {
 	// What sort of nodes do we check for changes?
 	changestates := self.getChangeStates()
 	//fmt.Printf("BuildTargets():\n")
 
 	builderr := new(BuildError)
-	visit := func(node Node) error {
+	visit := func(node dag.Node) error {
 		//fmt.Printf("  visiting node %s\n", node)
-		if node.State() == SOURCE {
+		if node.State() == dag.SOURCE {
 			// can't build original source nodes!
 			return nil
 		}
@@ -69,7 +74,7 @@ func (self *BuildState) BuildTargets(targets NodeSet) error {
 		}
 
 		if tainted {
-			node.SetState(TAINTED)
+			node.SetState(dag.TAINTED)
 		} else if missing || stale {
 			ok := self.buildNode(node, builderr)
 			if !ok && !self.keepGoing() {
@@ -81,7 +86,7 @@ func (self *BuildState) BuildTargets(targets NodeSet) error {
 		}
 		return nil
 	}
-	err := self.dag.DFS(targets, visit)
+	err := self.graph.DFS(targets, visit)
 	if err == nil && len(builderr.failed) > 0 {
 		// build failures in keep-going mode
 		err = builderr
@@ -89,32 +94,32 @@ func (self *BuildState) BuildTargets(targets NodeSet) error {
 	return err
 }
 
-func (self *BuildState) getChangeStates() map[NodeState]bool {
+func (self *BuildState) getChangeStates() map[dag.NodeState]bool {
 	// Default is like tup: only check original source nodes and nodes
 	// that have just been built.
-	changestates := make(map[NodeState]bool)
-	changestates[SOURCE] = true
-	changestates[BUILT] = true
+	changestates := make(map[dag.NodeState]bool)
+	changestates[dag.SOURCE] = true
+	changestates[dag.BUILT] = true
 	if self.checkAll() {
 		// Optional SCons-like behaviour: assume the user has been
 		// sneaking around and modifying .o or .class files behind our
 		// back and check everything. (N.B. this is unnecessary if the
 		// user sneakily *removes* intermediate targets; that case
 		// should be handled just fine by default.)
-		changestates[UNKNOWN] = true
+		changestates[dag.UNKNOWN] = true
 	}
 	return changestates
 }
 
 // panic if node is in an impossible state for starting its visit
-func checkInitialState(node Node) {
-	if node.State() != UNKNOWN {
+func checkInitialState(node dag.Node) {
+	if node.State() != dag.UNKNOWN {
 		// we just skipped SOURCE nodes, the other states are only set
 		// while visiting a node, and we should only visit each node
 		// once
 		panic(fmt.Sprintf(
 			"visiting node %v, state = %d (should be UNKNOWN = %d)",
-			node, node.State(), UNKNOWN))
+			node, node.State(), dag.UNKNOWN))
 	}
 }
 
@@ -126,7 +131,7 @@ func checkInitialState(node Node) {
 // non-nil err if there were unexpected node errors (error checking
 // existence or change status).
 func (self *BuildState) inspectParents(
-	changestates map[NodeState]bool, node Node) (
+	changestates map[dag.NodeState]bool, node dag.Node) (
 	missing, stale, tainted bool, err error) {
 
 	var exists, changed bool
@@ -138,10 +143,10 @@ func (self *BuildState) inspectParents(
 	stale = false   // need to rebuild this node
 	tainted = false // failures upstream: do not rebuild
 
-	parentnodes := self.dag.ParentNodes(node)
+	parentnodes := self.graph.ParentNodes(node)
 	for _, parent := range parentnodes {
 		pstate := parent.State()
-		if pstate == FAILED || pstate == TAINTED {
+		if pstate == dag.FAILED || pstate == dag.TAINTED {
 			tainted = true
 			return // no further inspection required
 		}
@@ -172,25 +177,25 @@ func (self *BuildState) inspectParents(
 // built and can be built). On failure, report the error (e.g. to the
 // console, a GUI window, ...) and return false. On success, return
 // true.
-func (self *BuildState) buildNode(node Node, builderr *BuildError) bool {
+func (self *BuildState) buildNode(node dag.Node, builderr *BuildError) bool {
 	rule := node.BuildRule()
 	log.Verbose("building node %s, action=%s\n",
 		node, rule.ActionString())
-	node.SetState(BUILDING)
+	node.SetState(dag.BUILDING)
 	builderr.attempts++
 	targets, errs := rule.Execute()
 	if len(errs) > 0 {
 		// Normal, everyday build failure: report the precise problem
 		// immediately, and accumulate summary info in the caller.
 		for _, tnode := range targets {
-			tnode.SetState(FAILED)
+			tnode.SetState(dag.FAILED)
 		}
 		self.reportFailure(errs)
 		builderr.addFailure(node)
 		return false
 	}
 	for _, tnode := range targets {
-		tnode.SetState(BUILT)
+		tnode.SetState(dag.BUILT)
 	}
 	return true
 }
@@ -209,7 +214,7 @@ func (self *BuildState) checkAll() bool {
 	return self.options.CheckAll
 }
 
-func (self *BuildError) addFailure(node Node) {
+func (self *BuildError) addFailure(node dag.Node) {
 	self.failed = append(self.failed, node)
 }
 
@@ -228,7 +233,7 @@ func (self *BuildError) Error() string {
 	return fmt.Sprintf("failed to build target: %s", self.failed[0])
 }
 
-func joinNodes(delim string, max int, nodes []Node) string {
+func joinNodes(delim string, max int, nodes []dag.Node) string {
 	if len(nodes) < max {
 		max = len(nodes)
 	}

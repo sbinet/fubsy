@@ -253,6 +253,10 @@ func MakeStubRule(callback func(string), target ...Node) *StubRule {
 	}
 }
 
+func (self *StubRule) SetFail(fail bool) {
+	self.fail = fail
+}
+
 func (self *StubRule) Execute() ([]Node, []error) {
 	self.callback(self.targets[0].String())
 	errs := []error{}

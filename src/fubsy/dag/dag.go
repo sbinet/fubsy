@@ -300,10 +300,6 @@ func (self CycleError) Error() string {
 	return strings.Join(result, "\n")
 }
 
-func (self *DAG) NewBuildState(options BuildOptions) *BuildState {
-	return &BuildState{dag: self, options: options}
-}
-
 // Build a new DAG that is ready to start building targets. The new
 // DAG preserves only relevant nodes and expands all expandable nodes
 // in the current DAG (e.g each FinderNode is replaced by FileNodes

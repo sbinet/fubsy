@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchrcom/testify/assert"
 
+	"fubsy/build"
 	"fubsy/dag"
 	"fubsy/dsl"
 	"fubsy/types"
@@ -78,7 +79,7 @@ func Test_Runtime_runMainPhase_error(t *testing.T) {
 func parseScript(t *testing.T, filename string, content string) *Runtime {
 	ast, errors := dsl.ParseString(filename, content)
 	assert.Equal(t, 0, len(errors)) // syntax must be good
-	return NewRuntime(dag.BuildOptions{}, filename, ast)
+	return NewRuntime(build.BuildOptions{}, filename, ast)
 }
 
 func Test_nodify(t *testing.T) {
@@ -88,7 +89,7 @@ func Test_nodify(t *testing.T) {
 	finder1 := dag.NewFinderNode("*.c", "*.h")
 	finder2 := dag.NewFinderNode("**/*.java")
 
-	rt := NewRuntime(dag.BuildOptions{}, "", nil)
+	rt := NewRuntime(build.BuildOptions{}, "", nil)
 	nodes := rt.nodify(sval1)
 	assert.Equal(t, 1, len(nodes))
 	assert.Equal(t, "hello.txt", nodes[0].(*dag.FileNode).String())

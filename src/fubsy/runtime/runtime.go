@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"strings"
 
+	"fubsy/build"
 	"fubsy/dag"
 	"fubsy/dsl"
 	"fubsy/log"
@@ -22,7 +23,7 @@ import (
 )
 
 type Runtime struct {
-	options dag.BuildOptions
+	options build.BuildOptions
 	script  string // filename
 	ast     *dsl.ASTRoot
 
@@ -31,7 +32,8 @@ type Runtime struct {
 	dag     *dag.DAG
 }
 
-func NewRuntime(options dag.BuildOptions, script string, ast *dsl.ASTRoot) *Runtime {
+func NewRuntime(
+	options build.BuildOptions, script string, ast *dsl.ASTRoot) *Runtime {
 	stack := types.NewValueStack()
 
 	// The globals namespace is currently used only for builtins,
@@ -207,7 +209,7 @@ func (self *Runtime) runBuildPhase() []error {
 	log.Debug("dag", "rebuilt dag:")
 	log.DebugDump("dag", self.dag)
 
-	bstate := self.dag.NewBuildState(self.options)
+	bstate := build.NewBuildState(self.dag, self.options)
 	goal = self.dag.FindFinalTargets()
 	err := bstate.BuildTargets(goal)
 	if err != nil {

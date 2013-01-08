@@ -13,14 +13,14 @@ import (
 
 	"github.com/ogier/pflag"
 
-	"fubsy/dag"
+	"fubsy/build"
 	"fubsy/dsl"
 	"fubsy/log"
 	"fubsy/runtime"
 )
 
 type args struct {
-	options     dag.BuildOptions
+	options     build.BuildOptions
 	scriptFile  string
 	debugTopics []string
 	verbosity   uint
