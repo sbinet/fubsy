@@ -165,6 +165,35 @@ func Test_DAG_DFS_error(t *testing.T) {
 	assert.Equal(t, []int{5, 3, 4}, visited)
 }
 
+func Test_DAG_AddManyParents(t *testing.T) {
+	dag := NewDAG()
+	node0 := MakeStubNode(dag, "0")
+	node1 := MakeStubNode(dag, "1")
+	node2 := MakeStubNode(dag, "2")
+	node3 := MakeStubNode(dag, "3")
+
+	dag.AddManyParents([]Node{node0}, []Node{node1, node2, node3})
+	dag.AddManyParents([]Node{node1, node2}, []Node{node3})
+	buf := &bytes.Buffer{}
+	dag.Dump(buf, "")
+	expect := `0000: 0 (StubNode, state UNKNOWN)
+  parents:
+    0001: 1
+    0002: 2
+    0003: 3
+0001: 1 (StubNode, state UNKNOWN)
+  parents:
+    0003: 3
+0002: 2 (StubNode, state UNKNOWN)
+  parents:
+    0003: 3
+0003: 3 (StubNode, state UNKNOWN)
+`
+	actual := string(buf.Bytes())
+	assert.Equal(t, expect, actual,
+		"expected:\n%s\nbut got:\n%s", expect, actual)
+}
+
 func Test_DAG_FindRelevantNodes(t *testing.T) {
 	dag := makeSimpleGraph()
 	goal := bit.New(0, 1) // all final targets: tool1, tool2
