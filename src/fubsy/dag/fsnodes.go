@@ -35,6 +35,11 @@ func (self *FileNode) Typename() string {
 	return "FileNode"
 }
 
+func (self *FileNode) copy() Node {
+	var c FileNode = *self
+	return &c
+}
+
 func (self *FileNode) Equal(other_ types.FuObject) bool {
 	other, ok := other_.(*FileNode)
 	return ok && other.name == self.name

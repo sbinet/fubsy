@@ -51,6 +51,10 @@ func (self NodeState) String() string {
 type Node interface {
 	types.FuObject
 
+	setid(id int)
+	id() int
+	copy() Node
+
 	// brief human-readable string representation of this node (must
 	// be unique in this graph)
 	Name() string
@@ -126,6 +130,7 @@ type BuildRule interface {
 //   Changed()
 
 type nodebase struct {
+	_id   int
 	name  string
 	rule  BuildRule
 	state NodeState
@@ -133,12 +138,21 @@ type nodebase struct {
 
 func makenodebase(name string) nodebase {
 	return nodebase{
+		_id:  -1,
 		name: name,
 	}
 }
 
 func (self *nodebase) Name() string {
 	return self.name
+}
+
+func (self *nodebase) setid(id int) {
+	self._id = id
+}
+
+func (self *nodebase) id() int {
+	return self._id
 }
 
 func (self *nodebase) SetBuildRule(rule BuildRule) {
@@ -176,6 +190,11 @@ type StubNode struct {
 
 func (self *StubNode) Typename() string {
 	return "StubNode"
+}
+
+func (self *StubNode) copy() Node {
+	var c StubNode = *self
+	return &c
 }
 
 func (self *StubNode) Equal(other_ types.FuObject) bool {

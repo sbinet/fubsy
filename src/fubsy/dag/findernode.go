@@ -107,6 +107,11 @@ func (self *FinderNode) Typename() string {
 	return "FinderNode"
 }
 
+func (self *FinderNode) copy() Node {
+	var c FinderNode = *self
+	return &c
+}
+
 // Walk the filesystem for files matching this FinderNode's include
 // patterns. Return the list of matching filenames as a FuList of
 // FileNode.

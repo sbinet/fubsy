@@ -76,6 +76,69 @@ func NewDAG() *DAG {
 	}
 }
 
+// Return a deep copy of self, i.e. all nodes in the returned DAG are
+// copies of nodes in self. Mainly for test code.
+func (self *DAG) copy() *DAG {
+	newdag := DAG{
+		nodes:   make([]Node, len(self.nodes)),
+		index:   make(map[string]int),
+		parents: make([]*bit.Set, len(self.parents)),
+	}
+	for id, node := range self.nodes {
+		newdag.nodes[id] = node.copy()
+	}
+	for name, id := range self.index {
+		newdag.index[name] = id
+	}
+	for id, parentset := range self.parents {
+		var copyset bit.Set
+		copyset = *parentset
+		newdag.parents[id] = &copyset
+	}
+	return &newdag
+}
+
+// Examine the DAG and panic if there are any inconsistencies. Use
+// liberally in test code. Should not be necessary to use in
+// production code!
+func (self *DAG) verify() {
+	if len(self.nodes) != len(self.index) {
+		panic(fmt.Sprintf(
+			"corrupt DAG: self.nodes has %d nodes, but self.index has %d",
+			len(self.nodes), len(self.index)))
+	}
+	if len(self.nodes) != len(self.parents) {
+		panic(fmt.Sprintf(
+			"corrupt DAG: self.nodes has %d nodes, but self.parents has %d",
+			len(self.nodes), len(self.parents)))
+	}
+
+	for id, node := range self.nodes {
+		if id != node.id() {
+			panic(fmt.Sprintf(
+				"corrupt DAG: node %s thinks it has id %d, but is in slot %d",
+				node, node.id(), id))
+		}
+	}
+	for name, id := range self.index {
+		node := self.nodes[id]
+		if name != node.Name() {
+			panic(fmt.Sprintf(
+				"corrupt DAG: index says node %s has id %d, "+
+					"but slot %d has node %s",
+				name, id, node.Name()))
+		}
+	}
+	maxid := len(self.nodes) - 1
+	for id, parentset := range self.parents {
+		if !parentset.IsEmpty() && parentset.Max() > maxid {
+			panic(fmt.Sprintf(
+				"corrupt DAG: max parent of node %d is %d (should be <= %d)",
+				id, parentset.Max(), maxid))
+		}
+	}
+}
+
 // Add the same set of parents (source nodes) to many children (target
 // nodes).
 func (self *DAG) AddManyParents(targets, sources []Node) {
@@ -238,12 +301,27 @@ func (self *DAG) NewBuildState(options BuildOptions) *BuildState {
 // in the current DAG (e.g each FinderNode is replaced by FileNodes
 // for the files matching the glob's patterns). Any BuildState or
 // NodeSet objects derived from the old DAG are invalid with the new
-// DAG: throw them away and start over again.
+// DAG: throw them away and start over again. This is a destructive
+// operation; on return, self is unusable.
 func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) {
 	var errors []error
+
+	// First, detach all nodes from the old DAG (and sabotage the old
+	// DAG while we're at it, so nobody accidentally uses it)
+	nodes := self.nodes
+	parents := self.parents
+	self.nodes = nil
+	self.index = nil
+	self.parents = nil
+	for _, node := range nodes {
+		node.setid(-1)
+	}
+
+	// Next, build the new DAG: expand all relevant nodes and add the
+	// result to the new DAG.
 	replacements := make(map[int]*bit.Set)
 	newdag := NewDAG()
-	for id, node := range self.nodes {
+	for id, node := range nodes {
 		if !relevant.Contains(id) {
 			continue
 		}
@@ -263,14 +341,14 @@ func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) 
 		replacements[id] = repl
 	}
 
-	// Second loop to rebuild parent info in the new DAG.
-	for oldid := range self.nodes {
+	// Finally, rebuild parent info in the new DAG.
+	for oldid := range nodes {
 		newids := replacements[oldid]
 		if newids == nil { // node not relevant (not preserved in new DAG)
 			continue
 		}
 
-		oldparents := self.parents[oldid]
+		oldparents := parents[oldid]
 		newparents := bit.New()
 		for oldpid, ok := oldparents.Next(-1); ok; oldpid, ok = oldparents.Next(oldpid) {
 			newparents.SetOr(newparents, replacements[oldpid])
@@ -341,15 +419,21 @@ func (self *DAG) addNode(node Node) (int, Node) {
 			len(self.nodes), len(self.parents)))
 	}
 
+	if node.id() != -1 {
+		panic(fmt.Sprintf(
+			"cannot add node %s to the DAG: it already has id %d",
+			node, node.id()))
+	}
 	id := len(self.nodes)
+	node.setid(id)
 	self.nodes = append(self.nodes, node)
 	self.parents = append(self.parents, bit.New())
 	self.index[name] = id
 	return id, node
 }
 
-func (self *DAG) parentNodes(id int) []Node {
-	parents := self.parents[id]
+func (self *DAG) parentNodes(node Node) []Node {
+	parents := self.parents[node.id()]
 	result := make([]Node, 0, parents.Size())
 	for parentid, ok := parents.Next(-1); ok; parentid, ok = parents.Next(parentid) {
 		result = append(result, self.nodes[parentid])

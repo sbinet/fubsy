@@ -139,7 +139,7 @@ func (self *BuildState) inspectParents(
 	stale = false   // need to rebuild this node
 	tainted = false // failures upstream: do not rebuild
 
-	parentnodes := self.dag.parentNodes(id)
+	parentnodes := self.dag.parentNodes(node)
 	for _, parent := range parentnodes {
 		pstate := parent.State()
 		if pstate == FAILED || pstate == TAINTED {

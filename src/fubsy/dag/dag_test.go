@@ -233,6 +233,7 @@ func Test_DAG_Rebuild_simple(t *testing.T) {
 
 	// this just gives us a known set of filenames for FinderNode to search
 	dag := makeSimpleGraph()
+	orig := dag.copy()
 
 	// dag.Rebuild() just copies the DAG, because it consists
 	// entirely of FileNodes -- nothing to expand here
@@ -243,7 +244,7 @@ func Test_DAG_Rebuild_simple(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.False(t, &dag.nodes == &rdag.nodes)
-	assert.True(t, reflect.DeepEqual(dag.nodes, rdag.nodes))
+	assert.True(t, reflect.DeepEqual(orig.nodes, rdag.nodes))
 }
 
 func Test_DAG_Rebuild_globs(t *testing.T) {
@@ -255,18 +256,23 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	touchSourceFiles(dag)
 
 	dag = NewDAG()
-	node0 := MakeFinderNode(dag, "**/util.[ch]")
-	node1 := MakeFinderNode(dag, "*.h")
-	node2 := MakeFileNode(dag, "util.o")
+	var node0, node1, node2 Node
+	node0 = MakeFinderNode(dag, "**/util.[ch]")
+	node1 = MakeFinderNode(dag, "*.h")
+	node2 = MakeFileNode(dag, "util.o")
 	_ = node1
 	dag.addParent(node2, node0)
 	assert.Equal(t, 3, dag.length())
+	dag.verify()
+
+	savedag := dag.copy()
 
 	// relevant = {0} so we only expand the first FinderNode, and the
 	// new DAG contains only nodes derived from that expansion
 	relevant := bit.New(0)
 	ns := types.NewValueMap()
 	rdag, err := dag.Rebuild(relevant, ns)
+	savedag.verify()
 
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(rdag.nodes))
@@ -276,7 +282,11 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	buf := new(bytes.Buffer)
 	dag.Dump(buf, "") // no panic
 
-	// all nodes are relevant, so the second FinderNode will be expanded
+	// second rebuild where all nodes are relevant, so the second
+	// FinderNode will be expanded
+	dag = savedag
+	dag.verify()
+	node2 = dag.nodes[2] // need the pre-Rebuild() copy
 	relevant.AddRange(0, len(dag.nodes))
 	ns = types.NewValueMap()
 	rdag, err = dag.Rebuild(relevant, ns)
@@ -289,7 +299,7 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	assert.Equal(t, "util.o", rdag.nodes[3].(*FileNode).name)
 
 	// parents of node2 (util.o) were correctly adjusted
-	parents := rdag.parentNodes(3)
+	parents := rdag.parentNodes(node2)
 	assert.Equal(t, 2, len(parents))
 	assert.Equal(t, "util.c", parents[0].Name())
 	assert.Equal(t, "util.h", parents[1].Name())
