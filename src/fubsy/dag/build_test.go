@@ -104,8 +104,8 @@ func setupBuild() (*DAG, *[]string) {
 	callback := func(name string) {
 		executed = append(executed, name)
 	}
-	for id, node := range dag.nodes {
-		if !dag.parents[id].IsEmpty() {
+	for _, node := range dag.Nodes() {
+		if dag.HasParents(node) {
 			rule := makestubrule(callback, node)
 			node.SetBuildRule(rule)
 		}

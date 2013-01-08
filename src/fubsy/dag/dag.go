@@ -76,6 +76,14 @@ func NewDAG() *DAG {
 	}
 }
 
+// Return a slice of all the nodes in this graph. Do not mutate the
+// returned slice: it might be shared with the DAG (or it might not).
+// It's OK to modify the Node objects in the slice, though; that is
+// guaranteed to affect the Nodes in the DAG.
+func (self *DAG) Nodes() []Node {
+	return self.nodes
+}
+
 // Return a deep copy of self, i.e. all nodes in the returned DAG are
 // copies of nodes in self. Mainly for test code.
 func (self *DAG) copy() *DAG {
@@ -422,6 +430,10 @@ func (self *DAG) addNode(node Node) (int, Node) {
 	self.parents = append(self.parents, bit.New())
 	self.index[name] = id
 	return id, node
+}
+
+func (self *DAG) HasParents(node Node) bool {
+	return !self.parents[node.id()].IsEmpty()
 }
 
 func (self *DAG) parentNodes(node Node) []Node {
