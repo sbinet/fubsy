@@ -144,11 +144,11 @@ func (self *DAG) verify() {
 func (self *DAG) AddManyParents(targets, sources []Node) {
 	sourceset := bit.New()
 	for _, snode := range sources {
-		sourceset.Add(self.lookupId(snode))
+		sourceset.Add(snode.id())
 	}
 
 	for _, tnode := range targets {
-		tid := self.lookupId(tnode)
+		tid := tnode.id()
 		self.parents[tid].SetOr(self.parents[tid], sourceset)
 	}
 }
@@ -379,14 +379,6 @@ func (self *DAG) lookup(name string) Node {
 	return nil
 }
 
-// Return the ID of node, or -1 if node is not in the DAG.
-func (self *DAG) lookupId(node Node) int {
-	if idx, ok := self.index[node.Name()]; ok {
-		return idx
-	}
-	return -1
-}
-
 // Either add node to the DAG, or ensure that another node just like
 // it is already there. Specifically: if there is already a node with
 // the same name and type as node, do nothing; if there is no node
@@ -442,9 +434,7 @@ func (self *DAG) parentNodes(node Node) []Node {
 }
 
 func (self *DAG) addParent(child Node, parent Node) {
-	childid := self.lookupId(child)
-	parentid := self.lookupId(parent)
-	self.parents[childid].Add(parentid)
+	self.parents[child.id()].Add(parent.id())
 }
 
 // Return the number of nodes in the DAG.
