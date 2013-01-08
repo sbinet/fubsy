@@ -30,9 +30,9 @@ func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 	assert.Nil(t, err)
 	assertBuild(t, dag, expect, *executed)
 
-	assert.Equal(t, SOURCE, dag.lookup("tool2.c").State())
-	assert.Equal(t, SOURCE, dag.lookup("misc.h").State())
-	assert.Equal(t, SOURCE, dag.lookup("util.c").State())
+	assert.Equal(t, SOURCE, dag.Lookup("tool2.c").State())
+	assert.Equal(t, SOURCE, dag.Lookup("misc.h").State())
+	assert.Equal(t, SOURCE, dag.Lookup("util.c").State())
 }
 
 // full build (all targets), one action fails
@@ -42,7 +42,7 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 	// fail to build misc.{c,h} -> misc.o: that will block building
 	// tool1, but not tool2 (since keepGoing() always returns true
 	// (for now))
-	rule := dag.lookup("misc.o").BuildRule().(*stubrule)
+	rule := dag.Lookup("misc.o").BuildRule().(*stubrule)
 	rule.fail = true
 
 	expect := []buildexpect{
@@ -62,7 +62,7 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 
 	// we don't even look at tool1, since an earlier node failed and
 	// the build terminates on first failure
-	assert.Equal(t, UNKNOWN, dag.lookup("tool1").State())
+	assert.Equal(t, UNKNOWN, dag.Lookup("tool1").State())
 }
 
 // full build (all targets), one action fails, --keep-going true
@@ -74,7 +74,7 @@ func Test_BuildState_BuildTargets_full_failure_keep_going(t *testing.T) {
 
 	dag, executed := setupBuild()
 
-	rule := dag.lookup("misc.o").BuildRule().(*stubrule)
+	rule := dag.Lookup("misc.o").BuildRule().(*stubrule)
 	rule.fail = true
 
 	expect := []buildexpect{
@@ -92,7 +92,7 @@ func Test_BuildState_BuildTargets_full_failure_keep_going(t *testing.T) {
 	assert.NotNil(t, err)
 	assertBuild(t, dag, expect, *executed)
 
-	assert.Equal(t, TAINTED, dag.lookup("tool1").State())
+	assert.Equal(t, TAINTED, dag.Lookup("tool1").State())
 }
 
 func setupBuild() (*DAG, *[]string) {
@@ -129,7 +129,7 @@ func assertBuild(
 	for i, expect := range expect {
 		assert.Equal(t, expect.name, executed[i],
 			"action %d: expected %s", i, expect.name)
-		actualstate := dag.lookup(expect.name).State()
+		actualstate := dag.Lookup(expect.name).State()
 		assert.Equal(t, expect.state, actualstate,
 			"target: %s (state = %v)", expect.name, actualstate)
 	}

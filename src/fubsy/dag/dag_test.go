@@ -20,7 +20,7 @@ import (
 
 func Test_DAG_add_lookup(t *testing.T) {
 	dag := NewDAG()
-	outnode := dag.lookup("foo")
+	outnode := dag.Lookup("foo")
 	assert.Nil(t, outnode)
 
 	innode := NewStubNode("foo")
@@ -28,10 +28,10 @@ func Test_DAG_add_lookup(t *testing.T) {
 	assert.True(t, outnode == innode)
 	assert.True(t, innode == dag.nodes[0].(*StubNode))
 
-	outnode = dag.lookup("foo")
+	outnode = dag.Lookup("foo")
 	assert.True(t, outnode.(*StubNode) == innode)
 
-	assert.Nil(t, dag.lookup("bar"))
+	assert.Nil(t, dag.Lookup("bar"))
 }
 
 func Test_DAG_FindFinalTargets(t *testing.T) {
@@ -218,14 +218,14 @@ func Test_DAG_MarkSources(t *testing.T) {
 	dag := makeSimpleGraph()
 
 	// initial sanity check
-	assert.Equal(t, UNKNOWN, dag.lookup("tool1.c").State())
-	assert.Equal(t, UNKNOWN, dag.lookup("tool1.o").State())
-	assert.Equal(t, UNKNOWN, dag.lookup("tool1").State())
+	assert.Equal(t, UNKNOWN, dag.Lookup("tool1.c").State())
+	assert.Equal(t, UNKNOWN, dag.Lookup("tool1.o").State())
+	assert.Equal(t, UNKNOWN, dag.Lookup("tool1").State())
 
 	dag.MarkSources()
-	assert.Equal(t, SOURCE, dag.lookup("tool1.c").State())
-	assert.Equal(t, UNKNOWN, dag.lookup("tool1.o").State())
-	assert.Equal(t, UNKNOWN, dag.lookup("tool1").State())
+	assert.Equal(t, SOURCE, dag.Lookup("tool1.c").State())
+	assert.Equal(t, UNKNOWN, dag.Lookup("tool1.o").State())
+	assert.Equal(t, UNKNOWN, dag.Lookup("tool1").State())
 }
 
 func Test_DAG_Rebuild_simple(t *testing.T) {
@@ -300,7 +300,7 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	assert.Equal(t, "util.o", rdag.nodes[3].(*FileNode).name)
 
 	// parents of node2 (util.o) were correctly adjusted
-	parents := rdag.parentNodes(node2)
+	parents := rdag.ParentNodes(node2)
 	assert.Equal(t, 2, len(parents))
 	assert.Equal(t, "util.c", parents[0].Name())
 	assert.Equal(t, "util.h", parents[1].Name())
@@ -362,9 +362,9 @@ func (self *testdag) finish() *DAG {
 		MakeStubNode(dag, name)
 	}
 	for _, name := range self.nodes {
-		node := dag.lookup(name)
+		node := dag.Lookup(name)
 		for _, pname := range self.parents[name] {
-			dag.addParent(node, dag.lookup(pname))
+			dag.addParent(node, dag.Lookup(pname))
 		}
 	}
 	return dag

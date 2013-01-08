@@ -167,7 +167,7 @@ func Benchmark_FileNode_AddParent(b *testing.B) {
 }
 
 func assertParents(t *testing.T, expect []string, dag *DAG, node Node) {
-	actual := dag.parentNodes(node)
+	actual := dag.ParentNodes(node)
 	actualnames := make([]string, len(actual))
 	for i, node := range actual {
 		actualnames[i] = node.Name()

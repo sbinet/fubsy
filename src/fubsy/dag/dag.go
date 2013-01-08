@@ -380,7 +380,7 @@ func (self *DAG) MarkSources() {
 }
 
 // Return the node with the specified name, or nil if no such node.
-func (self *DAG) lookup(name string) Node {
+func (self *DAG) Lookup(name string) Node {
 	if idx, ok := self.index[name]; ok {
 		return self.nodes[idx]
 	}
@@ -436,7 +436,7 @@ func (self *DAG) HasParents(node Node) bool {
 	return !self.parents[node.id()].IsEmpty()
 }
 
-func (self *DAG) parentNodes(node Node) []Node {
+func (self *DAG) ParentNodes(node Node) []Node {
 	parents := self.parents[node.id()]
 	result := make([]Node, 0, parents.Size())
 	for parentid, ok := parents.Next(-1); ok; parentid, ok = parents.Next(parentid) {
