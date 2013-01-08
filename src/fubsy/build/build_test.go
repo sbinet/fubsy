@@ -7,7 +7,6 @@ package build
 import (
 	"testing"
 
-	"code.google.com/p/go-bit/bit"
 	"github.com/stretchrcom/testify/assert"
 
 	"fubsy/dag"
@@ -27,7 +26,7 @@ func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 	}
 
 	bstate := NewBuildState(graph, BuildOptions{})
-	goal := dag.NodeSet(bit.New(0, 1))
+	goal := graph.MakeNodeSet("tool1", "tool2")
 	err := bstate.BuildTargets(goal)
 	assert.Nil(t, err)
 	assertBuild(t, graph, expect, *executed)
@@ -57,7 +56,7 @@ func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 
 	opts := BuildOptions{}
 	bstate := NewBuildState(graph, opts)
-	goal := dag.NodeSet(bit.New(0, 1))
+	goal := graph.MakeNodeSet("tool1", "tool2")
 	err := bstate.BuildTargets(goal)
 	assert.NotNil(t, err)
 	assertBuild(t, graph, expect, *executed)
@@ -89,7 +88,7 @@ func Test_BuildState_BuildTargets_full_failure_keep_going(t *testing.T) {
 
 	opts := BuildOptions{KeepGoing: true}
 	bstate := NewBuildState(graph, opts)
-	goal := dag.NodeSet(bit.New(0, 1))
+	goal := graph.MakeNodeSet("tool1", "tool2")
 	err := bstate.BuildTargets(goal)
 	assert.NotNil(t, err)
 	assertBuild(t, graph, expect, *executed)

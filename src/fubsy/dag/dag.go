@@ -147,6 +147,20 @@ func (self *DAG) verify() {
 	}
 }
 
+// Return a NodeSet containing all the nodes passed by name. Panic if
+// any of the names do not exist in this DAG. Mainly for test code.
+func (self *DAG) MakeNodeSet(names ...string) NodeSet {
+	result := bit.New()
+	for _, name := range names {
+		id, ok := self.index[name]
+		if !ok {
+			panic("no such node: " + name)
+		}
+		result.Add(id)
+	}
+	return NodeSet(result)
+}
+
 // Add the same set of parents (source nodes) to many children (target
 // nodes).
 func (self *DAG) AddManyParents(targets, sources []Node) {
