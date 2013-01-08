@@ -52,16 +52,16 @@ func Test_DAG_DFS(t *testing.T) {
 	// original sources: {e, g, h} = {4, 6, 7}
 	// final targets:    {a} = {0}
 
-	tdag := newtestdag()
-	tdag.add("a", "c", "f", "h")
-	tdag.add("b", "d", "f", "g", "h")
-	tdag.add("c", "b", "e")
-	tdag.add("d", "g")
-	tdag.add("e")
-	tdag.add("f", "g")
-	tdag.add("g")
-	tdag.add("h")
-	dag := tdag.finish()
+	tdag := NewTestDAG()
+	tdag.Add("a", "c", "f", "h")
+	tdag.Add("b", "d", "f", "g", "h")
+	tdag.Add("c", "b", "e")
+	tdag.Add("d", "g")
+	tdag.Add("e")
+	tdag.Add("f", "g")
+	tdag.Add("g")
+	tdag.Add("h")
+	dag := tdag.Finish()
 
 	actual := []string{}
 	visit := func(node Node) error {
@@ -92,23 +92,23 @@ func Test_DAG_DFS(t *testing.T) {
 }
 
 func Test_DAG_DFS_cycle(t *testing.T) {
-	var tdag *testdag
+	var tdag *TestDAG
 	var dag *DAG
 	var err error
 
 	visit := func(node Node) error { return nil }
 
-	tdag = newtestdag()
-	tdag.add("0", "1")
-	tdag.add("1", "0")
-	dag = tdag.finish()
+	tdag = NewTestDAG()
+	tdag.Add("0", "1")
+	tdag.Add("1", "0")
+	dag = tdag.Finish()
 	err = dag.DFS(NodeSet(bit.New(0, 1)), visit)
 	assert.Equal(t, "found 1 dependency cycles:\n  0 -> 1 -> 0", err.Error())
 
 	// degenerate case
-	tdag = newtestdag()
-	tdag.add("0", "0")
-	dag = tdag.finish()
+	tdag = NewTestDAG()
+	tdag.Add("0", "0")
+	dag = tdag.Finish()
 	err = dag.DFS(NodeSet(bit.New(0)), visit)
 	assert.Equal(t, "found 1 dependency cycles:\n  0 -> 0", err.Error())
 
@@ -118,18 +118,18 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 	//   0 -> 2 -> 4 -> 8 -> 0
 	//   1 -> 3 -> 5 -> 7 -> 3
 	//   1 -> 3 -> 5 -> 9 -> 1
-	tdag = newtestdag()
-	tdag.add("0", "2", "4")
-	tdag.add("1", "3", "5")
-	tdag.add("2", "4")
-	tdag.add("3", "5")
-	tdag.add("4", "6", "8")
-	tdag.add("5", "7", "9")
-	tdag.add("6", "2")
-	tdag.add("7", "3")
-	tdag.add("8", "0")
-	tdag.add("9", "1")
-	dag = tdag.finish()
+	tdag = NewTestDAG()
+	tdag.Add("0", "2", "4")
+	tdag.Add("1", "3", "5")
+	tdag.Add("2", "4")
+	tdag.Add("3", "5")
+	tdag.Add("4", "6", "8")
+	tdag.Add("5", "7", "9")
+	tdag.Add("6", "2")
+	tdag.Add("7", "3")
+	tdag.Add("8", "0")
+	tdag.Add("9", "1")
+	dag = tdag.Finish()
 	start := bit.New()
 	start.AddRange(0, 9)
 	err = dag.DFS(NodeSet(start), visit)
@@ -142,14 +142,14 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 }
 
 func Test_DAG_DFS_error(t *testing.T) {
-	tdag := newtestdag()
-	tdag.add("0", "2", "4")
-	tdag.add("1", "3", "5")
-	tdag.add("2", "4")
-	tdag.add("3", "5")
-	tdag.add("4", "3", "2") // dependency cycle goes unreported
-	tdag.add("5")
-	dag := tdag.finish()
+	tdag := NewTestDAG()
+	tdag.Add("0", "2", "4")
+	tdag.Add("1", "3", "5")
+	tdag.Add("2", "4")
+	tdag.Add("3", "5")
+	tdag.Add("4", "3", "2") // dependency cycle goes unreported
+	tdag.Add("5")
+	dag := tdag.Finish()
 
 	visited := make([]int, 0)
 	visit := func(node Node) error {
@@ -324,50 +324,20 @@ func makeSimpleGraph() *DAG {
 	// original sources: {tool1.c, misc.h, misc.c, util.h, util.c, tool2.c}
 	//   (node IDs 6, 7, 8, 9, 10, 11)
 
-	tdag := newtestdag()
-	tdag.add("tool1", "tool1.o", "misc.o", "util.o")
-	tdag.add("tool2", "tool2.o", "util.o")
-	tdag.add("tool1.o", "tool1.c", "misc.h", "util.h")
-	tdag.add("misc.o", "misc.h", "misc.c")
-	tdag.add("util.o", "util.h", "util.c")
-	tdag.add("tool2.o", "tool2.c", "util.h")
-	tdag.add("tool1.c")
-	tdag.add("misc.h")
-	tdag.add("misc.c")
-	tdag.add("util.h")
-	tdag.add("util.c")
-	tdag.add("tool2.c")
-	return tdag.finish()
-}
-
-// string-based DAG that's easy to construct, and then gets converted
-// to the real thing
-type testdag struct {
-	nodes   []string
-	parents map[string][]string
-}
-
-func newtestdag() *testdag {
-	return &testdag{parents: make(map[string][]string)}
-}
-
-func (self *testdag) add(name string, parent ...string) {
-	self.nodes = append(self.nodes, name)
-	self.parents[name] = parent
-}
-
-func (self *testdag) finish() *DAG {
-	dag := NewDAG()
-	for _, name := range self.nodes {
-		MakeStubNode(dag, name)
-	}
-	for _, name := range self.nodes {
-		node := dag.Lookup(name)
-		for _, pname := range self.parents[name] {
-			dag.addParent(node, dag.Lookup(pname))
-		}
-	}
-	return dag
+	tdag := NewTestDAG()
+	tdag.Add("tool1", "tool1.o", "misc.o", "util.o")
+	tdag.Add("tool2", "tool2.o", "util.o")
+	tdag.Add("tool1.o", "tool1.c", "misc.h", "util.h")
+	tdag.Add("misc.o", "misc.h", "misc.c")
+	tdag.Add("util.o", "util.h", "util.c")
+	tdag.Add("tool2.o", "tool2.c", "util.h")
+	tdag.Add("tool1.c")
+	tdag.Add("misc.h")
+	tdag.Add("misc.c")
+	tdag.Add("util.h")
+	tdag.Add("util.c")
+	tdag.Add("tool2.c")
+	return tdag.Finish()
 }
 
 func touchSourceFiles(dag *DAG) {

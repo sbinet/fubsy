@@ -453,3 +453,34 @@ func (self *DAG) addParent(child Node, parent Node) {
 func (self *DAG) length() int {
 	return len(self.nodes)
 }
+
+// string-based DAG that's easy to construct, and then gets converted
+// to the real thing -- for testing only, but public so it can be used
+// by other packages' tests
+type TestDAG struct {
+	nodes   []string
+	parents map[string][]string
+}
+
+func NewTestDAG() *TestDAG {
+	return &TestDAG{parents: make(map[string][]string)}
+}
+
+func (self *TestDAG) Add(name string, parent ...string) {
+	self.nodes = append(self.nodes, name)
+	self.parents[name] = parent
+}
+
+func (self *TestDAG) Finish() *DAG {
+	dag := NewDAG()
+	for _, name := range self.nodes {
+		MakeStubNode(dag, name)
+	}
+	for _, name := range self.nodes {
+		node := dag.Lookup(name)
+		for _, pname := range self.parents[name] {
+			dag.addParent(node, dag.Lookup(pname))
+		}
+	}
+	return dag
+}
