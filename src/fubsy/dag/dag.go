@@ -36,6 +36,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"code.google.com/p/go-bit/bit"
@@ -58,7 +59,7 @@ type DAG struct {
 // few methods; it just exists so code in the 'runtime' package can
 // get node sets out of the DAG to pass back to other DAG methods that
 // then do further processing)
-type NodeSet *bit.Set
+type NodeSet bit.Set
 
 // graph-walking state: a white node is one we haven't visited yet,
 // grey is one we're currently processing, and black is one we're done
@@ -149,7 +150,7 @@ func (self *DAG) verify() {
 
 // Return a NodeSet containing all the nodes passed by name. Panic if
 // any of the names do not exist in this DAG. Mainly for test code.
-func (self *DAG) MakeNodeSet(names ...string) NodeSet {
+func (self *DAG) MakeNodeSet(names ...string) *NodeSet {
 	result := bit.New()
 	for _, name := range names {
 		id, ok := self.index[name]
@@ -158,7 +159,7 @@ func (self *DAG) MakeNodeSet(names ...string) NodeSet {
 		}
 		result.Add(id)
 	}
-	return NodeSet(result)
+	return (*NodeSet)(result)
 }
 
 // Add the same set of parents (source nodes) to many children (target
@@ -204,7 +205,7 @@ func (self *DAG) Dump(writer io.Writer, indent string) {
 }
 
 // Return the set of nodes in this graph with no children.
-func (self *DAG) FindFinalTargets() NodeSet {
+func (self *DAG) FindFinalTargets() *NodeSet {
 	//fmt.Println("FindFinalTargets():")
 	var targets *bit.Set = bit.New()
 	targets.AddRange(0, self.length())
@@ -213,14 +214,14 @@ func (self *DAG) FindFinalTargets() NodeSet {
 		targets.SetAndNot(targets, parents)
 	}
 	//fmt.Printf("  -> targets = %v\n", targets)
-	return NodeSet(targets)
+	return (*NodeSet)(targets)
 }
 
 // Walk the graph starting from each node in goal to find the set of
 // original source nodes, i.e. nodes with no parents that are
 // ancestors of any node in goal. Store that set (along with some
 // other useful information discovered in the graph walk) in self.
-func (self *DAG) FindRelevantNodes(goal NodeSet) NodeSet {
+func (self *DAG) FindRelevantNodes(goal *NodeSet) *NodeSet {
 	relevant := bit.New()
 	self.DFS(goal, func(node Node) error {
 		relevant.Add(node.id())
@@ -228,7 +229,7 @@ func (self *DAG) FindRelevantNodes(goal NodeSet) NodeSet {
 	})
 
 	//fmt.Printf("FindRelevantNodes: %v\n", relevant)
-	return NodeSet(relevant)
+	return (*NodeSet)(relevant)
 }
 
 // Callback function to visit nodes from DFS(). Return a non-nil error
@@ -241,7 +242,7 @@ type DFSVisitor func(node Node) error
 // visit() just as we're leaving that node -- i.e. calls to visit()
 // are in topological order. visit() can abort the search; see
 // DFSVisitor for details.
-func (self *DAG) DFS(start NodeSet, visit DFSVisitor) error {
+func (self *DAG) DFS(start *NodeSet, visit DFSVisitor) error {
 	colour := make([]byte, len(self.nodes))
 	path := make([]int, 0)
 	cycles := make([][]int, 0)
@@ -321,7 +322,7 @@ func (self CycleError) Error() string {
 // NodeSet objects derived from the old DAG are invalid with the new
 // DAG: throw them away and start over again. This is a destructive
 // operation; on return, self is unusable.
-func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) {
+func (self *DAG) Rebuild(relevant *NodeSet, ns types.Namespace) (*DAG, []error) {
 	var errors []error
 
 	// First, detach all nodes from the old DAG (and sabotage the old
@@ -340,7 +341,7 @@ func (self *DAG) Rebuild(relevant *bit.Set, ns types.Namespace) (*DAG, []error) 
 	replacements := make(map[int]*bit.Set)
 	newdag := NewDAG()
 	for id, node := range nodes {
-		if !relevant.Contains(id) {
+		if !(*bit.Set)(relevant).Contains(id) {
 			continue
 		}
 		expansion, err := node.Expand(ns)
@@ -462,6 +463,19 @@ func (self *DAG) addParent(child Node, parent Node) {
 // Return the number of nodes in the DAG.
 func (self *DAG) length() int {
 	return len(self.nodes)
+}
+
+// test-friendly way to format a NodeSet as a string
+func (self *NodeSet) String() string {
+	set := (*bit.Set)(self)
+	result := make([]byte, 1, set.Size()*3)
+	result[0] = '{'
+	for n, ok := set.Next(-1); ok; n, ok = set.Next(n) {
+		result = strconv.AppendInt(result, int64(n), 10)
+		result = append(result, ',')
+	}
+	result[len(result)-1] = '}'
+	return string(result)
 }
 
 // string-based DAG that's easy to construct, and then gets converted

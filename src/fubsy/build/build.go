@@ -49,7 +49,7 @@ func NewBuildState(graph *dag.DAG, options BuildOptions) *BuildState {
 // (if anything) went wrong; error details are reported "live" as
 // builds fail (e.g. to the console or a GUI window) so the user gets
 // timely feedback.
-func (self *BuildState) BuildTargets(targets dag.NodeSet) error {
+func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 	// What sort of nodes do we check for changes?
 	changestates := self.getChangeStates()
 	//fmt.Printf("BuildTargets():\n")

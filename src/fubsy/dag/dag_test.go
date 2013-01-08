@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"code.google.com/p/go-bit/bit"
@@ -69,24 +68,21 @@ func Test_DAG_DFS(t *testing.T) {
 		return nil
 	}
 
-	assertDFS := func(start *bit.Set, expect []string) {
+	assertDFS := func(start *NodeSet, expect []string) {
 		actual = actual[0:0]
 		dag.DFS(start, visit)
 		assert.Equal(t, expect, actual)
 	}
 
-	start := bit.New()
-	start.AddRange(0, 7)
+	start := dag.MakeNodeSet("a", "h")
 	expect := []string{"g", "d", "f", "h", "b", "e", "c", "a"}
 	assertDFS(start, expect)
 
-	// start nodes: {c, f}
-	start = bit.New(2, 5)
+	start = dag.MakeNodeSet("c", "f")
 	expect = []string{"g", "d", "f", "h", "b", "e", "c"}
 	assertDFS(start, expect)
 
-	// start nodes: {d, f}
-	start = bit.New(3, 5)
+	start = dag.MakeNodeSet("d", "f")
 	expect = []string{"g", "d", "f"}
 	assertDFS(start, expect)
 }
@@ -102,14 +98,16 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 	tdag.Add("0", "1")
 	tdag.Add("1", "0")
 	dag = tdag.Finish()
-	err = dag.DFS(NodeSet(bit.New(0, 1)), visit)
+	start := dag.MakeNodeSet("0", "1")
+	err = dag.DFS(start, visit)
 	assert.Equal(t, "found 1 dependency cycles:\n  0 -> 1 -> 0", err.Error())
 
 	// degenerate case
 	tdag = NewTestDAG()
 	tdag.Add("0", "0")
 	dag = tdag.Finish()
-	err = dag.DFS(NodeSet(bit.New(0)), visit)
+	start = dag.MakeNodeSet("0")
+	err = dag.DFS(start, visit)
 	assert.Equal(t, "found 1 dependency cycles:\n  0 -> 0", err.Error())
 
 	// weird case: two disconnected isomorphic graphs stuck in the
@@ -130,9 +128,9 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 	tdag.Add("8", "0")
 	tdag.Add("9", "1")
 	dag = tdag.Finish()
-	start := bit.New()
-	start.AddRange(0, 9)
-	err = dag.DFS(NodeSet(start), visit)
+	start = dag.MakeNodeSet()
+	(*bit.Set)(start).AddRange(0, 9)
+	err = dag.DFS(start, visit)
 	cycerr := err.(CycleError)
 	assert.Equal(t, 4, len(cycerr.cycles))
 	assert.Equal(t, []int{0, 2, 4, 6, 2}, cycerr.cycles[0])
@@ -161,7 +159,7 @@ func Test_DAG_DFS_error(t *testing.T) {
 		return nil
 	}
 
-	err := dag.DFS(bit.New(0), visit)
+	err := dag.DFS(dag.MakeNodeSet("0"), visit)
 	assert.Equal(t, "bite me", err.Error())
 	assert.Equal(t, []int{5, 3, 4}, visited)
 }
@@ -197,21 +195,21 @@ func Test_DAG_AddManyParents(t *testing.T) {
 
 func Test_DAG_FindRelevantNodes(t *testing.T) {
 	dag := makeSimpleGraph()
-	goal := bit.New(0, 1) // all final targets: tool1, tool2
-	relevant := dag.FindRelevantNodes(NodeSet(goal))
-	assert.Equal(t, "{0,1,2,3,4,5,6,7,8,9,10,11}", setToString(relevant))
+	goal := dag.MakeNodeSet("tool1", "tool2")
+	relevant := dag.FindRelevantNodes(goal)
+	assert.Equal(t, "{0,1,2,3,4,5,6,7,8,9,10,11}", relevant.String())
 
 	// goal = {tool1} ==>
 	// sources = {tool1.c, misc.h, misc.c, util.h, util.c}
-	goal = bit.New(0)
-	relevant = dag.FindRelevantNodes(NodeSet(goal))
-	assert.Equal(t, "{0,2,3,4,6,7,8,9,10}", setToString(relevant))
+	goal = dag.MakeNodeSet("tool1")
+	relevant = dag.FindRelevantNodes(goal)
+	assert.Equal(t, "{0,2,3,4,6,7,8,9,10}", relevant.String())
 
 	// goal = {tool2} ==>
 	// sources = {util.h, util.c, tool2.c}
-	goal = bit.New(1)
-	relevant = dag.FindRelevantNodes(NodeSet(goal))
-	assert.Equal(t, "{1,4,5,9,10,11}", setToString(relevant))
+	goal = dag.MakeNodeSet("tool2")
+	relevant = dag.FindRelevantNodes(goal)
+	assert.Equal(t, "{1,4,5,9,10,11}", relevant.String())
 }
 
 func Test_DAG_MarkSources(t *testing.T) {
@@ -238,8 +236,8 @@ func Test_DAG_Rebuild_simple(t *testing.T) {
 
 	// dag.Rebuild() just copies the DAG, because it consists
 	// entirely of FileNodes -- nothing to expand here
-	relevant := bit.New()
-	relevant.AddRange(0, len(dag.nodes))
+	relevant := dag.MakeNodeSet()
+	(*bit.Set)(relevant).AddRange(0, len(dag.nodes))
 	ns := types.NewValueMap()
 	rdag, err := dag.Rebuild(relevant, ns)
 
@@ -270,7 +268,7 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 
 	// relevant = {0} so we only expand the first FinderNode, and the
 	// new DAG contains only nodes derived from that expansion
-	relevant := bit.New(0)
+	relevant := dag.MakeNodeSet(node0.Name())
 	ns := types.NewValueMap()
 	rdag, err := dag.Rebuild(relevant, ns)
 	savedag.verify()
@@ -288,7 +286,7 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	dag = savedag
 	dag.verify()
 	node2 = dag.nodes[2] // need the pre-Rebuild() copy
-	relevant.AddRange(0, len(dag.nodes))
+	(*bit.Set)(relevant).AddRange(0, len(dag.nodes))
 	ns = types.NewValueMap()
 	rdag, err = dag.Rebuild(relevant, ns)
 	assert.Nil(t, err)
@@ -348,29 +346,4 @@ func touchSourceFiles(dag *DAG) {
 		}
 	}
 	testutils.TouchFiles(filenames...)
-}
-
-func newNodeSet(dag *DAG, names ...string) NodeSet {
-	set := bit.New()
-	for _, name := range names {
-		if id, ok := dag.index[name]; ok {
-			set.Add(id)
-		} else {
-			panic("no such node in DAG: " + name)
-		}
-	}
-	return NodeSet(set)
-}
-
-// test-friendly way to formatting a NodeSet as a string
-func setToString(set_ NodeSet) string {
-	set := (*bit.Set)(set_)
-	result := make([]byte, 1, set.Size()*3)
-	result[0] = '{'
-	for n, ok := set.Next(-1); ok; n, ok = set.Next(n) {
-		result = strconv.AppendInt(result, int64(n), 10)
-		result = append(result, ',')
-	}
-	result[len(result)-1] = '}'
-	return string(result)
 }
