@@ -188,7 +188,12 @@ func (self *nodebase) CommandString() string {
 
 type StubNode struct {
 	nodebase
+	exists  bool
 	changed bool
+}
+
+func (self *StubNode) SetExists(exists bool) {
+	self.exists = exists
 }
 
 func (self *StubNode) SetChanged(changed bool) {
@@ -210,7 +215,7 @@ func (self *StubNode) Equal(other_ types.FuObject) bool {
 }
 
 func (self *StubNode) Exists() (bool, error) {
-	return true, nil
+	return self.exists, nil
 }
 
 func (self *StubNode) Expand(ns types.Namespace) (types.FuObject, error) {

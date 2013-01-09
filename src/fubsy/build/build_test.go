@@ -12,13 +12,37 @@ import (
 	"fubsy/dag"
 )
 
-// full build (all targets), all actions succeed
-func Test_BuildState_BuildTargets_full_success(t *testing.T) {
+// full build of all targets, all actions succeed
+func Test_BuildState_BuildTargets_all_changed(t *testing.T) {
 	// This is actually an unusual case: we rebuild all targets
 	// because all sources have changed. A much more likely reason for
 	// a full build is that all targets are missing, e.g. a fresh
 	// working dir.
-	graph, executed := setupBuild(true)
+	graph, executed := setupBuild(true, true)
+
+	expect := []buildexpect{
+		{"tool1.o", dag.BUILT},
+		{"misc.o", dag.BUILT},
+		{"util.o", dag.BUILT},
+		{"tool1", dag.BUILT},
+		{"tool2.o", dag.BUILT},
+		{"tool2", dag.BUILT},
+	}
+
+	bstate := NewBuildState(graph, BuildOptions{})
+	goal := graph.MakeNodeSet("tool1", "tool2")
+	err := bstate.BuildTargets(goal)
+	assert.Nil(t, err)
+	assertBuild(t, graph, expect, *executed)
+
+	assert.Equal(t, dag.SOURCE, graph.Lookup("tool2.c").State())
+	assert.Equal(t, dag.SOURCE, graph.Lookup("misc.h").State())
+	assert.Equal(t, dag.SOURCE, graph.Lookup("util.c").State())
+}
+
+// full build because all targets are missing (much more realistic)
+func Test_BuildState_BuildTargets_all_missing(t *testing.T) {
+	graph, executed := setupBuild(false, false)
 
 	expect := []buildexpect{
 		{"tool1.o", dag.BUILT},
@@ -42,7 +66,7 @@ func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 
 // full successful build, then try some incremental rebuilds
 func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
-	graph, executed := setupBuild(true)
+	graph, executed := setupBuild(true, true)
 	opts := BuildOptions{}
 	bstate := NewBuildState(graph, opts)
 	goal := graph.MakeNodeSet("tool1", "tool2")
@@ -50,7 +74,7 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 	assert.Nil(t, err)
 
 	// now the rebuild, after marking all nodes unchanged
-	graph, executed = setupBuild(false)
+	graph, executed = setupBuild(true, false)
 
 	expect := []buildexpect{}
 	bstate = NewBuildState(graph, opts)
@@ -62,7 +86,7 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 	// rebuilds of misc.o and tool1.o -- but those two will appear
 	// unchanged, so we short-circuit the build and do *not* rebuild
 	// tool1)
-	graph, executed = setupBuild(false)
+	graph, executed = setupBuild(true, false)
 	graph.Lookup("misc.h").(*dag.StubNode).SetChanged(true)
 
 	expect = []buildexpect{
@@ -77,7 +101,7 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 
 // full build (all targets), one action fails
 func Test_BuildState_BuildTargets_one_failure(t *testing.T) {
-	graph, executed := setupBuild(true)
+	graph, executed := setupBuild(true, true)
 
 	// fail to build misc.{c,h} -> misc.o: that will block building
 	// tool1
@@ -105,13 +129,13 @@ func Test_BuildState_BuildTargets_one_failure(t *testing.T) {
 }
 
 // full build (all targets), one action fails, --keep-going true
-func Test_BuildState_BuildTargets_full_failure_keep_going(t *testing.T) {
+func Test_BuildState_BuildTargets_one_failure_keep_going(t *testing.T) {
 	// this is the same as the previous test except that
 	// opts.KeepGoing == true: we don't terminate the build on first
 	// failure, but carry on and consider building tool1, then mark it
 	// TAINTED because one of its ancestors (misc.o) failed to build
 
-	graph, executed := setupBuild(true)
+	graph, executed := setupBuild(true, true)
 
 	rule := graph.Lookup("misc.o").BuildRule().(*dag.StubRule)
 	rule.SetFail(true)
@@ -134,7 +158,7 @@ func Test_BuildState_BuildTargets_full_failure_keep_going(t *testing.T) {
 	assert.Equal(t, dag.TAINTED, graph.Lookup("tool1").State())
 }
 
-func setupBuild(changed bool) (*dag.DAG, *[]string) {
+func setupBuild(exists, changed bool) (*dag.DAG, *[]string) {
 	graph := makeSimpleGraph()
 
 	// add a stub build rule to every target node, so we track when
@@ -144,7 +168,9 @@ func setupBuild(changed bool) (*dag.DAG, *[]string) {
 		executed = append(executed, name)
 	}
 	for _, node := range graph.Nodes() {
-		node.(*dag.StubNode).SetChanged(changed)
+		snode := node.(*dag.StubNode)
+		snode.SetExists(exists)
+		snode.SetChanged(changed)
 		if graph.HasParents(node) {
 			rule := dag.MakeStubRule(callback, node)
 			node.SetBuildRule(rule)
