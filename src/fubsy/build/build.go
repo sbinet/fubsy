@@ -65,7 +65,7 @@ func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 
 		// do we need to build this node? can we?
 		missing, stale, tainted, err :=
-			self.inspectParents(changestates, node)
+			self.considerNode(changestates, node)
 		log.Debug("build",
 			"node %s: missing=%v, stale=%v, tainted=%v, err=%v\n",
 			node, missing, stale, tainted, err)
@@ -118,8 +118,8 @@ func checkInitialState(node dag.Node) {
 		// while visiting a node, and we should only visit each node
 		// once
 		panic(fmt.Sprintf(
-			"visiting node %v, state = %d (should be UNKNOWN = %d)",
-			node, node.State(), dag.UNKNOWN))
+			"visiting node %v, state = %s (should be UNKNOWN)",
+			node, node.State()))
 	}
 }
 
@@ -130,7 +130,7 @@ func checkInitialState(node dag.Node) {
 // should build this node because its resource is missing. Return
 // non-nil err if there were unexpected node errors (error checking
 // existence or change status).
-func (self *BuildState) inspectParents(
+func (self *BuildState) considerNode(
 	changestates map[dag.NodeState]bool, node dag.Node) (
 	missing, stale, tainted bool, err error) {
 
@@ -140,7 +140,7 @@ func (self *BuildState) inspectParents(
 		return
 	}
 	missing = !exists
-	stale = false   // need to rebuild this node
+	stale = false   // parents have changed
 	tainted = false // failures upstream: do not rebuild
 
 	parentnodes := self.graph.ParentNodes(node)
