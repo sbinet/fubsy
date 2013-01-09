@@ -456,7 +456,7 @@ func (self *DAG) ParentNodes(node Node) []Node {
 	return result
 }
 
-func (self *DAG) addParent(child Node, parent Node) {
+func (self *DAG) AddParent(child Node, parent Node) {
 	self.parents[child.id()].Add(parent.id())
 }
 
@@ -507,7 +507,7 @@ func (self *TestDAG) Finish() *DAG {
 	for _, name := range self.nodes {
 		node := dag.Lookup(name)
 		for _, pname := range self.parents[name] {
-			dag.addParent(node, dag.Lookup(pname))
+			dag.AddParent(node, dag.Lookup(pname))
 		}
 	}
 	return dag

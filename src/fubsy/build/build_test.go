@@ -5,6 +5,7 @@
 package build
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchrcom/testify/assert"
@@ -165,6 +166,36 @@ func Test_BuildState_BuildTargets_one_failure_keep_going(t *testing.T) {
 	assert.Equal(t, dag.TAINTED, graph.Lookup("tool1").State())
 }
 
+func Test_BuildState_BuildTargets_add_source(t *testing.T) {
+	// do a full build (all targets missing), then add one source file
+	// and ensure that downstream targets are rebuilt
+	db := db.NewDummyDB()
+	graph, executed := setupBuild(false, false)
+	opts := BuildOptions{}
+	bstate := NewBuildState(graph, db, opts)
+	goal := graph.MakeNodeSet("tool1", "tool2")
+	err := bstate.BuildTargets(goal)
+	assert.Nil(t, err)
+
+	// feep.h is the new file, a parent of tool1.o: we will rebuild
+	// tool1.o and tool1 (after ensuring that tool1.o is changed by
+	// the rebuild)
+	graph, executed = setupBuild(true, false)
+	newnode := dag.MakeStubNode(graph, "feep.h")
+	newnode.SetState(dag.SOURCE)
+	child := graph.Lookup("tool1.o").(*dag.StubNode)
+	graph.AddParent(child, newnode)
+	child.SetChanged(true)
+
+	expect := []buildexpect{
+		{"tool1.o", dag.BUILT},
+		{"tool1", dag.BUILT}}
+	bstate = NewBuildState(graph, db, opts)
+	err = bstate.BuildTargets(goal)
+	assert.Nil(t, err)
+	assertBuild(t, graph, expect, *executed)
+}
+
 func setupBuild(exists, changed bool) (*dag.DAG, *[]string) {
 	graph := makeSimpleGraph()
 
@@ -220,24 +251,39 @@ func setChanged(nodes []dag.Node, changed bool) {
 
 func assertBuild(
 	t *testing.T,
-	dag *dag.DAG,
+	graph *dag.DAG,
 	expect []buildexpect,
 	executed []string) {
-	assert.Equal(t, len(expect), len(executed),
-		"expected %d build attempts (%v), but got %d",
-		len(expect), expect, len(executed))
-	for i, expect := range expect {
-		assert.Equal(t, expect.name, executed[i],
-			"action %d: expected %s", i, expect.name)
-		actualstate := dag.Lookup(expect.name).State()
-		assert.Equal(t, expect.state, actualstate,
-			"target: %s (state = %v)", expect.name, actualstate)
+
+	actual := make([]buildexpect, len(executed))
+	for i, name := range executed {
+		state := graph.Lookup(name).State()
+		actual[i] = buildexpect{name, state}
+	}
+
+	if len(expect) != len(actual) {
+		t.Errorf("expected %d build attempts, but got %d\n"+
+			"expect: %v\n"+
+			"actual: %v",
+			len(expect), len(actual), expect, actual)
+		return
+	}
+	for i := range expect {
+		assert.Equal(t, expect[i], actual[i])
 	}
 }
 
 type buildexpect struct {
 	name  string
 	state dag.NodeState
+}
+
+func (self buildexpect) GoString() string {
+	return self.String()
+}
+
+func (self buildexpect) String() string {
+	return fmt.Sprintf("(%s, %s)", self.name, self.state)
 }
 
 func Test_BuildError_Error(t *testing.T) {

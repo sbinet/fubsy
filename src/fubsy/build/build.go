@@ -65,6 +65,9 @@ func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 			// can't build original source nodes!
 			return nil
 		}
+		if node.BuildRule() == nil {
+			panic("node is a target, but has no build rule: " + node.Name())
+		}
 
 		checkInitialState(node)
 

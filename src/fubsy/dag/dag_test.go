@@ -260,7 +260,7 @@ func Test_DAG_Rebuild_globs(t *testing.T) {
 	node1 = MakeFinderNode(dag, "*.h")
 	node2 = MakeFileNode(dag, "util.o")
 	_ = node1
-	dag.addParent(node2, node0)
+	dag.AddParent(node2, node0)
 	assert.Equal(t, 3, dag.length())
 	dag.verify()
 
