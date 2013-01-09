@@ -13,9 +13,12 @@ import (
 	"fubsy/log"
 )
 
+type stateset map[dag.NodeState]bool
+
 type BuildState struct {
-	graph   *dag.DAG
-	options BuildOptions
+	graph        *dag.DAG
+	options      BuildOptions
+	changestates stateset
 }
 
 // user options, typically from the command line
@@ -51,7 +54,7 @@ func NewBuildState(graph *dag.DAG, options BuildOptions) *BuildState {
 // timely feedback.
 func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 	// What sort of nodes do we check for changes?
-	changestates := self.getChangeStates()
+	self.setChangeStates()
 	log.Debug("build", "building %d targets", targets.Length())
 
 	builderr := new(BuildError)
@@ -64,8 +67,7 @@ func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 		checkInitialState(node)
 
 		// do we need to build this node? can we?
-		missing, stale, tainted, err :=
-			self.considerNode(changestates, node)
+		missing, stale, tainted, err := self.considerNode(node)
 		log.Debug("build",
 			"node %s: missing=%v, stale=%v, tainted=%v, err=%v\n",
 			node, missing, stale, tainted, err)
@@ -94,10 +96,10 @@ func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 	return err
 }
 
-func (self *BuildState) getChangeStates() map[dag.NodeState]bool {
+func (self *BuildState) setChangeStates() {
 	// Default is like tup: only check original source nodes and nodes
 	// that have just been built.
-	changestates := make(map[dag.NodeState]bool)
+	changestates := make(stateset)
 	changestates[dag.SOURCE] = true
 	changestates[dag.BUILT] = true
 	if self.checkAll() {
@@ -108,7 +110,7 @@ func (self *BuildState) getChangeStates() map[dag.NodeState]bool {
 		// should be handled just fine by default.)
 		changestates[dag.UNKNOWN] = true
 	}
-	return changestates
+	self.changestates = changestates
 }
 
 // panic if node is in an impossible state for starting its visit
@@ -130,8 +132,7 @@ func checkInitialState(node dag.Node) {
 // should build this node because its resource is missing. Return
 // non-nil err if there were unexpected node errors (error checking
 // existence or change status).
-func (self *BuildState) considerNode(
-	changestates map[dag.NodeState]bool, node dag.Node) (
+func (self *BuildState) considerNode(node dag.Node) (
 	missing, stale, tainted bool, err error) {
 
 	var exists, changed bool
@@ -153,7 +154,7 @@ func (self *BuildState) considerNode(
 
 		// Try *really hard* to avoid calling parent.Changed(), because
 		// it's likely to do I/O: prone to fail, slow, etc.
-		if missing || stale || !changestates[pstate] {
+		if missing || stale || !self.changestates[pstate] {
 			continue
 		}
 		changed, err = parent.Changed()
