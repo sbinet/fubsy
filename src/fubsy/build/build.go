@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"fubsy/dag"
+	"fubsy/db"
 	"fubsy/log"
 )
 
@@ -17,6 +18,7 @@ type stateset map[dag.NodeState]bool
 
 type BuildState struct {
 	graph        *dag.DAG
+	db           BuildDB
 	options      BuildOptions
 	changestates stateset
 }
@@ -41,8 +43,8 @@ type BuildError struct {
 	attempts int
 }
 
-func NewBuildState(graph *dag.DAG, options BuildOptions) *BuildState {
-	return &BuildState{graph: graph, options: options}
+func NewBuildState(graph *dag.DAG, db BuildDB, options BuildOptions) *BuildState {
+	return &BuildState{graph: graph, db: db, options: options}
 }
 
 // The heart of Fubsy: do a depth-first walk of the dependency graph
@@ -67,23 +69,25 @@ func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 		checkInitialState(node)
 
 		// do we need to build this node? can we?
-		missing, stale, tainted, err := self.considerNode(node)
-		log.Debug("build",
-			"node %s: missing=%v, stale=%v, tainted=%v, err=%v\n",
-			node, missing, stale, tainted, err)
+		build, tainted, err := self.considerNode(node)
+		log.Debug("build", "node %s: build=%v, tainted=%v err=%v\n",
+			node, build, tainted, err)
 		if err != nil {
 			return err
 		}
 
 		if tainted {
 			node.SetState(dag.TAINTED)
-		} else if missing || stale {
+		} else if build {
 			ok := self.buildNode(node, builderr)
 			if !ok && !self.keepGoing() {
 				// attempts counter is not very useful when we break
 				// out of the build early
 				builderr.attempts = -1
 				return builderr
+			}
+			if ok {
+				self.recordNode(node)
 			}
 		}
 		return nil
@@ -126,35 +130,58 @@ func checkInitialState(node dag.Node) {
 }
 
 // Inspect node and its parents to see if we need to build it. Return
-// tainted=true if we should skip building this node due to upstream
-// failure. Return stale=true if we should build this node because at
-// least one of its parents has changed. Return missing=true if we
-// should build this node because its resource is missing. Return
-// non-nil err if there were unexpected node errors (error checking
-// existence or change status).
+// build=true if we should build it, tainted=true if we should skip
+// building this node due to upstream failure. Return non-nil err if
+// there were unexpected node errors (error checking existence or
+// change status).
 func (self *BuildState) considerNode(node dag.Node) (
-	missing, stale, tainted bool, err error) {
+	build bool, tainted bool, err error) {
 
 	var exists, changed bool
 	exists, err = node.Exists() // obvious rebuild (unless tainted)
 	if err != nil {
 		return
 	}
-	missing = !exists
-	stale = false   // parents have changed
-	tainted = false // failures upstream: do not rebuild
+	missing := !exists
 
+	var oldparents *db.SourceRecord
+	if !missing {
+		// skip DB lookup for missing nodes: the only thing that will
+		// stop us from rebuilding them is a failed parent, and that
+		// check comes later
+		oldparents, err = self.db.LookupParents(node.Name())
+		if err != nil {
+			return
+		}
+		if oldparents != nil {
+			log.Debug("build", "old parents of %s:", node)
+			log.DebugDump("build", oldparents)
+		}
+	}
+
+	// XXX detect when parents are removed (need test case)
+	// XXX modify parent.Changed() to compare against previous signature
+	// (need test case)
+
+	build = missing
 	parentnodes := self.graph.ParentNodes(node)
 	for _, parent := range parentnodes {
 		pstate := parent.State()
 		if pstate == dag.FAILED || pstate == dag.TAINTED {
+			build = false
 			tainted = true
 			return // no further inspection required
 		}
 
-		// Try *really hard* to avoid calling parent.Changed(), because
-		// it's likely to do I/O: prone to fail, slow, etc.
-		if missing || stale || !self.changestates[pstate] {
+		if oldparents != nil && !oldparents.Contains(parent.Name()) {
+			// New parent for this node: rebuild unless another parent
+			// is failed/tainted.
+			build = true
+		}
+
+		// Try to avoid calling parent.Changed(), because it's likely
+		// to do I/O, which is prone to fail, slow, etc.
+		if build || !self.changestates[pstate] {
 			continue
 		}
 		changed, err = parent.Changed()
@@ -165,7 +192,7 @@ func (self *BuildState) considerNode(node dag.Node) (
 			return
 		}
 		if changed {
-			stale = true
+			build = true
 			// Do NOT return here: we need to continue inspecting parents
 			// to make sure they don't taint this node with upstream
 			// failure.
@@ -205,6 +232,22 @@ func (self *BuildState) reportFailure(errs []error) {
 	for _, err := range errs {
 		fmt.Fprintf(os.Stderr, "build failure: %s\n", err)
 	}
+}
+
+func (self *BuildState) recordNode(node dag.Node) error {
+	record := db.NewSourceRecord()
+	for _, parent := range self.graph.ParentNodes(node) {
+		sig, err := parent.Signature()
+		if err != nil {
+			return err
+		}
+		record.AddNode(parent.Name(), sig)
+	}
+	err := self.db.WriteParents(node.Name(), record)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (self *BuildState) keepGoing() bool {

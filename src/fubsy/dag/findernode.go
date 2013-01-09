@@ -152,6 +152,11 @@ func (self *FinderNode) Exists() (bool, error) {
 		"(graph should have been rebuilt by this point)")
 }
 
+func (self *FinderNode) Signature() ([]byte, error) {
+	panic("Signature() should never be called on a FinderNode " +
+		"(graph should have been rebuilt by this point)")
+}
+
 func (self *FinderNode) Changed() (bool, error) {
 	panic("Changed() should never be called on a FinderNode " +
 		"(graph should have been rebuilt by this point)")

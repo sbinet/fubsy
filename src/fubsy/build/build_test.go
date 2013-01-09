@@ -10,6 +10,8 @@ import (
 	"github.com/stretchrcom/testify/assert"
 
 	"fubsy/dag"
+	"fubsy/db"
+	//"fubsy/log"
 )
 
 // full build of all targets, all actions succeed
@@ -18,6 +20,7 @@ func Test_BuildState_BuildTargets_all_changed(t *testing.T) {
 	// because all sources have changed. A much more likely reason for
 	// a full build is that all targets are missing, e.g. a fresh
 	// working dir.
+	db := db.NewDummyDB()
 	graph, executed := setupBuild(true, true)
 
 	expect := []buildexpect{
@@ -29,7 +32,7 @@ func Test_BuildState_BuildTargets_all_changed(t *testing.T) {
 		{"tool2", dag.BUILT},
 	}
 
-	bstate := NewBuildState(graph, BuildOptions{})
+	bstate := NewBuildState(graph, db, BuildOptions{})
 	goal := graph.MakeNodeSet("tool1", "tool2")
 	err := bstate.BuildTargets(goal)
 	assert.Nil(t, err)
@@ -42,6 +45,7 @@ func Test_BuildState_BuildTargets_all_changed(t *testing.T) {
 
 // full build because all targets are missing (much more realistic)
 func Test_BuildState_BuildTargets_all_missing(t *testing.T) {
+	db := db.NewDummyDB()
 	graph, executed := setupBuild(false, false)
 
 	expect := []buildexpect{
@@ -53,7 +57,7 @@ func Test_BuildState_BuildTargets_all_missing(t *testing.T) {
 		{"tool2", dag.BUILT},
 	}
 
-	bstate := NewBuildState(graph, BuildOptions{})
+	bstate := NewBuildState(graph, db, BuildOptions{})
 	goal := graph.MakeNodeSet("tool1", "tool2")
 	err := bstate.BuildTargets(goal)
 	assert.Nil(t, err)
@@ -66,9 +70,10 @@ func Test_BuildState_BuildTargets_all_missing(t *testing.T) {
 
 // full successful build, then try some incremental rebuilds
 func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
+	db := db.NewDummyDB()
 	graph, executed := setupBuild(true, true)
 	opts := BuildOptions{}
-	bstate := NewBuildState(graph, opts)
+	bstate := NewBuildState(graph, db, opts)
 	goal := graph.MakeNodeSet("tool1", "tool2")
 	err := bstate.BuildTargets(goal) // initial full build
 	assert.Nil(t, err)
@@ -77,7 +82,7 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 	graph, executed = setupBuild(true, false)
 
 	expect := []buildexpect{}
-	bstate = NewBuildState(graph, opts)
+	bstate = NewBuildState(graph, db, opts)
 	err = bstate.BuildTargets(goal)
 	assert.Nil(t, err)
 	assertBuild(t, graph, expect, *executed)
@@ -93,7 +98,7 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 		{"tool1.o", dag.BUILT},
 		{"misc.o", dag.BUILT},
 	}
-	bstate = NewBuildState(graph, opts)
+	bstate = NewBuildState(graph, db, opts)
 	err = bstate.BuildTargets(goal)
 	assert.Nil(t, err)
 	assertBuild(t, graph, expect, *executed)
@@ -101,6 +106,7 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 
 // full build (all targets), one action fails
 func Test_BuildState_BuildTargets_one_failure(t *testing.T) {
+	db := db.NewDummyDB()
 	graph, executed := setupBuild(true, true)
 
 	// fail to build misc.{c,h} -> misc.o: that will block building
@@ -117,7 +123,7 @@ func Test_BuildState_BuildTargets_one_failure(t *testing.T) {
 	}
 
 	opts := BuildOptions{}
-	bstate := NewBuildState(graph, opts)
+	bstate := NewBuildState(graph, db, opts)
 	goal := graph.MakeNodeSet("tool1", "tool2")
 	err := bstate.BuildTargets(goal)
 	assert.NotNil(t, err)
@@ -135,6 +141,7 @@ func Test_BuildState_BuildTargets_one_failure_keep_going(t *testing.T) {
 	// failure, but carry on and consider building tool1, then mark it
 	// TAINTED because one of its ancestors (misc.o) failed to build
 
+	db := db.NewDummyDB()
 	graph, executed := setupBuild(true, true)
 
 	rule := graph.Lookup("misc.o").BuildRule().(*dag.StubRule)
@@ -149,7 +156,7 @@ func Test_BuildState_BuildTargets_one_failure_keep_going(t *testing.T) {
 	}
 
 	opts := BuildOptions{KeepGoing: true}
-	bstate := NewBuildState(graph, opts)
+	bstate := NewBuildState(graph, db, opts)
 	goal := graph.MakeNodeSet("tool1", "tool2")
 	err := bstate.BuildTargets(goal)
 	assert.NotNil(t, err)

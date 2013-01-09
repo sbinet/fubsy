@@ -100,6 +100,12 @@ type Node interface {
 	// node)
 	Exists() (bool, error)
 
+	// return a brief byte sequence that summarizes the content of
+	// this node, and can be used to determine if it has changed since
+	// a previous build (e.g. file modification time, content hash, or
+	// a combination of such data)
+	Signature() ([]byte, error)
+
 	// return true if this node has changed since the last build where
 	// it was relevant
 	Changed() (bool, error)
@@ -220,6 +226,10 @@ func (self *StubNode) Exists() (bool, error) {
 
 func (self *StubNode) Expand(ns types.Namespace) (types.FuObject, error) {
 	return self, nil
+}
+
+func (self *StubNode) Signature() ([]byte, error) {
+	return []byte{0xDE, 0xAD, 0xBE, 0xEF}, nil
 }
 
 func (self *StubNode) Changed() (bool, error) {

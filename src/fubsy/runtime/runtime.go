@@ -17,6 +17,7 @@ import (
 
 	"fubsy/build"
 	"fubsy/dag"
+	"fubsy/db"
 	"fubsy/dsl"
 	"fubsy/log"
 	"fubsy/types"
@@ -209,7 +210,8 @@ func (self *Runtime) runBuildPhase() []error {
 	log.Debug("dag", "rebuilt dag:")
 	log.DebugDump("dag", self.dag)
 
-	bstate := build.NewBuildState(self.dag, self.options)
+	db := db.NewDummyDB()
+	bstate := build.NewBuildState(self.dag, db, self.options)
 	goal = self.dag.FindFinalTargets()
 	err := bstate.BuildTargets(goal)
 	if err != nil {

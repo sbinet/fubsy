@@ -93,6 +93,11 @@ func (self *FileNode) Exists() (bool, error) {
 	return true, nil
 }
 
+func (self *FileNode) Signature() ([]byte, error) {
+	// placeholder until we have persistent build state
+	return nil, nil
+}
+
 func (self *FileNode) Changed() (bool, error) {
 	// placeholder until we have persistent build state
 	return true, nil
