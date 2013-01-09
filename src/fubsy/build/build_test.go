@@ -36,13 +36,52 @@ func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 	assert.Equal(t, dag.SOURCE, graph.Lookup("util.c").State())
 }
 
+// full successful build, then try some incremental rebuilds
+func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
+	graph, executed := setupBuild()
+	opts := BuildOptions{}
+	bstate := NewBuildState(graph, opts)
+	goal := graph.MakeNodeSet("tool1", "tool2")
+	err := bstate.BuildTargets(goal) // initial full build
+	assert.Nil(t, err)
+
+	// now the rebuild, after marking all nodes unchanged
+	graph, executed = setupBuild()
+	for _, node := range graph.Nodes() {
+		node.(*dag.StubNode).SetChanged(false)
+	}
+
+	expect := []buildexpect{}
+	bstate = NewBuildState(graph, opts)
+	err = bstate.BuildTargets(goal)
+	assert.Nil(t, err)
+	assertBuild(t, graph, expect, *executed)
+
+	// again, but this time change one source file (misc.h, forcing
+	// rebuilds of misc.o and tool1.o -- but those two will appear
+	// unchanged, so we short-circuit the build and do *not* rebuild
+	// tool1)
+	graph, executed = setupBuild()
+	for _, node := range graph.Nodes() {
+		node.(*dag.StubNode).SetChanged(node.Name() == "misc.h")
+	}
+
+	expect = []buildexpect{
+		{"tool1.o", dag.BUILT},
+		{"misc.o", dag.BUILT},
+	}
+	bstate = NewBuildState(graph, opts)
+	err = bstate.BuildTargets(goal)
+	assert.Nil(t, err)
+	assertBuild(t, graph, expect, *executed)
+}
+
 // full build (all targets), one action fails
 func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
 	graph, executed := setupBuild()
 
 	// fail to build misc.{c,h} -> misc.o: that will block building
-	// tool1, but not tool2 (since keepGoing() always returns true
-	// (for now))
+	// tool1
 	rule := graph.Lookup("misc.o").BuildRule().(*dag.StubRule)
 	rule.SetFail(true)
 

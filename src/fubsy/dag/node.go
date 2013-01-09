@@ -188,6 +188,11 @@ func (self *nodebase) CommandString() string {
 
 type StubNode struct {
 	nodebase
+	changed bool
+}
+
+func (self *StubNode) SetChanged(changed bool) {
+	self.changed = changed
 }
 
 func (self *StubNode) Typename() string {
@@ -213,7 +218,7 @@ func (self *StubNode) Expand(ns types.Namespace) (types.FuObject, error) {
 }
 
 func (self *StubNode) Changed() (bool, error) {
-	return true, nil
+	return self.changed, nil
 }
 
 func (self *StubNode) List() []types.FuObject {
@@ -225,7 +230,10 @@ func (self *StubNode) Add(other types.FuObject) (types.FuObject, error) {
 }
 
 func NewStubNode(name string) *StubNode {
-	return &StubNode{nodebase: makenodebase(name)}
+	return &StubNode{
+		nodebase: makenodebase(name),
+		changed:  true,
+	}
 }
 
 func MakeStubNode(dag *DAG, name string) *StubNode {
