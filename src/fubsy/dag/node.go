@@ -232,7 +232,6 @@ func (self *StubNode) Add(other types.FuObject) (types.FuObject, error) {
 func NewStubNode(name string) *StubNode {
 	return &StubNode{
 		nodebase: makenodebase(name),
-		changed:  true,
 	}
 }
 

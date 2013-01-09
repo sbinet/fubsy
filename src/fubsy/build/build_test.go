@@ -14,7 +14,11 @@ import (
 
 // full build (all targets), all actions succeed
 func Test_BuildState_BuildTargets_full_success(t *testing.T) {
-	graph, executed := setupBuild()
+	// This is actually an unusual case: we rebuild all targets
+	// because all sources have changed. A much more likely reason for
+	// a full build is that all targets are missing, e.g. a fresh
+	// working dir.
+	graph, executed := setupBuild(true)
 
 	expect := []buildexpect{
 		{"tool1.o", dag.BUILT},
@@ -38,7 +42,7 @@ func Test_BuildState_BuildTargets_full_success(t *testing.T) {
 
 // full successful build, then try some incremental rebuilds
 func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
-	graph, executed := setupBuild()
+	graph, executed := setupBuild(true)
 	opts := BuildOptions{}
 	bstate := NewBuildState(graph, opts)
 	goal := graph.MakeNodeSet("tool1", "tool2")
@@ -46,10 +50,7 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 	assert.Nil(t, err)
 
 	// now the rebuild, after marking all nodes unchanged
-	graph, executed = setupBuild()
-	for _, node := range graph.Nodes() {
-		node.(*dag.StubNode).SetChanged(false)
-	}
+	graph, executed = setupBuild(false)
 
 	expect := []buildexpect{}
 	bstate = NewBuildState(graph, opts)
@@ -61,10 +62,8 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 	// rebuilds of misc.o and tool1.o -- but those two will appear
 	// unchanged, so we short-circuit the build and do *not* rebuild
 	// tool1)
-	graph, executed = setupBuild()
-	for _, node := range graph.Nodes() {
-		node.(*dag.StubNode).SetChanged(node.Name() == "misc.h")
-	}
+	graph, executed = setupBuild(false)
+	graph.Lookup("misc.h").(*dag.StubNode).SetChanged(true)
 
 	expect = []buildexpect{
 		{"tool1.o", dag.BUILT},
@@ -77,8 +76,8 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 }
 
 // full build (all targets), one action fails
-func Test_BuildState_BuildTargets_full_failure(t *testing.T) {
-	graph, executed := setupBuild()
+func Test_BuildState_BuildTargets_one_failure(t *testing.T) {
+	graph, executed := setupBuild(true)
 
 	// fail to build misc.{c,h} -> misc.o: that will block building
 	// tool1
@@ -112,7 +111,7 @@ func Test_BuildState_BuildTargets_full_failure_keep_going(t *testing.T) {
 	// failure, but carry on and consider building tool1, then mark it
 	// TAINTED because one of its ancestors (misc.o) failed to build
 
-	graph, executed := setupBuild()
+	graph, executed := setupBuild(true)
 
 	rule := graph.Lookup("misc.o").BuildRule().(*dag.StubRule)
 	rule.SetFail(true)
@@ -135,7 +134,7 @@ func Test_BuildState_BuildTargets_full_failure_keep_going(t *testing.T) {
 	assert.Equal(t, dag.TAINTED, graph.Lookup("tool1").State())
 }
 
-func setupBuild() (*dag.DAG, *[]string) {
+func setupBuild(changed bool) (*dag.DAG, *[]string) {
 	graph := makeSimpleGraph()
 
 	// add a stub build rule to every target node, so we track when
@@ -145,6 +144,7 @@ func setupBuild() (*dag.DAG, *[]string) {
 		executed = append(executed, name)
 	}
 	for _, node := range graph.Nodes() {
+		node.(*dag.StubNode).SetChanged(changed)
 		if graph.HasParents(node) {
 			rule := dag.MakeStubRule(callback, node)
 			node.SetBuildRule(rule)
@@ -177,6 +177,12 @@ func makeSimpleGraph() *dag.DAG {
 	tdag.Add("util.c")
 	tdag.Add("tool2.c")
 	return tdag.Finish()
+}
+
+func setChanged(nodes []dag.Node, changed bool) {
+	for _, node := range nodes {
+		node.(*dag.StubNode).SetChanged(changed)
+	}
 }
 
 func assertBuild(
