@@ -19,6 +19,12 @@ func NewSourceRecord() *SourceRecord {
 	return &SourceRecord{signature: make(map[string]([]byte))}
 }
 
+// Return the list of nodes in this record (by name). Do not modify
+// the returned slice; it might share storage with the SourceRecord.
+func (self *SourceRecord) Nodes() []string {
+	return self.nodes
+}
+
 func (self *SourceRecord) AddNode(name string, sig []byte) {
 	self.nodes = append(self.nodes, name)
 	self.signature[name] = sig

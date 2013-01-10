@@ -162,13 +162,18 @@ func (self *BuildState) considerNode(node dag.Node) (
 		}
 	}
 
-	// XXX detect when parents are removed (need test case)
+	build = missing
+	parents := self.graph.ParentNodes(node)
+
+	// Check if any of node's former parents have been removed.
+	if !build && oldparents != nil {
+		build = parentsRemoved(parents, oldparents)
+	}
+
 	// XXX modify parent.Changed() to compare against previous signature
 	// (need test case)
 
-	build = missing
-	parentnodes := self.graph.ParentNodes(node)
-	for _, parent := range parentnodes {
+	for _, parent := range parents {
 		pstate := parent.State()
 		if pstate == dag.FAILED || pstate == dag.TAINTED {
 			build = false
@@ -202,6 +207,19 @@ func (self *BuildState) considerNode(node dag.Node) (
 		}
 	}
 	return
+}
+
+func parentsRemoved(parents []dag.Node, oldparents *db.SourceRecord) bool {
+	parentset := make(map[string]bool)
+	for _, parent := range parents {
+		parentset[parent.Name()] = true
+	}
+	for _, name := range oldparents.Nodes() {
+		if !parentset[name] {
+			return true
+		}
+	}
+	return false
 }
 
 // Build the specified node (caller has determined that it should be

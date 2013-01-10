@@ -71,20 +71,14 @@ func Test_BuildState_BuildTargets_all_missing(t *testing.T) {
 
 // full successful build, then try some incremental rebuilds
 func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
-	db := db.NewDummyDB()
-	graph, executed := setupBuild(true, true)
-	opts := BuildOptions{}
-	bstate := NewBuildState(graph, db, opts)
-	goal := graph.MakeNodeSet("tool1", "tool2")
-	err := bstate.BuildTargets(goal) // initial full build
-	assert.Nil(t, err)
+	db, goal, opts := fullBuild(t)
 
 	// now the rebuild, after marking all nodes unchanged
-	graph, executed = setupBuild(true, false)
+	graph, executed := setupBuild(true, false)
 
 	expect := []buildexpect{}
-	bstate = NewBuildState(graph, db, opts)
-	err = bstate.BuildTargets(goal)
+	bstate := NewBuildState(graph, db, opts)
+	err := bstate.BuildTargets(goal)
 	assert.Nil(t, err)
 	assertBuild(t, graph, expect, *executed)
 
@@ -169,18 +163,12 @@ func Test_BuildState_BuildTargets_one_failure_keep_going(t *testing.T) {
 func Test_BuildState_BuildTargets_add_source(t *testing.T) {
 	// do a full build (all targets missing), then add one source file
 	// and ensure that downstream targets are rebuilt
-	db := db.NewDummyDB()
-	graph, executed := setupBuild(false, false)
-	opts := BuildOptions{}
-	bstate := NewBuildState(graph, db, opts)
-	goal := graph.MakeNodeSet("tool1", "tool2")
-	err := bstate.BuildTargets(goal)
-	assert.Nil(t, err)
+	db, goal, opts := fullBuild(t)
 
 	// feep.h is the new file, a parent of tool1.o: we will rebuild
 	// tool1.o and tool1 (after ensuring that tool1.o is changed by
 	// the rebuild)
-	graph, executed = setupBuild(true, false)
+	graph, executed := setupBuild(true, false)
 	newnode := dag.MakeStubNode(graph, "feep.h")
 	newnode.SetState(dag.SOURCE)
 	child := graph.Lookup("tool1.o").(*dag.StubNode)
@@ -190,36 +178,43 @@ func Test_BuildState_BuildTargets_add_source(t *testing.T) {
 	expect := []buildexpect{
 		{"tool1.o", dag.BUILT},
 		{"tool1", dag.BUILT}}
-	bstate = NewBuildState(graph, db, opts)
-	err = bstate.BuildTargets(goal)
+	bstate := NewBuildState(graph, db, opts)
+	err := bstate.BuildTargets(goal)
+	assert.Nil(t, err)
+	assertBuild(t, graph, expect, *executed)
+}
+
+func Test_BuildState_BuildTargets_remove_source(t *testing.T) {
+	// full build, then remove one source file and ensure that
+	// downstream targets (anything that formerly depended on the
+	// removed file) are rebuilt
+	db, goal, opts := fullBuild(t)
+
+	// same as setupBuild() does, but without misc.{c,h,o}
+	graph := makeSmallerGraph()
+	setNodeFlags(true, false, graph) // all exist, none changed
+	executed := addTrackingRules(graph)
+	graph.MarkSources()
+
+	// now build with the smaller graph: we should rebuild tool.o
+	// (formerly depended on misc.h) and tool1 (formerly depended on
+	// misc.o)
+	expect := []buildexpect{
+		{"tool1.o", dag.BUILT},
+		{"tool1", dag.BUILT},
+	}
+	bstate := NewBuildState(graph, db, opts)
+	err := bstate.BuildTargets(goal)
 	assert.Nil(t, err)
 	assertBuild(t, graph, expect, *executed)
 }
 
 func setupBuild(exists, changed bool) (*dag.DAG, *[]string) {
 	graph := makeSimpleGraph()
-
-	// add a stub build rule to every target node, so we track when
-	// each rule's Execute() method is called
-	executed := []string{}
-	callback := func(name string) {
-		executed = append(executed, name)
-	}
-	for _, node := range graph.Nodes() {
-		snode := node.(*dag.StubNode)
-		snode.SetExists(exists)
-		snode.SetChanged(changed)
-		if graph.HasParents(node) {
-			rule := dag.MakeStubRule(callback, node)
-			node.SetBuildRule(rule)
-		}
-	}
-
+	setNodeFlags(exists, changed, graph)
+	executed := addTrackingRules(graph)
 	graph.MarkSources()
-
-	// need to return a pointer to the executed slice because
-	// callback() modifies the slice
-	return graph, &executed
+	return graph, executed
 }
 
 func makeSimpleGraph() *dag.DAG {
@@ -243,10 +238,59 @@ func makeSimpleGraph() *dag.DAG {
 	return tdag.Finish()
 }
 
-func setChanged(nodes []dag.Node, changed bool) {
-	for _, node := range nodes {
-		node.(*dag.StubNode).SetChanged(changed)
+func makeSmallerGraph() *dag.DAG {
+	// construct the same graph as makeSimpleGraph(), but minus
+	// misc.{h,c}
+	tdag := dag.NewTestDAG()
+	tdag.Add("tool1", "tool1.o", "util.o")
+	tdag.Add("tool2", "tool2.o", "util.o")
+	tdag.Add("tool1.o", "tool1.c", "util.h")
+	tdag.Add("util.o", "util.h", "util.c")
+	tdag.Add("tool2.o", "tool2.c", "util.h")
+	tdag.Add("tool1.c")
+	tdag.Add("util.h")
+	tdag.Add("util.c")
+	tdag.Add("tool2.c")
+	return tdag.Finish()
+}
+
+func setNodeFlags(exists, changed bool, graph *dag.DAG) {
+	for _, node := range graph.Nodes() {
+		snode := node.(*dag.StubNode)
+		snode.SetExists(exists)
+		snode.SetChanged(changed)
 	}
+}
+
+// add a stub build rule to every target node, so we track when each
+// rule's Execute() method is called
+func addTrackingRules(graph *dag.DAG) *[]string {
+	executed := []string{}
+	callback := func(name string) {
+		executed = append(executed, name)
+	}
+	for _, node := range graph.Nodes() {
+		if graph.HasParents(node) {
+			rule := dag.MakeStubRule(callback, node)
+			node.SetBuildRule(rule)
+		}
+	}
+	// need to return a pointer to the executed slice because
+	// callback() modifies the slice
+	return &executed
+}
+
+func fullBuild(t *testing.T) (
+	bdb BuildDB, goal *dag.NodeSet, opts BuildOptions) {
+	bdb = db.NewDummyDB()
+	graph, executed := setupBuild(false, false)
+	opts = BuildOptions{}
+	bstate := NewBuildState(graph, bdb, opts)
+	goal = graph.MakeNodeSet("tool1", "tool2")
+	err := bstate.BuildTargets(goal)
+	assert.Nil(t, err)
+	assert.Equal(t, 6, len(*executed))
+	return
 }
 
 func assertBuild(
