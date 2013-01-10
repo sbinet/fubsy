@@ -147,18 +147,18 @@ func (self *BuildState) considerNode(node dag.Node) (
 	}
 	missing := !exists
 
-	var oldparents *db.SourceRecord
+	var record *db.BuildRecord
 	if !missing {
 		// skip DB lookup for missing nodes: the only thing that will
 		// stop us from rebuilding them is a failed parent, and that
 		// check comes later
-		oldparents, err = self.db.LookupParents(node.Name())
+		record, err = self.db.LookupNode(node.Name())
 		if err != nil {
 			return
 		}
-		if oldparents != nil {
+		if record != nil {
 			log.Debug("build", "old parents of %s:", node)
-			log.DebugDump("build", oldparents)
+			log.DebugDump("build", record)
 		}
 	}
 
@@ -166,8 +166,8 @@ func (self *BuildState) considerNode(node dag.Node) (
 	parents := self.graph.ParentNodes(node)
 
 	// Check if any of node's former parents have been removed.
-	if !build && oldparents != nil {
-		build = parentsRemoved(parents, oldparents)
+	if !build && record != nil {
+		build = parentsRemoved(parents, record)
 	}
 
 	for _, parent := range parents {
@@ -178,9 +178,9 @@ func (self *BuildState) considerNode(node dag.Node) (
 			return // no further inspection required
 		}
 
-		var oldsig, newsig []byte
-		if oldparents != nil {
-			oldsig = oldparents.Signature(parent.Name())
+		var oldsig []byte
+		if record != nil {
+			oldsig = record.SourceSignature(parent.Name())
 			if oldsig == nil {
 				// New parent for this node: rebuild unless another
 				// parent is failed/tainted.
@@ -188,42 +188,74 @@ func (self *BuildState) considerNode(node dag.Node) (
 			}
 		}
 
-		// Try to avoid calling parent.Signature(), because it's
-		// likely to do I/O, which is prone to fail, slow, etc.
 		if build {
 			continue
 		}
-		newsig, err = parent.Signature()
+		changed, err = self.parentChanged(parent, pstate, oldsig)
 		if err != nil {
-			// This should not happen: parent should exist and be readable,
-			// since we've already visited it earlier in the build and we
-			// avoid looking at failed/tainted parents.
 			return
 		}
-		changed = parent.Changed(newsig, oldsig)
-		//log.Debug("build", "parent %s: oldsig=%v, newsig=%v, changed=%v",
-		//	parent, oldsig, newsig, changed)
 		if changed {
+			// Do NOT return here: we need to continue inspecting
+			// parents to make sure they don't taint this node with
+			// upstream failure.
 			build = true
-			// Do NOT return here: we need to continue inspecting parents
-			// to make sure they don't taint this node with upstream
-			// failure.
 		}
 	}
 	return
 }
 
-func parentsRemoved(parents []dag.Node, oldparents *db.SourceRecord) bool {
+func parentsRemoved(parents []dag.Node, record *db.BuildRecord) bool {
 	parentset := make(map[string]bool)
 	for _, parent := range parents {
 		parentset[parent.Name()] = true
 	}
-	for _, name := range oldparents.Nodes() {
+	for _, name := range record.Parents() {
 		if !parentset[name] {
 			return true
 		}
 	}
 	return false
+}
+
+func (self *BuildState) parentChanged(
+	parent dag.Node, pstate dag.NodeState, oldsig []byte) (
+	bool, error) {
+
+	var cursig []byte
+	var err error
+	if !(pstate == dag.SOURCE || pstate == dag.BUILT || self.checkAll()) {
+		// parent is an intermediate target that has not been built in
+		// the current run. We don't want the expense of calling
+		// Signature() for target nodes, because people don't normally
+		// modify targets behind their build tool's back. But it might
+		// have been modified by a previous build, in which case we'll
+		// use the signature previously recorded for parent *as a
+		// target*. This can still be fooled by modifying intermediate
+		// targets behind Fubsy's back, but that's what --check-all is
+		// for.
+		precord, err := self.db.LookupNode(parent.Name())
+		if err != nil {
+			return false, err
+		}
+		if precord != nil {
+			cursig = precord.TargetSignature()
+		}
+	}
+
+	if cursig == nil {
+		cursig, err = parent.Signature()
+		if err != nil {
+			// This should not happen: parent should exist and be readable,
+			// since we've already visited it earlier in the build and we
+			// avoid looking at failed/tainted parents.
+			return false, err
+		}
+	}
+	changed := parent.Changed(cursig, oldsig)
+	//log.Verbose("parent %s: oldsig=%v, cursig=%v, changed=%v",
+	//	parent, oldsig, cursig, changed)
+	return changed, nil
 }
 
 // Build the specified node (caller has determined that it should be
@@ -259,15 +291,21 @@ func (self *BuildState) reportFailure(errs []error) {
 }
 
 func (self *BuildState) recordNode(node dag.Node) error {
-	record := db.NewSourceRecord()
+	sig, err := node.Signature()
+	if err != nil {
+		return err
+	}
+
+	record := db.NewBuildRecord()
+	record.SetTargetSignature(sig)
 	for _, parent := range self.graph.ParentNodes(node) {
-		sig, err := parent.Signature()
+		sig, err = parent.Signature()
 		if err != nil {
 			return err
 		}
-		record.AddNode(parent.Name(), sig)
+		record.AddParent(parent.Name(), sig)
 	}
-	err := self.db.WriteParents(node.Name(), record)
+	err = self.db.WriteNode(node.Name(), record)
 	if err != nil {
 		return err
 	}

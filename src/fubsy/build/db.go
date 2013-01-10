@@ -11,12 +11,14 @@ import (
 // Interfaces for the Fubsy build database.
 
 type BuildDB interface {
-	// lookup the source signatures of the specified node as recorded
-	// in the database when that node was last successfully built
-	LookupParents(name string) (*db.SourceRecord, error)
+	// lookup everything we know about the specified name from the
+	// last time it was successfully built: the signature of the built
+	// node, the list of parents it was built from, and their
+	// signatures
+	LookupNode(nodename string) (*db.BuildRecord, error)
 
 	// record the source signatures of the specified node for use by
 	// future builds (should only be called after successfully
 	// building that node)
-	WriteParents(name string, record *db.SourceRecord) error
+	WriteNode(nodename string, record *db.BuildRecord) error
 }

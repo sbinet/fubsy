@@ -335,11 +335,12 @@ func addTrackingRules(graph *dag.DAG) *[]string {
 func makeDummyDB(graph *dag.DAG, sig []byte) BuildDB {
 	var bdb BuildDB = db.NewDummyDB()
 	for _, node := range graph.Nodes() {
-		record := db.NewSourceRecord()
+		record := db.NewBuildRecord()
+		record.SetTargetSignature(sig)
 		for _, parent := range graph.ParentNodes(node) {
-			record.AddNode(parent.Name(), sig)
+			record.AddParent(parent.Name(), sig)
 		}
-		bdb.WriteParents(node.Name(), record)
+		bdb.WriteNode(node.Name(), record)
 	}
 	return bdb
 }

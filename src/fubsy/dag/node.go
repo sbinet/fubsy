@@ -174,6 +174,9 @@ func (self *nodebase) BuildRule() BuildRule {
 }
 
 func (self *nodebase) Changed(oldsig, newsig []byte) bool {
+	if oldsig == nil || newsig == nil {
+		panic("node signatures must not be nil")
+	}
 	return !bytes.Equal(oldsig, newsig)
 }
 

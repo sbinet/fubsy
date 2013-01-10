@@ -7,16 +7,16 @@ package db
 // In-memory implementation of BuildDB. Fully functional but not
 // persistent, so only suitable for use in test code.
 type DummyDB struct {
-	parents map[string]*SourceRecord
+	parents map[string]*BuildRecord
 }
 
 func NewDummyDB() *DummyDB {
 	return &DummyDB{
-		parents: make(map[string]*SourceRecord),
+		parents: make(map[string]*BuildRecord),
 	}
 }
 
-func (self *DummyDB) LookupParents(name string) (*SourceRecord, error) {
+func (self *DummyDB) LookupNode(name string) (*BuildRecord, error) {
 	match, ok := self.parents[name]
 	if !ok {
 		return nil, nil
@@ -24,7 +24,8 @@ func (self *DummyDB) LookupParents(name string) (*SourceRecord, error) {
 	return match, nil
 }
 
-func (self *DummyDB) WriteParents(name string, record *SourceRecord) error {
+func (self *DummyDB) WriteNode(name string, record *BuildRecord) error {
+	record.check()
 	self.parents[name] = record
 	return nil
 }

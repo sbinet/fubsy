@@ -12,24 +12,24 @@ import (
 )
 
 func Test_Record_basics(t *testing.T) {
-	record := NewSourceRecord()
-	assert.True(t, record.Signature("foo") == nil)
-	assert.True(t, record.Signature("bar") == nil)
+	record := NewBuildRecord()
+	assert.True(t, record.SourceSignature("foo") == nil)
+	assert.True(t, record.SourceSignature("bar") == nil)
 
-	record.AddNode("foo", []byte{0})
-	record.AddNode("bar", []byte{})
-	sig := record.Signature("foo")
+	record.AddParent("foo", []byte{0})
+	record.AddParent("bar", []byte{})
+	sig := record.SourceSignature("foo")
 	assert.True(t, sig != nil && len(sig) == 1 && sig[0] == 0)
-	sig = record.Signature("bar")
+	sig = record.SourceSignature("bar")
 	assert.True(t, sig != nil && len(sig) == 0)
-	sig = record.Signature("qux")
+	sig = record.SourceSignature("qux")
 	assert.True(t, sig == nil)
 }
 
 func Test_Record_Dump(t *testing.T) {
-	record := NewSourceRecord()
-	record.AddNode("foo/bar/baz", []byte{0x00, 0xff, 0x1e, 0x1f})
-	record.AddNode("m! b.*?/...", []byte{})
+	record := NewBuildRecord()
+	record.AddParent("foo/bar/baz", []byte{0x00, 0xff, 0x1e, 0x1f})
+	record.AddParent("m! b.*?/...", []byte{})
 
 	writer := &bytes.Buffer{}
 	record.Dump(writer, "%%")
