@@ -11,12 +11,47 @@ package log
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	stdlog "log"
 	"os"
 	"runtime"
+	"strings"
 )
+
+type Topic uint
+
+const (
+	AST Topic = 1 << iota
+	DAG
+	PLUGINS
+	BUILD
+)
+
+type topicname struct {
+	val  Topic
+	name string
+}
+
+var topicnames []topicname
+
+func init() {
+	topicnames = []topicname{
+		{AST, "ast"},
+		{DAG, "dag"},
+		{PLUGINS, "plugins"},
+		{BUILD, "build"},
+	}
+}
+
+func TopicNames() []string {
+	names := make([]string, len(topicnames))
+	for i, tn := range topicnames {
+		names[i] = tn.name
+	}
+	return names
+}
 
 type Logger struct {
 	// use a pointer because Logger has a mutex, and mutexes mustn't
@@ -24,7 +59,7 @@ type Logger struct {
 	stdlog *stdlog.Logger
 
 	// set of debug topics enabled by the user
-	debug map[string]bool
+	debug Topic
 
 	// verbosity level specified by the user: 0 is quiet, 1 is normal,
 	// 2 is verbose, 3 is full debug output
@@ -39,22 +74,47 @@ type Dumper interface {
 // with the --debug command-line option: e.g. if the user passes
 // "--debug=foo,bar" then debug messages with topic "foo" or "bar"
 // will be printed; all others wil be suppressed.
-func Debug(topic string, format string, arg ...interface{}) {
+func Debug(topic Topic, format string, arg ...interface{}) {
 	defaultlogger.Debug(topic, format, arg...)
 }
 
 // Print a debugging message related to topic, followed by a stack trace
 // that explains how we got to the code that called DebugStack().
-func DebugStack(topic string, format string, arg ...interface{}) {
+func DebugStack(topic Topic, format string, arg ...interface{}) {
 	defaultlogger.DebugStack(topic, format, arg...)
 }
 
-func DebugDump(topic string, object Dumper) {
+func DebugDump(topic Topic, object Dumper) {
 	defaultlogger.DebugDump(topic, object)
 }
 
-func EnableDebug(topic string) {
-	defaultlogger.debug[topic] = true
+func EnableDebugTopics(names []string) error {
+	bad := []string{}
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		ok := false
+		for _, tn := range topicnames {
+			if tn.name == name {
+				defaultlogger.EnableDebug(tn.val)
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			bad = append(bad, name)
+		}
+	}
+	if len(bad) > 0 {
+		return errors.New("invalid debug topic: " + strings.Join(bad, ", "))
+	}
+	return nil
+}
+
+func EnableDebug(topic Topic) {
+	defaultlogger.EnableDebug(topic)
 }
 
 func SetVerbosity(verbosity uint) {
@@ -82,20 +142,23 @@ func init() {
 func New(output io.Writer) *Logger {
 	return &Logger{
 		stdlog:    stdlog.New(output, "", 0),
-		debug:     make(map[string]bool),
 		verbosity: 1,
 	}
 }
 
-func (self *Logger) Debug(topic string, format string, arg ...interface{}) bool {
-	if self.verbosity >= 3 || self.debug[topic] {
+func (self *Logger) EnableDebug(topic Topic) {
+	self.debug |= topic
+}
+
+func (self *Logger) Debug(topic Topic, format string, arg ...interface{}) bool {
+	if self.debugEnabled(topic) {
 		self.stdlog.Output(2, fmt.Sprintf(format, arg...))
 		return true
 	}
 	return false
 }
 
-func (self *Logger) DebugStack(topic string, format string, arg ...interface{}) bool {
+func (self *Logger) DebugStack(topic Topic, format string, arg ...interface{}) bool {
 	if self.Debug(topic, format, arg...) {
 		depth := 2
 		_, file, line, ok := runtime.Caller(depth)
@@ -109,8 +172,8 @@ func (self *Logger) DebugStack(topic string, format string, arg ...interface{}) 
 	return false
 }
 
-func (self *Logger) DebugDump(topic string, object Dumper) bool {
-	if self.verbosity >= 3 || self.debug[topic] {
+func (self *Logger) DebugDump(topic Topic, object Dumper) bool {
+	if self.debugEnabled(topic) {
 		buf := &bytes.Buffer{}
 		object.Dump(buf, "")
 		//fmt.Fprintln(buf)
@@ -118,6 +181,10 @@ func (self *Logger) DebugDump(topic string, object Dumper) bool {
 		return true
 	}
 	return false
+}
+
+func (self *Logger) debugEnabled(topic Topic) bool {
+	return self.verbosity >= 3 || (self.debug&topic > 0)
 }
 
 func (self *Logger) Verbose(format string, arg ...interface{}) {

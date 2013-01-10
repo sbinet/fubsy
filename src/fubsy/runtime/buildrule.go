@@ -33,8 +33,8 @@ func (self *BuildRule) Execute() ([]dag.Node, []error) {
 	defer stack.Pop()
 
 	self.setLocals(locals)
-	log.Debug("build", "value stack:")
-	log.DebugDump("build", stack)
+	log.Debug(log.BUILD, "value stack:")
+	log.DebugDump(log.BUILD, stack)
 	err := self.action.Execute(stack)
 	return self.targets, err
 }

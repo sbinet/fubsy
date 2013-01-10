@@ -57,7 +57,7 @@ func NewBuildState(graph *dag.DAG, db BuildDB, options BuildOptions) *BuildState
 func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 	// What sort of nodes do we check for changes?
 	self.setChangeStates()
-	log.Debug("build", "building %d targets", targets.Length())
+	log.Debug(log.BUILD, "building %d targets", targets.Length())
 
 	builderr := new(BuildError)
 	visit := func(node dag.Node) error {
@@ -73,7 +73,7 @@ func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 
 		// do we need to build this node? can we?
 		build, tainted, err := self.considerNode(node)
-		log.Debug("build", "node %s: build=%v, tainted=%v err=%v\n",
+		log.Debug(log.BUILD, "node %s: build=%v, tainted=%v err=%v\n",
 			node, build, tainted, err)
 		if err != nil {
 			return err
@@ -157,8 +157,8 @@ func (self *BuildState) considerNode(node dag.Node) (
 			return
 		}
 		if record != nil {
-			log.Debug("build", "old parents of %s:", node)
-			log.DebugDump("build", record)
+			log.Debug(log.BUILD, "old parents of %s:", node)
+			log.DebugDump(log.BUILD, record)
 		}
 	}
 

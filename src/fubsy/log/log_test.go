@@ -13,26 +13,44 @@ import (
 	"github.com/stretchrcom/testify/assert"
 )
 
+func Test_TopicNames(t *testing.T) {
+	names := TopicNames()
+	assert.True(t, len(names) >= 4)
+	assert.Equal(t, "ast", names[0])
+	assert.Equal(t, "build", names[3])
+}
+
+func Test_topic_values(t *testing.T) {
+	assert.Equal(t, 1, int(topicnames[0].val))
+	assert.Equal(t, 2, int(topicnames[1].val))
+	assert.Equal(t, 4, int(topicnames[2].val))
+	assert.Equal(t, 8, int(topicnames[3].val))
+}
+
+func Test_EnableDebugTopics(t *testing.T) {
+	assert.Equal(t, 0, int(defaultlogger.debug))
+	EnableDebugTopics([]string{"ast", "build"})
+	assert.Equal(t, AST|BUILD, defaultlogger.debug)
+	EnableDebugTopics([]string{"  dag", ""})
+	assert.Equal(t, AST|DAG|BUILD, defaultlogger.debug)
+}
+
 func Test_Logger_Debug(t *testing.T) {
 	buf := &bytes.Buffer{}
 	log := New(buf)
-	log.Debug("foo", "1: suppressed")
+	log.Debug(AST, "1: suppressed")
 	log.verbosity = 2
-	log.Debug("qux", "2: still suppressed")
+	log.Debug(DAG, "2: still suppressed")
 	log.verbosity = 3
-	log.Debug("qux", "3: printed")
+	log.Debug(DAG, "3: printed")
 	assertBuffer(t, "3: printed\n", buf)
 
 	log.verbosity = 0
-	log.debug["foo"] = true
-	log.debug["bar"] = true
-	log.Debug("foo", "%d: printed", 4)
-	log.Debug("qux", "%d: still suppressed", 5)
-	log.Debug("bar", "%d: printed", 6)
-	log.Debug("barrr", "7: not printed")
-	log.Debug("foo.bar", "8: not printed")
-	log.Debug("bar.foo", "9: not printed")
-	log.Debug("foo.bar.baz", "10: not printed")
+	log.EnableDebug(AST)
+	log.EnableDebug(BUILD)
+	log.Debug(AST, "%d: printed", 4)
+	log.Debug(DAG, "%d: still suppressed", 5)
+	log.Debug(BUILD, "%d: printed", 6)
 	assertBuffer(t, "4: printed\n6: printed\n", buf)
 }
 
@@ -41,12 +59,12 @@ func Test_Logger_DebugDump(t *testing.T) {
 	buf := &bytes.Buffer{}
 	log := New(buf)
 
-	log.DebugDump("foo", obj)
-	log.DebugDump("bar", obj)
+	log.DebugDump(AST, obj)
+	log.DebugDump(BUILD, obj)
 
-	log.debug["foo"] = true
-	log.DebugDump("foo", obj)
-	log.DebugDump("bar", obj)
+	log.EnableDebug(AST)
+	log.DebugDump(AST, obj)
+	log.DebugDump(BUILD, obj)
 
 	assertBuffer(t,
 		"this is an object dump\nspread over multiple lines\n",

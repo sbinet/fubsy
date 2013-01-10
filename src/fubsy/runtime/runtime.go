@@ -63,7 +63,7 @@ func NewRuntime(
 func (self *Runtime) RunScript() []error {
 	var errors []error
 	for _, plugin := range self.ast.ListPlugins() {
-		log.Debug("plugins", "loading plugin '%s'", strings.Join(plugin, "."))
+		log.Debug(log.PLUGINS, "loading plugin '%s'", strings.Join(plugin, "."))
 	}
 
 	errors = self.runMainPhase()
@@ -193,8 +193,8 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 func (self *Runtime) runBuildPhase() []error {
 	var errors []error
 
-	log.Debug("dag", "initial dag:")
-	log.DebugDump("dag", self.dag)
+	log.Debug(log.DAG, "initial dag:")
+	log.DebugDump(log.DAG, self.dag)
 
 	// eventually we should use the command line to figure out the
 	// user's desired targets... but the default will always be to
@@ -207,8 +207,8 @@ func (self *Runtime) runBuildPhase() []error {
 		return errors
 	}
 	self.dag.MarkSources()
-	log.Debug("dag", "rebuilt dag:")
-	log.DebugDump("dag", self.dag)
+	log.Debug(log.DAG, "rebuilt dag:")
+	log.DebugDump(log.DAG, self.dag)
 
 	db := db.NewDummyDB()
 	bstate := build.NewBuildState(self.dag, db, self.options)

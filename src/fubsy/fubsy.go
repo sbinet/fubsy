@@ -35,8 +35,10 @@ func main() {
 		os.Exit(2)
 	}
 	log.SetVerbosity(args.verbosity)
-	for _, topic := range args.debugTopics {
-		log.EnableDebug(topic)
+	err = log.EnableDebugTopics(args.debugTopics)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "fubsy: error: "+err.Error())
+		os.Exit(2)
 	}
 
 	ast, errors := dsl.Parse(script)
@@ -44,8 +46,8 @@ func main() {
 		panic("ast == nil && len(errors) == 0")
 	}
 	checkErrors("parse error:", errors)
-	log.Debug("ast", "ast:\n")
-	log.DebugDump("ast", ast)
+	log.Debug(log.AST, "ast:\n")
+	log.DebugDump(log.AST, ast)
 
 	rt := runtime.NewRuntime(args.options, script, ast)
 	errors = rt.RunScript()
@@ -54,7 +56,8 @@ func main() {
 
 func usage() {
 	fmt.Printf("Usage: %s [options] [target ...]\n", filepath.Base(os.Args[0]))
-	fmt.Println(`
+	topics := strings.Join(log.TopicNames(), ", ")
+	help := `
 Build out-of-date targets from sources by executing actions defined in
 a build script according to the dependencies between sources and
 targets.
@@ -66,9 +69,10 @@ Options:
   -v, --verbose            print more informative messages
   -q, --quiet              suppress all non-error output
   --debug=TOPIC,...        print detailed debug info about TOPIC: one of
-                           ast, dag, plugins (specify multiple topics as a
-                           comma-separated list)
-`)
+                           ` + topics + `
+                           (specify multiple topics as a comma-separated list)`
+
+	fmt.Println(help)
 }
 
 func parseArgs() args {
@@ -82,7 +86,9 @@ func parseArgs() args {
 	topics := pflag.String("debug", "", "")
 	pflag.Parse()
 	result.targets = pflag.Args()
-	result.debugTopics = strings.Split(*topics, ",")
+	if *topics != "" {
+		result.debugTopics = strings.Split(*topics, ",")
+	}
 
 	// argh: really, we just want a callback for each occurence of -q
 	// or -v, which decrements or increments verbosity
