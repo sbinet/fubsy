@@ -26,13 +26,18 @@ func (self *SourceRecord) Nodes() []string {
 }
 
 func (self *SourceRecord) AddNode(name string, sig []byte) {
+	if sig == nil {
+		panic("nil signatures not allowed")
+	}
 	self.nodes = append(self.nodes, name)
 	self.signature[name] = sig
 }
 
-func (self SourceRecord) Contains(name string) bool {
-	_, ok := self.signature[name]
-	return ok
+// Return the source signature for the specified node in this record,
+// or nil if that node is not in this record. (It's impossible to
+// store a nil signature.)
+func (self SourceRecord) Signature(name string) []byte {
+	return self.signature[name]
 }
 
 func (self SourceRecord) Dump(writer io.Writer, indent string) {

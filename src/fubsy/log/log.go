@@ -113,7 +113,7 @@ func (self *Logger) DebugDump(topic string, object Dumper) bool {
 	if self.verbosity >= 3 || self.debug[topic] {
 		buf := &bytes.Buffer{}
 		object.Dump(buf, "")
-		fmt.Fprintln(buf)
+		//fmt.Fprintln(buf)
 		self.stdlog.Output(2, string(buf.Bytes()))
 		return true
 	}

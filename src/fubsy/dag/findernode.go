@@ -157,11 +157,6 @@ func (self *FinderNode) Signature() ([]byte, error) {
 		"(graph should have been rebuilt by this point)")
 }
 
-func (self *FinderNode) Changed() (bool, error) {
-	panic("Changed() should never be called on a FinderNode " +
-		"(graph should have been rebuilt by this point)")
-}
-
 // Wildcard expansion -- nothing past here has anything to do with
 // FuObject, Node, FinderNode, or any of that high-level stuff. It's
 // purely about filename patterns and walking the filesystem.

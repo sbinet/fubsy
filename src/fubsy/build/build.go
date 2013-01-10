@@ -170,9 +170,6 @@ func (self *BuildState) considerNode(node dag.Node) (
 		build = parentsRemoved(parents, oldparents)
 	}
 
-	// XXX modify parent.Changed() to compare against previous signature
-	// (need test case)
-
 	for _, parent := range parents {
 		pstate := parent.State()
 		if pstate == dag.FAILED || pstate == dag.TAINTED {
@@ -181,24 +178,31 @@ func (self *BuildState) considerNode(node dag.Node) (
 			return // no further inspection required
 		}
 
-		if oldparents != nil && !oldparents.Contains(parent.Name()) {
-			// New parent for this node: rebuild unless another parent
-			// is failed/tainted.
-			build = true
+		var oldsig, newsig []byte
+		if oldparents != nil {
+			oldsig = oldparents.Signature(parent.Name())
+			if oldsig == nil {
+				// New parent for this node: rebuild unless another
+				// parent is failed/tainted.
+				build = true
+			}
 		}
 
-		// Try to avoid calling parent.Changed(), because it's likely
-		// to do I/O, which is prone to fail, slow, etc.
-		if build || !self.changestates[pstate] {
+		// Try to avoid calling parent.Signature(), because it's
+		// likely to do I/O, which is prone to fail, slow, etc.
+		if build {
 			continue
 		}
-		changed, err = parent.Changed()
+		newsig, err = parent.Signature()
 		if err != nil {
 			// This should not happen: parent should exist and be readable,
 			// since we've already visited it earlier in the build and we
 			// avoid looking at failed/tainted parents.
 			return
 		}
+		changed = parent.Changed(newsig, oldsig)
+		//log.Debug("build", "parent %s: oldsig=%v, newsig=%v, changed=%v",
+		//	parent, oldsig, newsig, changed)
 		if changed {
 			build = true
 			// Do NOT return here: we need to continue inspecting parents
@@ -228,8 +232,7 @@ func parentsRemoved(parents []dag.Node, oldparents *db.SourceRecord) bool {
 // true.
 func (self *BuildState) buildNode(node dag.Node, builderr *BuildError) bool {
 	rule := node.BuildRule()
-	log.Verbose("building node %s, action=%s\n",
-		node, rule.ActionString())
+	log.Verbose("building node %s, action=%s\n", node, rule.ActionString())
 	node.SetState(dag.BUILDING)
 	builderr.attempts++
 	targets, errs := rule.Execute()

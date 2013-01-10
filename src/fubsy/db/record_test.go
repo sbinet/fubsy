@@ -13,14 +13,17 @@ import (
 
 func Test_Record_basics(t *testing.T) {
 	record := NewSourceRecord()
-	assert.False(t, record.Contains("foo"))
-	assert.False(t, record.Contains("bar"))
+	assert.True(t, record.Signature("foo") == nil)
+	assert.True(t, record.Signature("bar") == nil)
 
-	record.AddNode("foo", nil)
+	record.AddNode("foo", []byte{0})
 	record.AddNode("bar", []byte{})
-	assert.True(t, record.Contains("foo"))
-	assert.True(t, record.Contains("bar"))
-	assert.False(t, record.Contains("qux"))
+	sig := record.Signature("foo")
+	assert.True(t, sig != nil && len(sig) == 1 && sig[0] == 0)
+	sig = record.Signature("bar")
+	assert.True(t, sig != nil && len(sig) == 0)
+	sig = record.Signature("qux")
+	assert.True(t, sig == nil)
 }
 
 func Test_Record_Dump(t *testing.T) {

@@ -5,6 +5,7 @@
 package dag
 
 import (
+	"bytes"
 	"errors"
 
 	"fubsy/types"
@@ -106,9 +107,10 @@ type Node interface {
 	// a combination of such data)
 	Signature() ([]byte, error)
 
-	// return true if this node has changed since the last build where
-	// it was relevant
-	Changed() (bool, error)
+	// return true if the two signatures are different, which
+	// indicates that this node has changed since the previous build
+	// of some unspecified target
+	Changed(oldsig, newsig []byte) bool
 
 	SetState(state NodeState)
 
@@ -135,7 +137,7 @@ type BuildRule interface {
 // to take care of:
 //   Equal()
 //   Exists()
-//   Changed()
+//   Signature()
 
 type nodebase struct {
 	_id   int
@@ -171,6 +173,10 @@ func (self *nodebase) BuildRule() BuildRule {
 	return self.rule
 }
 
+func (self *nodebase) Changed(oldsig, newsig []byte) bool {
+	return !bytes.Equal(oldsig, newsig)
+}
+
 func (self *nodebase) SetState(state NodeState) {
 	self.state = state
 }
@@ -194,16 +200,16 @@ func (self *nodebase) CommandString() string {
 
 type StubNode struct {
 	nodebase
-	exists  bool
-	changed bool
+	exists bool
+	sig    []byte
 }
 
 func (self *StubNode) SetExists(exists bool) {
 	self.exists = exists
 }
 
-func (self *StubNode) SetChanged(changed bool) {
-	self.changed = changed
+func (self *StubNode) SetSignature(sig []byte) {
+	self.sig = sig
 }
 
 func (self *StubNode) Typename() string {
@@ -229,11 +235,7 @@ func (self *StubNode) Expand(ns types.Namespace) (types.FuObject, error) {
 }
 
 func (self *StubNode) Signature() ([]byte, error) {
-	return []byte{0xDE, 0xAD, 0xBE, 0xEF}, nil
-}
-
-func (self *StubNode) Changed() (bool, error) {
-	return self.changed, nil
+	return self.sig, nil
 }
 
 func (self *StubNode) List() []types.FuObject {
@@ -247,6 +249,7 @@ func (self *StubNode) Add(other types.FuObject) (types.FuObject, error) {
 func NewStubNode(name string) *StubNode {
 	return &StubNode{
 		nodebase: makenodebase(name),
+		sig:      []byte{},
 	}
 }
 
