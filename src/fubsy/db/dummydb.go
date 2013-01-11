@@ -16,6 +16,10 @@ func NewDummyDB() *DummyDB {
 	}
 }
 
+func (self *DummyDB) Close() error {
+	return nil
+}
+
 func (self *DummyDB) LookupNode(name string) (*BuildRecord, error) {
 	match, ok := self.parents[name]
 	if !ok {

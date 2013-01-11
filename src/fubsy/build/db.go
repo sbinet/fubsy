@@ -11,6 +11,9 @@ import (
 // Interfaces for the Fubsy build database.
 
 type BuildDB interface {
+	// release all resources associated with this object
+	Close() error
+
 	// lookup everything we know about the specified name from the
 	// last time it was successfully built: the signature of the built
 	// node, the list of parents it was built from, and their
