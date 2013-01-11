@@ -4,19 +4,17 @@
 Fubsy depends on:
 
   * Go (the gc compiler and associated tools)
+  * Kyoto Cabinet (a database library)
   * some third-party tools and libraries, all written in Go
 
-You must have the Go compiler and tools installed on your system in
-order to build Fubsy. The other dependencies are included directly in
-Fubsy's source control repository, e.g. golex is in
-src/github.com/cznic/golex.
+Of these, the following must be installed on your system in order to
+build Fubsy:
 
-(I used Mercurial subrepos to track third-party dependencies for a
-while, but it's more trouble than it's worth. I think subrepos are
-more appropriate for an organization with many internal projects that
-have to be associated with each other. IMHO subrepos are not a great
-way to track third-party dependencies, especially when those
-dependencies are source-level, small, and quick to build.)
+  * Go
+  * Kyoto Cabinet
+
+The other dependencies are included directly in Fubsy's source control
+repository, e.g. golex is in src/github.com/cznic/golex.
 
 Describing dependencies
 -----------------------
