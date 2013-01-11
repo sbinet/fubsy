@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"bitbucket.org/ww/cabinet"
+
+	"fubsy/log"
 )
 
 type KyotoDB struct {
@@ -40,6 +42,7 @@ func (self KyotoDB) Close() error {
 }
 
 func (self KyotoDB) LookupNode(nodename string) (*BuildRecord, error) {
+	log.Debug(log.DB, "loading record for node %s", nodename)
 	key := nodekey(nodename)
 	val, err := self.kcdb.Get(key)
 
@@ -56,10 +59,12 @@ func (self KyotoDB) LookupNode(nodename string) (*BuildRecord, error) {
 	if err != nil {
 		return nil, err
 	}
+	//log.DebugDump(log.DB, result)
 	return result, nil
 }
 
 func (self KyotoDB) WriteNode(nodename string, record *BuildRecord) error {
+	log.Debug(log.DB, "writing record for node %s", nodename)
 	key := nodekey(nodename)
 	val, err := record.encode()
 	if err != nil {

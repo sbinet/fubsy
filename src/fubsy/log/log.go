@@ -27,6 +27,7 @@ const (
 	DAG
 	PLUGINS
 	BUILD
+	DB
 )
 
 type topicname struct {
@@ -42,6 +43,7 @@ func init() {
 		{DAG, "dag"},
 		{PLUGINS, "plugins"},
 		{BUILD, "build"},
+		{DB, "db"},
 	}
 }
 
