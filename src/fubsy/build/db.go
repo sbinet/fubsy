@@ -14,14 +14,17 @@ type BuildDB interface {
 	// release all resources associated with this object
 	Close() error
 
-	// lookup everything we know about the specified name from the
+	// Lookup everything we know about the specified name from the
 	// last time it was successfully built: the signature of the built
 	// node, the list of parents it was built from, and their
-	// signatures
+	// signatures. Returns nil record if node not found. Non-nil error
+	// is only for real errors, like the database disappeared, is
+	// unreadable, etc.
 	LookupNode(nodename string) (*db.BuildRecord, error)
 
-	// record the source signatures of the specified node for use by
+	// Record the source signatures of the specified node for use by
 	// future builds (should only be called after successfully
-	// building that node)
+	// building that node). Again, non-nil errors is only for serious
+	// database I/O problems.
 	WriteNode(nodename string, record *db.BuildRecord) error
 }

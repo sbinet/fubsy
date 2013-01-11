@@ -49,8 +49,21 @@ func Test_KyotoDB_basics(t *testing.T) {
 		rec1, rec2)
 }
 
+func Test_KyotoDB_lookup_fail(t *testing.T) {
+	// looking up a non-existent key is not an error
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	db, err := OpenKyotoDB("test")
+	assert.Nil(t, err)
+	record, err := db.LookupNode("nosuchnode")
+	assert.Nil(t, record)
+	assert.Nil(t, err)
+}
+
 func Test_KyotoDB_error(t *testing.T) {
-	db, err := OpenKyotoDB("no/such/directory")
+	db, err := OpenKyotoDB("no/such/directory/db")
 	assert.Nil(t, db.kcdb)
-	assert.Equal(t, "no repository", err.Error())
+	assert.Equal(t,
+		"could not open no/such/directory/db.kch: no repository", err.Error())
 }

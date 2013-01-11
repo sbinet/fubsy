@@ -3,6 +3,8 @@ package db
 // Implementation of BuildDB using Kyoto Cabinet
 
 import (
+	"fmt"
+
 	"bitbucket.org/ww/cabinet"
 )
 
@@ -17,12 +19,13 @@ const PREFIX_NODE = "\x00\x00\x00\x01"
 func OpenKyotoDB(basename string) (KyotoDB, error) {
 	db := KyotoDB{}
 	db.kcdb = cabinet.New()
-	err := db.kcdb.Open(
-		basename+".kch", cabinet.KCOWRITER|cabinet.KCOCREATE)
+	filename := basename + ".kch"
+	err := db.kcdb.Open(filename, cabinet.KCOWRITER|cabinet.KCOCREATE)
 	if err != nil {
 		db.kcdb.Del()
 		db.kcdb = nil
-		return db, err
+		// errors returned by KC are pretty sparse ;-(
+		return db, fmt.Errorf("could not open %s: %s", filename, err)
 	}
 	return db, nil
 }
@@ -39,6 +42,12 @@ func (self KyotoDB) Close() error {
 func (self KyotoDB) LookupNode(nodename string) (*BuildRecord, error) {
 	key := nodekey(nodename)
 	val, err := self.kcdb.Get(key)
+
+	// blechh: "no record" shouldn't be an error at all; if it must
+	// be, then it should be distinguished by type
+	if val == nil && (err == nil || err.Error() == "no record") {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
