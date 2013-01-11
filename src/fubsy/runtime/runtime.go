@@ -13,6 +13,7 @@ package runtime
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"fubsy/build"
@@ -210,10 +211,19 @@ func (self *Runtime) runBuildPhase() []error {
 	log.Debug(log.DAG, "rebuilt dag:")
 	log.DebugDump(log.DAG, self.dag)
 
-	db := db.NewDummyDB()
+	err := os.MkdirAll(".fubsy", 0755)
+	if err != nil {
+		errors = append(errors, err)
+		return errors
+	}
+	db, err := db.OpenKyotoDB(".fubsy/buildstate")
+	if err != nil {
+		errors = append(errors, err)
+		return errors
+	}
 	bstate := build.NewBuildState(self.dag, db, self.options)
 	goal = self.dag.FindFinalTargets()
-	err := bstate.BuildTargets(goal)
+	err = bstate.BuildTargets(goal)
 	if err != nil {
 		errors = append(errors, err)
 	}
