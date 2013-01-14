@@ -6,6 +6,8 @@ package dag
 
 import (
 	"fmt"
+	"hash/fnv"
+	"os"
 	"testing"
 
 	"github.com/stretchrcom/testify/assert"
@@ -149,6 +151,55 @@ func Test_FileNode_Exists(t *testing.T) {
 			t.Errorf("%v: expected Exists() false, got true", node)
 		}
 	}
+}
+
+func Test_FileNode_Signature(t *testing.T) {
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	testutils.Mkdirs("d1", "d2")
+	testutils.Mkfile("d1", "empty", "")
+	testutils.Mkfile("d2", "stuff", "foo\n")
+
+	node1 := newFileNode("d1/empty")
+	node2 := newFileNode("d2/stuff")
+	node3 := newFileNode("nonexistent")
+
+	expect := []byte{}
+	hash := fnv.New64a()
+	assert.Equal(t, 8, hash.Size())
+	expect = hash.Sum(expect)
+
+	sig, err := node1.Signature()
+	assert.Nil(t, err)
+	assert.Equal(t, expect, sig)
+
+	hash.Write([]byte{'f', 'o', 'o', '\n'})
+	expect = expect[:0]
+	expect = hash.Sum(expect)
+	sig, err = node2.Signature()
+	assert.Nil(t, err)
+	assert.Equal(t, expect, sig)
+
+	// make sure it's cached, i.e. changes to the file are not seen by
+	// the same FileNode object in the same process
+	testutils.Mkfile("d2", "stuff", "fooo\n")
+	sig, err = node2.Signature()
+	assert.Nil(t, err)
+	assert.Equal(t, expect, sig)
+
+	// in fact, even if the file disappears, we still have its signature
+	err = os.Remove("d2/stuff")
+	if err != nil {
+		panic(err)
+	}
+	sig, err = node2.Signature()
+	assert.Nil(t, err)
+	assert.Equal(t, expect, sig)
+
+	sig, err = node3.Signature()
+	assert.NotNil(t, err)
+	assert.Equal(t, "open nonexistent: no such file or directory", err.Error())
 }
 
 func Benchmark_FileNode_AddParent(b *testing.B) {

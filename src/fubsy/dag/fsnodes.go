@@ -8,6 +8,8 @@ package dag
 
 import (
 	"errors"
+	"hash/fnv"
+	"io"
 	"os"
 	"syscall"
 
@@ -17,6 +19,9 @@ import (
 type FileNode struct {
 	// name: filename (relative to top)
 	nodebase
+
+	// cache the signature so we only compute it once per process
+	sig []byte
 }
 
 // Lookup and return the named file node in dag. If it doesn't exist,
@@ -99,6 +104,27 @@ func (self *FileNode) Changed(oldsig, newsig []byte) bool {
 }
 
 func (self *FileNode) Signature() ([]byte, error) {
-	// placeholder until we have persistent build state
-	return []byte{}, nil
+	if self.sig != nil {
+		return self.sig, nil
+	}
+	file, err := os.Open(self.Name())
+	if err != nil {
+		return nil, err
+	}
+	hash := fnv.New64a()
+	block := hash.BlockSize()
+	data := make([]byte, block)
+	for {
+		nbytes, err := file.Read(data)
+		if nbytes == 0 && err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		hash.Write(data[0:nbytes])
+	}
+	signature := make([]byte, 0, hash.Size())
+	signature = hash.Sum(signature)
+	self.sig = signature
+	return signature, nil
 }
