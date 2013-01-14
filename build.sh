@@ -42,6 +42,7 @@ packages="fubsy/log fubsy/dsl fubsy/types fubsy/dag fubsy/db fubsy/build fubsy/r
 #packages="fubsy/runtime"
 
 run "go install -v -gcflags '-N -l' $packages"
+run "ln -sf fubsy bin/fubsydebug"
 run "go test -v -gcflags '-N -l' -i $packages"
 
 if [ "$coverage" ]; then

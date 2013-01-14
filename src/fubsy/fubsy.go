@@ -28,6 +28,11 @@ type args struct {
 }
 
 func main() {
+	if filepath.Base(os.Args[0]) == "fubsydebug" {
+		debugmain()
+		return
+	}
+
 	args := parseArgs()
 	script, err := findScript(args.scriptFile)
 	if err != nil {
