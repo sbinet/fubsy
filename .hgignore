@@ -4,6 +4,7 @@
 ^y.output$
 ^[a-z]+\.test$
 ^src/fubsy/dsl/fu(grammar|lex)\.go$
+^src/fubsy/db/kyotodb(_test)?\.go$
 ^doc/\.build$
 ^examples/.*/classes$
 ^coverage-

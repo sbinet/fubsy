@@ -13,6 +13,20 @@ fi
 export GOPATH=$PWD
 set -e
 
+kyotodb=src/fubsy/db/kyotodb
+if [ ! -f "$kyotodb.go" ]; then
+    set +e
+    run "pkg-config --silence-errors --cflags kyotocabinet"
+    status=$?
+    set -e
+    if [ $status -eq 0 ]; then
+        run "ln -sf kyotodb.go.real ${kyotodb}.go"
+        run "ln -sf kyotodb_test.go.real ${kyotodb}_test.go"
+    else
+        run "ln -sf kyotodb.go.fake ${kyotodb}.go"
+    fi
+fi
+
 golex=bin/golex
 if [ ! -f $golex ]; then
     run "go install github.com/cznic/golex"
