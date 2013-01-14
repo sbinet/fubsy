@@ -6,6 +6,7 @@ package build
 
 import (
 	"fubsy/db"
+	"fubsy/log"
 )
 
 // Interfaces for the Fubsy build database.
@@ -27,4 +28,6 @@ type BuildDB interface {
 	// building that node). Again, non-nil errors is only for serious
 	// database I/O problems.
 	WriteNode(nodename string, record *db.BuildRecord) error
+
+	log.Dumper
 }

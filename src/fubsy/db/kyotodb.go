@@ -3,7 +3,9 @@ package db
 // Implementation of BuildDB using Kyoto Cabinet
 
 import (
+	"encoding/hex"
 	"fmt"
+	"io"
 
 	"bitbucket.org/ww/cabinet"
 
@@ -46,9 +48,7 @@ func (self KyotoDB) LookupNode(nodename string) (*BuildRecord, error) {
 	key := nodekey(nodename)
 	val, err := self.kcdb.Get(key)
 
-	// blechh: "no record" shouldn't be an error at all; if it must
-	// be, then it should be distinguished by type
-	if val == nil && (err == nil || err.Error() == "no record") {
+	if val == nil && (err == nil || kyotoNoRecord(err)) {
 		return nil, nil
 	}
 	if err != nil {
@@ -77,9 +77,34 @@ func (self KyotoDB) WriteNode(nodename string, record *BuildRecord) error {
 	return nil
 }
 
+func (self KyotoDB) Dump(writer io.Writer, indent string) {
+	curs := self.kcdb.Cursor()
+	defer curs.Del()
+	for {
+		key, value, err := curs.Get(true)
+		if kyotoNoRecord(err) {
+			return
+		} else if err != nil {
+			fmt.Fprintf(writer, "error: %s\n", err)
+			return
+		}
+		// fmt.Fprintf(writer, "%s%x: %x\n", indent, key, value)
+
+		prefix := hex.EncodeToString(key[0:4])
+		key = key[4:]
+		fmt.Fprintf(writer, "%s(%s,%s): %x\n", indent, prefix, key, value)
+	}
+}
+
 func nodekey(name string) []byte {
 	key := make([]byte, 4+len(name))
 	copy(key, PREFIX_NODE)
 	copy(key[4:], name)
 	return key
+}
+
+func kyotoNoRecord(err error) bool {
+	// blechh: "no record" shouldn't be an error at all; if it must
+	// be, then it should be distinguished by type
+	return err != nil && err.Error() == "no record"
 }

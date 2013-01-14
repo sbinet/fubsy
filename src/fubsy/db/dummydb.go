@@ -4,6 +4,11 @@
 
 package db
 
+import (
+	"fmt"
+	"io"
+)
+
 // In-memory implementation of BuildDB. Fully functional but not
 // persistent, so only suitable for use in test code.
 type DummyDB struct {
@@ -32,4 +37,11 @@ func (self *DummyDB) WriteNode(name string, record *BuildRecord) error {
 	record.check()
 	self.parents[name] = record
 	return nil
+}
+
+func (self *DummyDB) Dump(writer io.Writer, indent string) {
+	for node, record := range self.parents {
+		fmt.Fprintf(writer, "%s%s:\n", indent, node)
+		record.Dump(writer, indent+"  ")
+	}
 }
