@@ -49,6 +49,35 @@ func Test_KyotoDB_basics(t *testing.T) {
 		rec1, rec2)
 }
 
+func Test_KyotoDB_key_prefix(t *testing.T) {
+	// make sure we write the key exactly as expected, byte-for-byte
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	db, err := OpenKyotoDB("test1")
+	assert.NotNil(t, db.kcdb)
+	assert.Nil(t, err)
+
+	rec1 := NewBuildRecord()
+	rec1.SetTargetSignature([]byte{})
+	db.WriteNode("f", rec1)
+	db.WriteNode("foobar", rec1)
+	db.WriteNode("foo", rec1)
+
+	keychan := db.kcdb.Keys()
+	keys := [][]byte{
+		<-keychan,
+		<-keychan,
+		<-keychan,
+	}
+	// hmmm: does Kyoto Cabinet guarantee key order? it seems to
+	// preserve insertion order from what I can tell, but I'm not
+	// sure if that's reliable
+	assert.Equal(t, []byte{0, 0, 0, 1, 'f'}, keys[0])
+	assert.Equal(t, []byte{0, 0, 0, 1, 'f', 'o', 'o', 'b', 'a', 'r'}, keys[1])
+	assert.Equal(t, []byte{0, 0, 0, 1, 'f', 'o', 'o'}, keys[2])
+}
+
 func Test_KyotoDB_lookup_fail(t *testing.T) {
 	// looking up a non-existent key is not an error
 	cleanup := testutils.Chtemp()

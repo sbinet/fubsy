@@ -80,6 +80,6 @@ func (self KyotoDB) WriteNode(nodename string, record *BuildRecord) error {
 func nodekey(name string) []byte {
 	key := make([]byte, 4+len(name))
 	copy(key, PREFIX_NODE)
-	copy(key, name)
+	copy(key[4:], name)
 	return key
 }
