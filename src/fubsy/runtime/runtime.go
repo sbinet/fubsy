@@ -216,7 +216,7 @@ func (self *Runtime) runBuildPhase() []error {
 		errors = append(errors, err)
 		return errors
 	}
-	db, err := db.OpenKyotoDB(".fubsy/buildstate", true)
+	db, err := db.OpenKyotoDB(".fubsy/buildstate.kch", true)
 	if err != nil {
 		errors = append(errors, err)
 		return errors
