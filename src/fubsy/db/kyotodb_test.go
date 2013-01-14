@@ -12,7 +12,7 @@ func Test_KyotoDB_basics(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
-	db, err := OpenKyotoDB("test1")
+	db, err := OpenKyotoDB("test1", true)
 	assert.NotNil(t, db.kcdb)
 	assert.Nil(t, err)
 
@@ -40,7 +40,7 @@ func Test_KyotoDB_basics(t *testing.T) {
 	err = db.Close()
 	assert.Nil(t, err)
 
-	db, err = OpenKyotoDB("test1")
+	db, err = OpenKyotoDB("test1", false) // open read-only
 	assert.Nil(t, err)
 	rec2, err = db.LookupNode("node0")
 	assert.Nil(t, err)
@@ -54,7 +54,7 @@ func Test_KyotoDB_key_prefix(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
-	db, err := OpenKyotoDB("test1")
+	db, err := OpenKyotoDB("test1", true)
 	assert.NotNil(t, db.kcdb)
 	assert.Nil(t, err)
 
@@ -83,7 +83,7 @@ func Test_KyotoDB_lookup_fail(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
-	db, err := OpenKyotoDB("test")
+	db, err := OpenKyotoDB("test", true)
 	assert.Nil(t, err)
 	record, err := db.LookupNode("nosuchnode")
 	assert.Nil(t, record)
@@ -91,7 +91,8 @@ func Test_KyotoDB_lookup_fail(t *testing.T) {
 }
 
 func Test_KyotoDB_error(t *testing.T) {
-	db, err := OpenKyotoDB("no/such/directory/db")
+	// cannot create a DB in a non-existent directory
+	db, err := OpenKyotoDB("no/such/directory/db", true)
 	assert.Nil(t, db.kcdb)
 	assert.Equal(t,
 		"could not open no/such/directory/db.kch: no repository", err.Error())

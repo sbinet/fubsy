@@ -47,7 +47,7 @@ func dumpdb(args []string) error {
 	if len(args) != 1 {
 		return UsageError{"dumpdb filename", "wrong number of arguments"}
 	}
-	bdb, err := db.OpenKyotoDB(args[0])
+	bdb, err := db.OpenKyotoDB(args[0], false)
 	if err != nil {
 		return err
 	}

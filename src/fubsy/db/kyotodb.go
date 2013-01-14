@@ -20,11 +20,15 @@ type KyotoDB struct {
 const PREFIX_META = "\x00\x00\x00\x00"
 const PREFIX_NODE = "\x00\x00\x00\x01"
 
-func OpenKyotoDB(basename string) (KyotoDB, error) {
+func OpenKyotoDB(basename string, writemode bool) (KyotoDB, error) {
 	db := KyotoDB{}
 	db.kcdb = cabinet.New()
 	filename := basename + ".kch"
-	err := db.kcdb.Open(filename, cabinet.KCOWRITER|cabinet.KCOCREATE)
+	mode := cabinet.KCOREADER
+	if writemode {
+		mode = cabinet.KCOWRITER | cabinet.KCOCREATE
+	}
+	err := db.kcdb.Open(filename, mode)
 	if err != nil {
 		db.kcdb.Del()
 		db.kcdb = nil
