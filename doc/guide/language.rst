@@ -92,7 +92,7 @@ equivalent build script::
         remove("junkfile")
     }
 
-.. note:: Don't expect this to work with Fubsy 0.0.1. The parser
+.. note:: Don't expect this to work with Fubsy 0.0.2. The parser
           supports all of the syntax shown here, but almost none of
           the required backend code has been implemented yet.
 
@@ -181,7 +181,7 @@ script::
 Precisely what a plugin provides is entirely up to the plugin.
 
 .. note:: Apart from syntactic support, this is completely
-          unimplemented in Fubsy 0.0.1.
+          unimplemented in Fubsy 0.0.2.
 
 Inline plugins
 --------------
@@ -222,7 +222,7 @@ the build script directly. See the example above, under "Top-level
 elements".
 
 .. note:: Apart from syntactic support, this is completely
-          unimplemented in Fubsy 0.0.1.
+          unimplemented in Fubsy 0.0.2.
 
 Phases
 ------
