@@ -60,6 +60,9 @@ type Logger struct {
 	// be copied
 	stdlog *stdlog.Logger
 
+	// stream to write warning/error messages to
+	stderr io.Writer
+
 	// set of debug topics enabled by the user
 	debug Topic
 
@@ -135,6 +138,12 @@ func Info(format string, arg ...interface{}) {
 	defaultlogger.Info(format, arg...)
 }
 
+// Print a warning message to stderr, prefixed with "warning: ". Warnings
+// cannot be suppressed.
+func Warning(format string, arg ...interface{}) {
+	defaultlogger.Warning(format, arg...)
+}
+
 var defaultlogger *Logger
 
 func init() {
@@ -144,6 +153,7 @@ func init() {
 func New(output io.Writer) *Logger {
 	return &Logger{
 		stdlog:    stdlog.New(output, "", 0),
+		stderr:    os.Stderr,
 		verbosity: 1,
 	}
 }
@@ -199,4 +209,8 @@ func (self *Logger) Info(format string, arg ...interface{}) {
 	if self.verbosity >= 1 {
 		self.stdlog.Output(2, fmt.Sprintf(format, arg...))
 	}
+}
+
+func (self *Logger) Warning(format string, arg ...interface{}) {
+	fmt.Fprintf(self.stderr, "fubsy: warning: "+format+"\n", arg...)
 }

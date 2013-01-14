@@ -211,23 +211,40 @@ func (self *Runtime) runBuildPhase() []error {
 	log.Debug(log.DAG, "rebuilt dag:")
 	log.DebugDump(log.DAG, self.dag)
 
-	err := os.MkdirAll(".fubsy", 0755)
+	bdb, err := openBuildDB()
 	if err != nil {
 		errors = append(errors, err)
 		return errors
 	}
-	db, err := db.OpenKyotoDB(".fubsy/buildstate.kch", true)
-	if err != nil {
-		errors = append(errors, err)
-		return errors
-	}
-	bstate := build.NewBuildState(self.dag, db, self.options)
+
+	bstate := build.NewBuildState(self.dag, bdb, self.options)
 	goal = self.dag.FindFinalTargets()
 	err = bstate.BuildTargets(goal)
 	if err != nil {
 		errors = append(errors, err)
 	}
 	return errors
+}
+
+func openBuildDB() (build.BuildDB, error) {
+	var bdb build.BuildDB
+	var err error
+
+	err = os.MkdirAll(".fubsy", 0755)
+	if err != nil {
+		return nil, err
+	}
+
+	bdb, err = db.OpenKyotoDB(".fubsy/buildstate.kch", true)
+	if _, ok := err.(db.NotAvailableError); ok {
+		bdb = db.NewDummyDB()
+		err = nil
+		log.Warning(
+			"no database libraries available; build state will not be saved")
+	} else if err != nil {
+		return nil, err
+	}
+	return bdb, nil
 }
 
 func unsupportedAST(node dsl.ASTNode) error {
