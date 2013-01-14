@@ -91,11 +91,23 @@ func (self KyotoDB) Dump(writer io.Writer, indent string) {
 			fmt.Fprintf(writer, "error: %s\n", err)
 			return
 		}
-		// fmt.Fprintf(writer, "%s%x: %x\n", indent, key, value)
 
-		prefix := hex.EncodeToString(key[0:4])
-		key = key[4:]
-		fmt.Fprintf(writer, "%s(%s,%s): %x\n", indent, prefix, key, value)
+		prefix := key[0:4]
+		fmt.Fprintf(writer, "%s(%s,%s):\n",
+			indent, hex.EncodeToString(prefix), key[4:])
+		fmt.Fprintf(writer, "%s  raw: %x\n",
+			indent, value)
+		switch string(prefix) {
+		case PREFIX_NODE:
+			record := BuildRecord{}
+			err = record.decode(value)
+			if err != nil {
+				fmt.Fprintf(writer, "%s  decode error: %s\n", indent, err)
+			} else {
+				fmt.Fprintln(writer, "decoded:")
+				record.Dump(writer, indent+"  ")
+			}
+		}
 	}
 }
 

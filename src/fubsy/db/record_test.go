@@ -133,12 +133,15 @@ func Test_Record_Dump(t *testing.T) {
 	record := NewBuildRecord()
 	record.AddParent("foo/bar/baz", []byte{0x00, 0xff, 0x1e, 0x1f})
 	record.AddParent("m! b.*?/...", []byte{})
+	record.SetTargetSignature([]byte{0x30, 0xa0, 0xff})
 
 	writer := &bytes.Buffer{}
 	record.Dump(writer, "%%")
 	expect := `
-%%foo/bar/baz                              {00ff1e1f}
-%%m! b.*?/...                              {}
+%%target signature: {30a0ff}
+%%source signatures:
+%%  foo/bar/baz                              {00ff1e1f}
+%%  m! b.*?/...                              {}
 `[1:]
 	actual := string(writer.Bytes())
 	if expect != actual {

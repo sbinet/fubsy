@@ -161,8 +161,11 @@ func (self *BuildRecord) decode(data []byte) error {
 }
 
 func (self BuildRecord) Dump(writer io.Writer, indent string) {
+	fmt.Fprintf(writer, "%starget signature: {%s}\n",
+		indent, hex.EncodeToString(self.tsig))
+	fmt.Fprintf(writer, "%ssource signatures:\n", indent)
 	for _, name := range self.parents {
 		sig := hex.EncodeToString(self.ssig[name])
-		fmt.Fprintf(writer, "%s%-40s {%s}\n", indent, name, sig)
+		fmt.Fprintf(writer, "%s  %-40s {%s}\n", indent, name, sig)
 	}
 }
