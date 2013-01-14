@@ -202,6 +202,31 @@ func Test_FileNode_Signature(t *testing.T) {
 	assert.Equal(t, "open nonexistent: no such file or directory", err.Error())
 }
 
+func Test_FileNode_Changed(t *testing.T) {
+	// this is really a test of Signature() + Changed() together, because
+	// Changed() itself is so trivial that testing it is no challenge
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	testutils.Mkfile(".", "stuff.txt", "blah blah blah\n")
+	node := newFileNode("stuff.txt")
+	osig, err := node.Signature()
+	assert.Nil(t, err)
+
+	// construct a new FileNode so the cache is lost
+	node = newFileNode("stuff.txt")
+	nsig, err := node.Signature()
+	assert.Nil(t, err)
+	assert.False(t, node.Changed(osig, nsig))
+
+	// modify the file and repeat
+	testutils.Mkfile(".", "stuff.txt", "blah blah blah\nblah")
+	node = newFileNode("stuff.txt")
+	nsig, err = node.Signature()
+	assert.Nil(t, err)
+	assert.True(t, node.Changed(osig, nsig))
+}
+
 func Benchmark_FileNode_AddParent(b *testing.B) {
 	b.StopTimer()
 	dag := NewDAG()
