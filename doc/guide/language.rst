@@ -96,13 +96,11 @@ equivalent build script::
           supports all of the syntax shown here, but almost none of
           the required backend code has been implemented yet.
 
-.. note:: There's no provision for builds with multiple build scripts
-          (aka "hierarchical builds") yet. I'm leaning towards a
-          simple ``include FILENAME`` syntax (like Make), with
-          automatic reinterpretation of filenames in child scripts
-          (like SCons). Join the `fubsydev mailing list
-          <http://fubsy.gerg.ca/lists/>`_ if you want to help shape
-          the design of Fubsy!
+.. note:: One more top-level element is planned for the future:
+          ``include``. I think that's how Fubsy will support
+          hierarchical (multi-directory) builds. Join the `fubsydev
+          mailing list <http://fubsy.gerg.ca/lists/>`_ if you want to
+          help shape the design of Fubsy!
 
 (Some) whitespace is significant
 --------------------------------
@@ -301,7 +299,7 @@ Thus, build rules *are* a scoping mechanism. But they are primarily a
 means for you to write code that isn't run until the *build* phase,
 and only runs if any of the rule's targets are stale or missing.
 
-A future version of Fubsy will support hierarchical builds where a
+A future version of Fubsy will support hierarchical builds, where a
 top-level build script includes child scripts for building code in
 subdirectories. When that happens, Fubsy will also grow support for
 global variables that are visible to all scripts in the same process.
