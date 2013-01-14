@@ -5,12 +5,7 @@ Now that we've seen four small but realistic examples, this is a good
 time to delve into how Fubsy really works: what exactly is going on
 behind the scenes in these build scripts?
 
-.. note:: This section is mostly accurate as of Fubsy 0.0.1. Fubsy
-          currently has no memory of previous builds, so it always
-          thinks that all files have changed. That means that
-          incremental builds aren't actually incremental. All of the
-          code *except* for determining what has changed is written
-          and tested, though, so things are looking pretty good here.
+.. note:: This section is mostly accurate as of Fubsy 0.0.2.
 
 The dependency graph
 --------------------

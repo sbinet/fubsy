@@ -6,9 +6,7 @@ Enough with the vague promises; let's see some code.
 C the naive way
 ---------------
 
-.. note:: As of Fubsy 0.0.1, this mostly works! (Fubsy currently has
-          no memory of previous builds, so it always thinks that all
-          files have changed.)
+.. note:: As of Fubsy 0.0.2, this works!
 
 Here is a naive build script for that simple C project above::
 
