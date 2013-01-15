@@ -216,6 +216,7 @@ func (self *Runtime) runBuildPhase() []error {
 		errors = append(errors, err)
 		return errors
 	}
+	defer bdb.Close()
 
 	bstate := build.NewBuildState(self.dag, bdb, self.options)
 	goal = self.dag.FindFinalTargets()
