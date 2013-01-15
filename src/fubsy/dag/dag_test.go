@@ -33,6 +33,65 @@ func Test_DAG_add_lookup(t *testing.T) {
 	assert.Nil(t, dag.Lookup("bar"))
 }
 
+func Test_DAG_MatchTargets(t *testing.T) {
+	tdag := NewTestDAG()
+	tdag.Add("foo/bar1", "s1", "s2", "s3")
+	tdag.Add("foo/bar2", "s2")
+	tdag.Add("bar/foo1", "s1", "s2")
+	tdag.Add("bar/foox", "s1", "s3")
+	tdag.Add("final", "foo/bar1", "foo/bar2", "bar/foo1", "bar/foox")
+	tdag.Add("s1")
+	tdag.Add("s2")
+	tdag.Add("s3")
+	dag := tdag.Finish()
+
+	tests := []struct {
+		name   string
+		expect string
+		errmsg string
+	}{
+		{"final", "{4}", ""},
+		{"fo", "{}", "no targets found matching 'fo'"},
+		{"f", "{}", "no targets found matching 'f'"},
+		{"foo", "{0,1}", ""},
+		{"foo/", "{0,1}", ""},
+		{"foo/bar", "{}", "no targets found matching 'foo/bar'"},
+		{"foo/bar1", "{0}", ""},
+		{"s1", "{}", "not a target: 's1'"},
+		{"s", "{}", "no targets found matching 's'"},
+	}
+	for _, test := range tests {
+		match, errs := dag.MatchTargets([]string{test.name})
+		if test.errmsg == "" {
+			assert.Equal(t, 0, len(errs),
+				"expected no errors, but got %v", errs)
+			actual := match.String()
+			assert.Equal(t, test.expect, actual)
+		} else {
+			if len(errs) == 1 {
+				assert.Equal(t, test.errmsg, errs[0].Error())
+			} else {
+				t.Errorf(
+					"target prefix %s: expected exactly one error, but got %v",
+					test.name, errs)
+			}
+		}
+	}
+
+	// Now make sure that passing multiple patterns can return
+	// multiple errors.
+	match, errs := dag.MatchTargets(
+		[]string{"foo/", "bar/foo", "s2", "final", "s"})
+	assert.Equal(t, "{0,1,4}", match.String())
+	if len(errs) == 3 {
+		assert.Equal(t, "no targets found matching 'bar/foo'", errs[0].Error())
+		assert.Equal(t, "not a target: 's2'", errs[1].Error())
+		assert.Equal(t, "no targets found matching 's'", errs[2].Error())
+	} else {
+		t.Errorf("expected 3 errors, but got %d:\n%v", len(errs), errs)
+	}
+}
+
 func Test_DAG_FindFinalTargets(t *testing.T) {
 	dag := makeSimpleGraph()
 	targets := (*bit.Set)(dag.FindFinalTargets())

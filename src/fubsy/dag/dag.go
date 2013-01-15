@@ -35,6 +35,7 @@ package dag
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -202,6 +203,55 @@ func (self *DAG) Dump(writer io.Writer, indent string) {
 			}
 		}
 	}
+}
+
+// Return the set of nodes in this graph that match the names in
+// targets. If targets is nil or empty, return all final targets
+// (nodes with no children). Otherwise, for each name in targets, find
+// the node with that name. If no such node, find all nodes whose
+// names start with that name (in the pathname sense: "foo/bar" starts
+// with "foo", but not with "f"). Each target name with no matches
+// will result in one error object being appended to the returned
+// slice of errors.
+func (self *DAG) MatchTargets(targets []string) (*NodeSet, []error) {
+	if len(targets) == 0 {
+		return self.FindFinalTargets(), nil
+	}
+	result := bit.New()
+	errs := []error{}
+	for _, name := range targets {
+		name = filepath.Clean(name)
+		id, ok := self.index[name]
+		if ok {
+			if self.parents[id].IsEmpty() {
+				errs = append(errs,
+					fmt.Errorf("not a target: '%s'", self.nodes[id].Name()))
+			} else {
+				result.Add(id)
+			}
+		} else {
+			var prefixmatch *bit.Set
+			prefixmatch, errs = self.matchPrefix(name, errs)
+			result.SetOr(result, prefixmatch)
+		}
+	}
+	return (*NodeSet)(result), errs
+}
+
+func (self *DAG) matchPrefix(name string, errs []error) (*bit.Set, []error) {
+	prefix := string(append(([]byte)(name), filepath.Separator))
+	result := bit.New()
+	for _, trynode := range self.nodes {
+		if self.HasParents(trynode) &&
+			strings.HasPrefix(trynode.Name(), prefix) {
+			result.Add(trynode.id())
+		}
+	}
+	if result.IsEmpty() {
+		errs = append(errs,
+			fmt.Errorf("no targets found matching '%s'", name))
+	}
+	return result, errs
 }
 
 // Return the set of nodes in this graph with no children.
