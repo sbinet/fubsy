@@ -197,10 +197,10 @@ func (self *Runtime) runBuildPhase() []error {
 	log.Debug(log.DAG, "initial dag:")
 	log.DebugDump(log.DAG, self.dag)
 
-	// eventually we should use the command line to figure out the
-	// user's desired targets... but the default will always be to
-	// build all final targets, so let's just handle that case for now
-	goal := self.dag.FindFinalTargets()
+	goal, errors := self.dag.MatchTargets(self.options.Targets)
+	if len(errors) > 0 {
+		return errors
+	}
 	relevant := self.dag.FindRelevantNodes(goal)
 
 	self.dag, errors = self.dag.Rebuild(relevant, self.stack)

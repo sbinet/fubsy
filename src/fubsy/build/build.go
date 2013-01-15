@@ -25,6 +25,11 @@ type BuildState struct {
 
 // user options, typically from the command line
 type BuildOptions struct {
+	// nodes that the user specifically asked to build; nil if the
+	// user didn't specify any, in which case we will try to build all
+	// final targets (nodes with no children)
+	Targets []string
+
 	// keep building even after one target fails (default: stop on
 	// first failure)
 	KeepGoing bool

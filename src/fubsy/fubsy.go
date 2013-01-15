@@ -24,7 +24,6 @@ type args struct {
 	scriptFile  string
 	debugTopics []string
 	verbosity   uint
-	targets     []string
 }
 
 func main() {
@@ -90,7 +89,6 @@ func parseArgs() args {
 	quiet := pflag.BoolP("quiet", "q", false, "")
 	topics := pflag.String("debug", "", "")
 	pflag.Parse()
-	result.targets = pflag.Args()
 	if *topics != "" {
 		result.debugTopics = strings.Split(*topics, ",")
 	}
@@ -104,6 +102,8 @@ func parseArgs() args {
 	} else {
 		result.verbosity = 1
 	}
+
+	result.options.Targets = pflag.Args()
 	return result
 }
 
