@@ -7,6 +7,7 @@ package dag
 // Fubsy Node types for filesystem objects
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"hash/fnv"
@@ -112,12 +113,14 @@ func (self *FileNode) Signature() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 	hash := fnv.New64a()
-	block := hash.BlockSize()
+	block := 4096
+	reader := bufio.NewReaderSize(file, block)
 	data := make([]byte, block)
 	for {
-		nbytes, err := file.Read(data)
-		if nbytes == 0 && err == io.EOF {
+		nbytes, err := reader.Read(data)
+		if err == io.EOF {
 			break
 		} else if err != nil {
 			return nil, err

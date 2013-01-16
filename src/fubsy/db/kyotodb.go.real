@@ -9,6 +9,8 @@ package db
 // Implementation of BuildDB using Kyoto Cabinet
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -26,6 +28,13 @@ type KyotoDB struct {
 const PREFIX_META = "\x00\x00\x00\x00"
 const PREFIX_NODE = "\x00\x00\x00\x01"
 
+// database version numbers: a database created by this code has
+// version set to CURRENT_VERSION, and we can open databases where
+// MIN_VERSION <= version <= MAX_VERSION
+const CURRENT_VERSION uint32 = 0x00
+const MIN_VERSION uint32 = 0x00
+const MAX_VERSION uint32 = 0x00
+
 func OpenKyotoDB(filename string, writemode bool) (KyotoDB, error) {
 	db := KyotoDB{}
 	db.kcdb = cabinet.New()
@@ -39,6 +48,12 @@ func OpenKyotoDB(filename string, writemode bool) (KyotoDB, error) {
 		db.kcdb = nil
 		// errors returned by KC are pretty sparse ;-(
 		return db, fmt.Errorf("could not open %s: %s", filename, err)
+	}
+	err = db.checkVersion(
+		filename, writemode, CURRENT_VERSION, MIN_VERSION, MAX_VERSION)
+	if err != nil {
+		db.Close()
+		return db, err
 	}
 	return db, nil
 }
@@ -54,7 +69,7 @@ func (self KyotoDB) Close() error {
 
 func (self KyotoDB) LookupNode(nodename string) (*BuildRecord, error) {
 	log.Debug(log.DB, "loading record for node %s", nodename)
-	key := nodekey(nodename)
+	key := makekey(PREFIX_NODE, nodename)
 	val, err := self.kcdb.Get(key)
 
 	if val == nil && (err == nil || kyotoNoRecord(err)) {
@@ -74,7 +89,7 @@ func (self KyotoDB) LookupNode(nodename string) (*BuildRecord, error) {
 
 func (self KyotoDB) WriteNode(nodename string, record *BuildRecord) error {
 	log.Debug(log.DB, "writing record for node %s", nodename)
-	key := nodekey(nodename)
+	key := makekey(PREFIX_NODE, nodename)
 	val, err := record.encode()
 	if err != nil {
 		return err
@@ -117,9 +132,54 @@ func (self KyotoDB) Dump(writer io.Writer, indent string) {
 	}
 }
 
-func nodekey(name string) []byte {
+func (self KyotoDB) checkVersion(
+	filename string, writemode bool, cur, min, max uint32) error {
+	key := makekey(PREFIX_META, "version")
+	val, err := self.kcdb.Get(key)
+	if kyotoNoRecord(err) {
+		// no version number: presumably this is a brand-new empty
+		// database, so we can set the version number
+		if writemode {
+			buf := &bytes.Buffer{}
+			binary.Write(buf, binary.BigEndian, cur)
+			err = self.kcdb.Set(key, buf.Bytes())
+		} else {
+			err = fmt.Errorf("database %s has no version number", filename)
+		}
+		return err
+	} else if err != nil {
+		return err
+	}
+
+	// successfully read the existing version number: is it compatible?
+	buf := bytes.NewBuffer(val)
+	var version uint32
+	err = binary.Read(buf, binary.BigEndian, &version)
+	if err != nil {
+		if err == io.ErrUnexpectedEOF {
+			err = fmt.Errorf(
+				"database %s: unable to decode version number (%x)",
+				filename, val)
+		}
+		return err
+	}
+
+	err = nil
+	if version < min {
+		err = fmt.Errorf("database %s is too old "+
+			"(database version = %d, but min supported version = %d)",
+			filename, version, min)
+	} else if version > max {
+		err = fmt.Errorf("database %s is from the future "+
+			"(database version = %d, but max supported version = %d)",
+			filename, version, max)
+	}
+	return err
+}
+
+func makekey(prefix, name string) []byte {
 	key := make([]byte, 4+len(name))
-	copy(key, PREFIX_NODE)
+	copy(key, prefix)
 	copy(key[4:], name)
 	return key
 }
