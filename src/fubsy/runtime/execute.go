@@ -131,5 +131,8 @@ func MakeLocationError(loc dsl.Locatable, err error) error {
 }
 
 func (self LocationError) Error() string {
+	if self.location == nil {
+		return self.err.Error()
+	}
 	return self.location.ErrorPrefix() + self.err.Error()
 }

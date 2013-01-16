@@ -671,3 +671,15 @@ func (self StubLocation) ErrorPrefix() string {
 func (self StubLocation) merge(other Location) Location {
 	return NewStubLocation(self.message + other.(StubLocation).message)
 }
+
+type StubLocatable struct {
+	location Location
+}
+
+func NewStubLocatable(location Location) StubLocatable {
+	return StubLocatable{location: location}
+}
+
+func (self StubLocatable) Location() Location {
+	return self.location
+}

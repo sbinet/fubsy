@@ -5,6 +5,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -199,6 +200,26 @@ func Test_evaluateCall(t *testing.T) {
 		"not a function or method: 'src'", errors[0].Error())
 
 	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
+}
+
+func Test_LocationError(t *testing.T) {
+	var loc dsl.Locatable
+	loc = dsl.NewStubLocation("right here")
+	err := errors.New("it hurts!")
+	locerr := MakeLocationError(loc, err)
+	assert.Equal(t, "right here: it hurts!", locerr.Error())
+
+	// make sure it still works when LocationError has a Locatable
+	// that wraps the real Location
+	loc = dsl.NewStubLocatable(loc.(dsl.Location))
+	locerr = MakeLocationError(loc, err)
+	assert.Equal(t, "right here: it hurts!", locerr.Error())
+
+	// and finally, don't crash when LocationError has a Locatable
+	// that wraps a nil Location
+	loc = dsl.NewStubLocatable(nil)
+	locerr = MakeLocationError(loc, err)
+	assert.Equal(t, "it hurts!", locerr.Error())
 }
 
 func stringnode(value string) *dsl.ASTString {
