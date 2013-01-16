@@ -306,9 +306,7 @@ func (self *DAG) DFS(start *NodeSet, visit DFSVisitor) error {
 		var err error
 		parents := self.parents[id]
 		for pid, ok := parents.Next(-1); ok; pid, ok = parents.Next(pid) {
-			if err != nil {
-				break
-			}
+			//fmt.Printf("%snode %d child: %d (color = %v)\n", indent, id, pid, colour[pid])
 			if colour[pid] == GREY {
 				cycle := make([]int, len(path)+1)
 				copy(cycle, path)
@@ -318,9 +316,9 @@ func (self *DAG) DFS(start *NodeSet, visit DFSVisitor) error {
 				colour[pid] = GREY
 				err = descend(pid)
 			}
-		}
-		if err != nil {
-			return err
+			if err != nil {
+				return err
+			}
 		}
 		path = path[0 : len(path)-1]
 		//fmt.Printf("%snode %d: visit(%s)\n", indent, id, self.nodes[id])
@@ -342,9 +340,6 @@ func (self *DAG) DFS(start *NodeSet, visit DFSVisitor) error {
 				return err
 			}
 		}
-	}
-	if err != nil {
-		return err
 	}
 	if len(cycles) > 0 {
 		return CycleError{self, cycles}
