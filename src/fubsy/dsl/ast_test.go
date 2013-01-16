@@ -6,10 +6,25 @@ package dsl
 
 import (
 	"bytes"
-	"github.com/stretchrcom/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/stretchrcom/testify/assert"
 )
+
+func Test_NewASTRoot(t *testing.T) {
+	children := []ASTNode{
+		NewASTName("foo"),
+		NewASTName("bar"),
+	}
+	root := NewASTRoot(children)
+
+	assert.Equal(t, children, root.Children())
+
+	children = children[:0]
+	root = NewASTRoot(children)
+	assert.Equal(t, children, root.Children())
+}
 
 func Test_ASTRoot_Equal(t *testing.T) {
 	node1 := &ASTRoot{}

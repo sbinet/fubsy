@@ -179,7 +179,10 @@ func (self children) Children() []ASTNode {
 }
 
 func NewASTRoot(children []ASTNode) *ASTRoot {
-	location := mergeLocations(children[0], children[len(children)-1])
+	var location Location
+	if len(children) > 0 {
+		location = mergeLocations(children[0], children[len(children)-1])
+	}
 	return &ASTRoot{
 		astbase:  astbase{location},
 		children: children}
