@@ -264,7 +264,7 @@ eof:
 		self.finishinline()
 	}
 
-	if self.tokens[len(self.tokens)-1].id != EOL {
+	if len(self.tokens) > 0 && self.tokens[len(self.tokens)-1].id != EOL {
 		// synthetic EOL so the parser only has to worry about EOL as a
 		// statement terminator (not EOF too)
 		self.tokfound(EOL)

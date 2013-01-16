@@ -51,6 +51,22 @@ func TestScan_eof(t *testing.T) {
 		14, 14, 2)
 }
 
+func TestScan_empty(t *testing.T) {
+	input := ""
+	expect := []minitok{}
+	tokens := scan(input)
+	assertScan(t, expect, tokens)
+
+	input = "    "
+	tokens = scan(input)
+	assertScan(t, expect, tokens)
+
+	input = "   # foo\n\n     "
+	expect = []minitok{}
+	tokens = scan(input)
+	assertScan(t, expect, tokens)
+}
+
 func TestScan_filefinder(t *testing.T) {
 	input := "bop { \n<**/*.[ch] [a-z]*.o\n>}"
 	expect := []minitok{
