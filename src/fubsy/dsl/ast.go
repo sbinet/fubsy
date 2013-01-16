@@ -71,6 +71,7 @@ type children []ASTNode
 type ASTRoot struct {
 	astbase
 	children
+	eof Locatable
 }
 
 // import a single plugin, e.g. "import NAME"
@@ -199,6 +200,10 @@ func (self *ASTRoot) Equal(other_ ASTNode) bool {
 		return other != nil && self.children.Equal(other.children)
 	}
 	return false
+}
+
+func (self *ASTRoot) EOF() Locatable {
+	return self.eof
 }
 
 func (self *ASTRoot) ListPlugins() [][]string {

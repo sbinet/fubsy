@@ -6,9 +6,12 @@ package dsl
 
 import (
 	"bytes"
-	"fubsy/testutils"
-	"github.com/stretchrcom/testify/assert"
+	"strings"
 	"testing"
+
+	"github.com/stretchrcom/testify/assert"
+
+	"fubsy/testutils"
 )
 
 func Test_ParseString(t *testing.T) {
@@ -60,6 +63,8 @@ main {
 	ast, err := Parse(fn)
 	assert.Equal(t, 0, len(err))
 	assertASTEqual(t, expect, ast)
+	eofloc := ast.EOF().Location()
+	assert.True(t, strings.HasSuffix(eofloc.ErrorPrefix(), "valid_1.fubsy:6: "))
 }
 
 func TestParse_valid_sequence(t *testing.T) {

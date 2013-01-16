@@ -84,7 +84,8 @@ func (self *Runtime) runMainPhase() []error {
 	main := self.ast.FindPhase("main")
 	if main == nil {
 		return []error{
-			MakeLocationError(self.ast, errors.New("no main phase defined"))}
+			MakeLocationError(self.ast.EOF(),
+				errors.New("no main phase defined"))}
 	}
 
 	var allerrors []error // from the entire phase

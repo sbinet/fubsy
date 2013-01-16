@@ -62,5 +62,6 @@ func parseTokens(tokens []token) (*ASTRoot, []error) {
 		return parser.ast, []error{parser.syntaxerror}
 	}
 	errors := checkAST(parser.ast)
+	parser.ast.eof = tokens[len(tokens)-1]
 	return parser.ast, errors
 }

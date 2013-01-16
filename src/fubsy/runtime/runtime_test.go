@@ -28,7 +28,7 @@ func Test_Runtime_runMainPhase_missing(t *testing.T) {
 	rt := parseScript(t, filename, script)
 	errors := rt.runMainPhase()
 	assert.Equal(t, 1, len(errors))
-	assert.Equal(t, "test.fubsy:1-3: no main phase defined", errors[0].Error())
+	assert.Equal(t, "test.fubsy:4: no main phase defined", errors[0].Error())
 }
 
 func Test_Runtime_runMainPhase_valid(t *testing.T) {
