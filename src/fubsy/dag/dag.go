@@ -301,7 +301,8 @@ func (self *DAG) DFS(start *NodeSet, visit DFSVisitor) error {
 	descend = func(id int) error {
 		path = append(path, id)
 		//node := self.nodes[id]
-		//fmt.Printf("entering node %d: %s (path = %v)\n", id, node, path)
+		//indent := fmt.Sprintf("%*s", len(path), "")
+		//fmt.Printf("%sentering node %d: %s (path = %v)\n", indent, id, node, path)
 		var err error
 		parents := self.parents[id]
 		for pid, ok := parents.Next(-1); ok; pid, ok = parents.Next(pid) {
@@ -322,6 +323,7 @@ func (self *DAG) DFS(start *NodeSet, visit DFSVisitor) error {
 			return err
 		}
 		path = path[0 : len(path)-1]
+		//fmt.Printf("%snode %d: visit(%s)\n", indent, id, self.nodes[id])
 		err = visit(self.nodes[id])
 		if err != nil {
 			return err
@@ -336,6 +338,9 @@ func (self *DAG) DFS(start *NodeSet, visit DFSVisitor) error {
 		if colour[id] == WHITE {
 			colour[id] = GREY
 			err = descend(id)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if err != nil {

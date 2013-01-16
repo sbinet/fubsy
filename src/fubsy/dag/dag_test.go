@@ -198,7 +198,7 @@ func Test_DAG_DFS_cycle(t *testing.T) {
 	assert.Equal(t, []int{1, 3, 5, 9, 1}, cycerr.cycles[3])
 }
 
-func Test_DAG_DFS_error(t *testing.T) {
+func Test_DAG_DFS_error_hides_cycle(t *testing.T) {
 	tdag := NewTestDAG()
 	tdag.Add("0", "2", "4")
 	tdag.Add("1", "3", "5")
@@ -208,7 +208,7 @@ func Test_DAG_DFS_error(t *testing.T) {
 	tdag.Add("5")
 	dag := tdag.Finish()
 
-	visited := make([]int, 0)
+	visited := []int{}
 	visit := func(node Node) error {
 		id := node.id()
 		visited = append(visited, id)
@@ -221,6 +221,32 @@ func Test_DAG_DFS_error(t *testing.T) {
 	err := dag.DFS(dag.MakeNodeSet("0"), visit)
 	assert.Equal(t, "bite me", err.Error())
 	assert.Equal(t, []int{5, 3, 4}, visited)
+}
+
+func Test_DAG_DFS_error_stop_early(t *testing.T) {
+	// similar, but this time the error is in a top-level node (no
+	// children), and it cuts the DFS short before we get to the
+	// second top-level node
+	tdag := NewTestDAG()
+	tdag.Add("0", "2", "3")
+	tdag.Add("1", "3")
+	tdag.Add("2", "3")
+	tdag.Add("3")
+	dag := tdag.Finish()
+
+	visited := []int{}
+	visit := func(node Node) error {
+		id := node.id()
+		visited = append(visited, id)
+		if id == 0 {
+			return errors.New("fail")
+		}
+		return nil
+	}
+
+	err := dag.DFS(dag.MakeNodeSet("0", "1"), visit)
+	assert.Equal(t, "fail", err.Error())
+	assert.Equal(t, []int{3, 2, 0}, visited)
 }
 
 func Test_DAG_AddManyParents(t *testing.T) {

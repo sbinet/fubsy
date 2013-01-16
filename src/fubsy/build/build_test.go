@@ -109,17 +109,13 @@ func Test_BuildState_BuildTargets_one_failure(t *testing.T) {
 	graph, executed := setupBuild(false, sig)
 	db := makeDummyDB(graph, sig)
 
-	// fail to build misc.{c,h} -> misc.o: that will block building
-	// tool1
+	// fail to build misc.{c,h} -> misc.o: that will stop the build
 	rule := graph.Lookup("misc.o").BuildRule().(*dag.StubRule)
 	rule.SetFail(true)
 
 	expect := []buildexpect{
 		{"tool1.o", dag.BUILT},
 		{"misc.o", dag.FAILED},
-		{"util.o", dag.BUILT},
-		{"tool2.o", dag.BUILT},
-		{"tool2", dag.BUILT},
 	}
 
 	opts := BuildOptions{}
@@ -129,9 +125,11 @@ func Test_BuildState_BuildTargets_one_failure(t *testing.T) {
 	assert.NotNil(t, err)
 	assertBuild(t, graph, expect, *executed)
 
-	// we don't even look at tool1, since an earlier node failed and
-	// the build terminates on first failure
+	// we didn't even think about building util.o, tool1, etc: an
+	// earlier node failed and the build terminates on first failure
+	assert.Equal(t, dag.UNKNOWN, graph.Lookup("util.o").State())
 	assert.Equal(t, dag.UNKNOWN, graph.Lookup("tool1").State())
+	assert.Equal(t, dag.UNKNOWN, graph.Lookup("tool2").State())
 }
 
 // full build (all targets), one action fails, --keep-going true
