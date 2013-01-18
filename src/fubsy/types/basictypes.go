@@ -103,59 +103,11 @@ func init() {
 }
 
 func (self FuString) Expand(ns Namespace) (FuObject, error) {
-
-	match := expand_re.FindStringSubmatchIndex(string(self))
-	if match == nil { // fast path for common case
-		return self, nil
+	s, err := ExpandString(string(self), ns)
+	if err != nil {
+		return nil, err
 	}
-
-	pos := 0
-	cur := string(self)
-	result := ""
-	var name string
-	var start, end int
-	for match != nil {
-		group1 := match[2:4] // location of match for "$foo"
-		group2 := match[4:6] // location of match for "${foo}"
-		if group1[0] > 0 {
-			name = cur[group1[0]:group1[1]]
-			start = group1[0] - 1
-			end = group1[1]
-		} else if group2[0] > 0 {
-			name = cur[group2[0]:group2[1]]
-			start = group2[0] - 2
-			end = group2[1] + 1
-		} else {
-			// this should not happen: panic?
-			return self, nil
-		}
-
-		value, ok := ns.Lookup(name)
-		var cstring string
-		if !ok {
-			// XXX very similar to error reported by runtime.evaluateName()
-			// XXX location?
-			return self, fmt.Errorf("undefined variable '%s' in string", name)
-		} else if value != nil {
-			xvalue, err := value.Expand(ns)
-			if err != nil {
-				return nil, err
-			}
-			if xvalue == nil {
-				// this violates the contract for FuObject.Expand()
-				panic(fmt.Sprintf(
-					"value.Expand() returned nil (value == %#v)", value))
-			}
-			cstring = xvalue.CommandString()
-		}
-
-		result += cur[:start] + cstring
-		pos = end
-		cur = cur[pos:]
-		match = expand_re.FindStringSubmatchIndex(cur)
-	}
-	result += cur
-	return FuString(result), nil
+	return FuString(s), nil
 }
 
 func (self FuString) Typename() string {
@@ -232,6 +184,65 @@ const shellmeta = "# `\"'\\&?*[]{}();$><|"
 
 // initialized on demand
 var shellreplacer *strings.Replacer
+
+// Expand variables in s by looking them up in ns. If s has no
+// variable references, just return s; otherwise return a new expanded
+// string. Return non-nil error if there are problems expanding the
+// string, most likely references to undefined variables.
+func ExpandString(s string, ns Namespace) (string, error) {
+	match := expand_re.FindStringSubmatchIndex(s)
+	if match == nil { // fast path for common case
+		return s, nil
+	}
+
+	pos := 0
+	cur := s
+	result := ""
+	var name string
+	var start, end int
+	for match != nil {
+		group1 := match[2:4] // location of match for "$foo"
+		group2 := match[4:6] // location of match for "${foo}"
+		if group1[0] > 0 {
+			name = cur[group1[0]:group1[1]]
+			start = group1[0] - 1
+			end = group1[1]
+		} else if group2[0] > 0 {
+			name = cur[group2[0]:group2[1]]
+			start = group2[0] - 2
+			end = group2[1] + 1
+		} else {
+			// this should not happen: panic?
+			return s, nil
+		}
+
+		value, ok := ns.Lookup(name)
+		var cstring string
+		if !ok {
+			// XXX very similar to error reported by runtime.evaluateName()
+			// XXX location?
+			return s, fmt.Errorf("undefined variable '%s' in string", name)
+		} else if value != nil {
+			xvalue, err := value.Expand(ns)
+			if err != nil {
+				return s, err
+			}
+			if xvalue == nil {
+				// this violates the contract for FuObject.Expand()
+				panic(fmt.Sprintf(
+					"value.Expand() returned nil (value == %#v)", value))
+			}
+			cstring = xvalue.CommandString()
+		}
+
+		result += cur[:start] + cstring
+		pos = end
+		cur = cur[pos:]
+		match = expand_re.FindStringSubmatchIndex(cur)
+	}
+	result += cur
+	return result, nil
+}
 
 // Return s decorated with quote characters so it can safely be
 // included in a shell command.
