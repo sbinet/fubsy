@@ -186,11 +186,11 @@ func (self *BuildState) considerNode(node dag.Node) (
 		var oldsig []byte
 		if record != nil {
 			oldsig = record.SourceSignature(parent.Name())
-			if oldsig == nil {
-				// New parent for this node: rebuild unless another
-				// parent is failed/tainted.
-				build = true
-			}
+		}
+		if oldsig == nil {
+			// New parent for this node: rebuild unless another
+			// parent is failed/tainted.
+			build = true
 		}
 
 		if build {

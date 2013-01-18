@@ -72,6 +72,29 @@ func Test_BuildState_BuildTargets_all_missing(t *testing.T) {
 	assert.Equal(t, dag.SOURCE, graph.Lookup("util.c").State())
 }
 
+// all targets exist, but the BuildDB is empty: rebuild everything
+// because we have no way of knowing what changed
+func Test_BuildState_BuildTargets_empty_db(t *testing.T) {
+	sig := []byte{0}
+	graph, executed := setupBuild(true, sig)
+	bdb := db.NewDummyDB()
+
+	expect := []buildexpect{
+		{"tool1.o", dag.BUILT},
+		{"misc.o", dag.BUILT},
+		{"util.o", dag.BUILT},
+		{"tool1", dag.BUILT},
+		{"tool2.o", dag.BUILT},
+		{"tool2", dag.BUILT},
+	}
+
+	bstate := NewBuildState(graph, bdb, BuildOptions{})
+	goal := graph.MakeNodeSet("tool1", "tool2")
+	err := bstate.BuildTargets(goal)
+	assert.Nil(t, err)
+	assertBuild(t, graph, expect, *executed)
+}
+
 // full successful build, then try some incremental rebuilds
 func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 	sig := []byte{0}
