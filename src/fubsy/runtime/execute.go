@@ -42,7 +42,7 @@ func evaluate(
 	case *dsl.ASTAdd:
 		result, errs = evaluateAdd(ns, expr)
 	case *dsl.ASTFunctionCall:
-		result, errs = evaluateCall(ns, expr)
+		result, errs = evaluateCall(ns, expr, nil)
 	default:
 		return nil, []error{unsupportedAST(expr_)}
 	}
@@ -82,7 +82,10 @@ func evaluateAdd(
 }
 
 func evaluateCall(
-	ns types.Namespace, expr *dsl.ASTFunctionCall) (types.FuObject, []error) {
+	ns types.Namespace,
+	expr *dsl.ASTFunctionCall,
+	precall func(*dsl.ASTFunctionCall, types.FuList)) (
+	types.FuObject, []error) {
 	value, errs := evaluate(ns, expr.Function())
 	if len(errs) > 0 {
 		return nil, errs
@@ -111,6 +114,11 @@ func evaluateCall(
 		return nil, []error{err}
 	}
 	arglist = argobj.List()
+
+	if precall != nil {
+		precall(expr, arglist)
+	}
+
 	err = function.CheckArgs(arglist)
 	if err != nil {
 		return nil, []error{err}

@@ -159,6 +159,14 @@ func (self *FunctionCallAction) String() string {
 }
 
 func (self *FunctionCallAction) Execute(ns types.Namespace) []error {
-	_, errs := evaluateCall(ns, self.fcall)
+	_, errs := evaluateCall(ns, self.fcall, logFunctionCall)
 	return errs
+}
+
+func logFunctionCall(expr *dsl.ASTFunctionCall, arglist types.FuList) {
+	argstrings := make([]string, len(arglist))
+	for i, arg := range arglist {
+		argstrings[i] = arg.String()
+	}
+	log.Info("%s(%s)", expr.Function(), strings.Join(argstrings, ", "))
 }
