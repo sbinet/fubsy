@@ -60,30 +60,32 @@ func Test_FinderNode_Add_Expand(t *testing.T) {
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 
-	// simulate <doc/*.txt> + (<*c*/?o?.h> + <**/*.c>)
-	// (same as before, just different order)
+	// sum = <*c*/?o?.h> + <**/*.c>
 	expect = []string{
 		"include/bop.h", "src/foo.h", "main.c", "src/foo.c"}
 	sum, err = finder3.Add(finder1)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 
+	// sum = <doc/*.txt> + sum
+	// (effectively: sum = <doc/*.txt> + (<*c*/?o?.h> + <**/*.c>))
 	expect = append([]string{"doc/stuff.txt"}, expect...)
 	sum, err = finder2.Add(sum)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 
-	// <**/*.c> + "urgh"
+	// sum = <**/*.c> + "urgh"
 	expect = []string{
 		"main.c", "src/foo.c", "urgh"}
 	sum, err = finder1.Add(types.FuString("urgh"))
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 
-	// <**/*.c> + ["a", "b", "c"]
+	// sum = <**/*.c> + ["a", "b", "c"]
 	expect = []string{
 		"main.c", "src/foo.c", "a", "b", "c"}
-	sum, err = finder1.Add(types.MakeFuList("a", "b", "c"))
+	list := types.MakeFuList("a", "b", "c")
+	sum, err = finder1.Add(list)
 	assert.Nil(t, err)
 	assertExpand(t, expect, sum)
 }
@@ -108,7 +110,9 @@ func Test_FinderNode_Add_CommandString(t *testing.T) {
 
 	sum2b, err := finder3.Add(sum1)
 	assert.Nil(t, err)
-	assert.True(t, sum2.Equal(sum2b))
+	assert.True(t, sum2.Equal(sum2b),
+		"expected equal ListNodes:\nsum2  = %T %v\nsum2b = %T %v",
+		sum2, sum2, sum2b, sum2b)
 
 	// This is a silly thing to do, and perhaps we should filter out
 	// the duplicate patterns... but I don't think so. If the user

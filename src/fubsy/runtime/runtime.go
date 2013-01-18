@@ -184,7 +184,12 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 		for _, val := range targets {
 			result = append(result, self.nodify(val)...)
 		}
-	case *dag.FinderNode:
+	case *dag.ListNode:
+		result = targets.Nodes()
+		for i, node := range result {
+			result[i] = self.dag.AddNode(node)
+		}
+	case dag.Node:
 		result = []dag.Node{self.dag.AddNode(targets)}
 	}
 	return result

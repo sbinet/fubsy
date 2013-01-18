@@ -6,6 +6,7 @@ package dag
 
 import (
 	"errors"
+	"fmt"
 	"hash/fnv"
 	"os"
 	"path/filepath"
@@ -81,17 +82,38 @@ func (self *FinderNode) Add(other_ types.FuObject) (types.FuObject, error) {
 	var result types.FuObject
 	switch other := other_.(type) {
 	case types.FuList:
-		// <pat> + ["a", "b", "c"] = [<pat>, "a", "b", "c"]
-		list := make(types.FuList, 1+len(other))
-		list[0] = self
-		copy(list[1:], other)
-		result = list
+		// <pat> + [a, b, c] = [<pat>, a, b, c]
+		// (a, b, c must all be Nodes)
+		members := make([]types.FuObject, 1+len(other))
+		members[0] = self
+
+		for i, obj := range other {
+			switch obj := obj.(type) {
+			case types.FuString:
+				// <*.c> + ["extra/stuff.c"] should just work
+				members[i+1] = newFileNode(string(obj))
+			case Node:
+				members[i+1] = obj
+			default:
+				err := fmt.Errorf(
+					"unsupported operation: cannot add list containing "+
+						"%s %v to %s %v",
+					obj.Typename(), obj, self.Typename(), self)
+				return nil, err
+			}
+		}
+		result = newListNode(members...)
+	case types.FuString:
+		// <pat> + "foo" = [<pat>, FileNode("foo")]
+		result = newListNode(self, newFileNode(string(other)))
+	case Node:
+		result = newListNode(self, other)
 	default:
-		// <pat> + anything = [<pat>, anything]
-		list := make(types.FuList, 2)
-		list[0] = self
-		list[1] = other
-		result = list
+		err := fmt.Errorf(
+			"unsupported operation: cannot add "+
+				"%s %v to %s %v",
+			other.Typename(), other, self.Typename(), self)
+		return nil, err
 	}
 	return result, nil
 }
