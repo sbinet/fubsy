@@ -195,22 +195,15 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 func (self *Runtime) runBuildPhase() []error {
 	var errors []error
 
-	log.Debug(log.DAG, "initial dag:")
+	self.dag.MarkSources()
+
+	log.Debug(log.DAG, "dependency graph:")
 	log.DebugDump(log.DAG, self.dag)
 
 	goal, errors := self.dag.MatchTargets(self.options.Targets)
 	if len(errors) > 0 {
 		return errors
 	}
-	relevant := self.dag.FindRelevantNodes(goal)
-
-	self.dag, errors = self.dag.Rebuild(relevant, self.stack)
-	if len(errors) > 0 {
-		return errors
-	}
-	self.dag.MarkSources()
-	log.Debug(log.DAG, "rebuilt dag:")
-	log.DebugDump(log.DAG, self.dag)
 
 	bdb, err := openBuildDB()
 	if err != nil {
@@ -220,7 +213,6 @@ func (self *Runtime) runBuildPhase() []error {
 	defer bdb.Close()
 
 	bstate := build.NewBuildState(self.dag, bdb, self.options)
-	goal = self.dag.FindFinalTargets()
 	err = bstate.BuildTargets(goal)
 	if err != nil {
 		errors = append(errors, err)

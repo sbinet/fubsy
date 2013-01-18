@@ -6,6 +6,7 @@ package dag
 
 import (
 	"errors"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -32,9 +33,12 @@ type FinderNode struct {
 	// (currently unused)
 	excludes []string
 
-	// cache the result of calling Expand(), so subsequent calls are
-	// cheap and consistent
-	expansion types.FuObject
+	// cache the result of calling FindFiles(), so subsequent calls
+	// are cheap and consistent
+	matches []string
+
+	// cache the result of Signature()
+	sig []byte
 }
 
 func NewFinderNode(includes ...string) *FinderNode {
@@ -116,11 +120,23 @@ func (self *FinderNode) copy() Node {
 // patterns. Return the list of matching filenames as a FuList of
 // FileNode.
 func (self *FinderNode) Expand(ns types.Namespace) (types.FuObject, error) {
-	if self.expansion != nil {
-		return self.expansion, nil
+	filenames, err := self.FindFiles()
+	if err != nil {
+		return nil, err
+	}
+	var result types.FuList
+	for _, filename := range filenames {
+		result = append(result, newFileNode(filename))
+	}
+	return result, nil
+}
+
+func (self *FinderNode) FindFiles() ([]string, error) {
+	if self.matches != nil {
+		return self.matches, nil
 	}
 
-	result := make(types.FuList, 0)
+	var result []string
 	var matches []string
 	for _, pattern := range self.includes {
 		recursive, prefix, tail, err := splitPattern(pattern)
@@ -135,26 +151,75 @@ func (self *FinderNode) Expand(ns types.Namespace) (types.FuObject, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, filename := range matches {
-			result = append(result, newFileNode(filename))
-		}
+		result = append(result, matches...)
 	}
-	self.expansion = result
+	self.matches = result
 	return result, nil
 }
 
 // Node methods
 
 func (self *FinderNode) Exists() (bool, error) {
-	// hmmm: it's perfectly meaningful to ask if a FinderNode exists,
-	// just unexpected and expensive (have to expand the wildcards)
-	panic("Exists() should not be called on a FinderNode " +
-		"(graph should have been rebuilt by this point)")
+	filenames, err := self.FindFiles()
+	if err != nil {
+		return false, err
+	}
+	return len(filenames) > 0, nil
 }
 
 func (self *FinderNode) Signature() ([]byte, error) {
-	panic("Signature() should never be called on a FinderNode " +
-		"(graph should have been rebuilt by this point)")
+	filenames, err := self.FindFiles()
+	if err != nil {
+		return nil, err
+	}
+
+	// the signature consists of:
+	//   sequence of {
+	//       filename_hash []byte
+	//       file_hash []byte
+	//   }
+	// this means we can do a simple bytewise comparison to detect
+	// change (file added, file removed, file modified), but later we
+	// can decode this and figure out *exactly what* changed, for
+	// better reporting to the user ("rebuilding x.jar because you
+	// added 3 files to <src/x/**/*.java>")
+
+	hash := fnv.New64a()
+	sig := make([]byte, 0, (2*hash.Size())*len(filenames))
+	for _, filename := range filenames {
+		hash.Reset()
+		hash.Write(([]byte)(filename))
+		sig = hash.Sum(sig)
+
+		hash.Reset()
+		err = HashFile(filename, hash)
+		if err != nil {
+			return nil, err
+		}
+		sig = hash.Sum(sig)
+	}
+	return sig, nil
+
+	// // the signature consists of:
+	// // - hash(concatenated filenames)
+	// // - hash(concatenated file contents)
+	// namehash := fnv.New64a()
+	// contenthash := fnv.New64a()
+	// zero := []byte{0}
+	// for _, filename := range filenames {
+	// 	namehash.Write(([]byte)(filename))
+	// 	namehash.Write(zero)
+	// 	err = HashFile(filename, contenthash)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
+
+	// signature := make([]byte, 0, namehash.Size()+contenthash.Size())
+	// signature = namehash.Sum(signature)
+	// signature = contenthash.Sum(signature)
+	// self.sig = signature
+	// return signature, nil
 }
 
 // Wildcard expansion -- nothing past here has anything to do with

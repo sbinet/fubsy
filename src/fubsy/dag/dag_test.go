@@ -7,14 +7,12 @@ package dag
 import (
 	"bytes"
 	"errors"
-	"reflect"
 	"testing"
 
 	"code.google.com/p/go-bit/bit"
 	"github.com/stretchrcom/testify/assert"
 
 	"fubsy/testutils"
-	"fubsy/types"
 )
 
 func Test_DAG_add_lookup(t *testing.T) {
@@ -278,25 +276,6 @@ func Test_DAG_AddManyParents(t *testing.T) {
 		"expected:\n%s\nbut got:\n%s", expect, actual)
 }
 
-func Test_DAG_FindRelevantNodes(t *testing.T) {
-	dag := makeSimpleGraph()
-	goal := dag.MakeNodeSet("tool1", "tool2")
-	relevant := dag.FindRelevantNodes(goal)
-	assert.Equal(t, "{0,1,2,3,4,5,6,7,8,9,10,11}", relevant.String())
-
-	// goal = {tool1} ==>
-	// sources = {tool1.c, misc.h, misc.c, util.h, util.c}
-	goal = dag.MakeNodeSet("tool1")
-	relevant = dag.FindRelevantNodes(goal)
-	assert.Equal(t, "{0,2,3,4,6,7,8,9,10}", relevant.String())
-
-	// goal = {tool2} ==>
-	// sources = {util.h, util.c, tool2.c}
-	goal = dag.MakeNodeSet("tool2")
-	relevant = dag.FindRelevantNodes(goal)
-	assert.Equal(t, "{1,4,5,9,10,11}", relevant.String())
-}
-
 func Test_DAG_MarkSources(t *testing.T) {
 	dag := makeSimpleGraph()
 
@@ -309,84 +288,6 @@ func Test_DAG_MarkSources(t *testing.T) {
 	assert.Equal(t, SOURCE, dag.Lookup("tool1.c").State())
 	assert.Equal(t, UNKNOWN, dag.Lookup("tool1.o").State())
 	assert.Equal(t, UNKNOWN, dag.Lookup("tool1").State())
-}
-
-func Test_DAG_Rebuild_simple(t *testing.T) {
-	cleanup := testutils.Chtemp()
-	defer cleanup()
-
-	// this just gives us a known set of filenames for FinderNode to search
-	dag := makeSimpleGraph()
-	orig := dag.copy()
-
-	// dag.Rebuild() just copies the DAG, because it consists
-	// entirely of FileNodes -- nothing to expand here
-	relevant := dag.MakeNodeSet()
-	(*bit.Set)(relevant).AddRange(0, len(dag.nodes))
-	ns := types.NewValueMap()
-	rdag, err := dag.Rebuild(relevant, ns)
-
-	assert.Nil(t, err)
-	assert.False(t, &dag.nodes == &rdag.nodes)
-	assert.True(t, reflect.DeepEqual(orig.nodes, rdag.nodes))
-}
-
-func Test_DAG_Rebuild_globs(t *testing.T) {
-	// same setup as Test_DAG_Rebuild_simple()
-	cleanup := testutils.Chtemp()
-	defer cleanup()
-
-	dag := makeSimpleGraph()
-	touchSourceFiles(dag)
-
-	dag = NewDAG()
-	var node0, node1, node2 Node
-	node0 = MakeFinderNode(dag, "**/util.[ch]")
-	node1 = MakeFinderNode(dag, "*.h")
-	node2 = MakeFileNode(dag, "util.o")
-	_ = node1
-	dag.AddParent(node2, node0)
-	assert.Equal(t, 3, dag.length())
-	dag.verify()
-
-	savedag := dag.copy()
-
-	// relevant = {0} so we only expand the first FinderNode, and the
-	// new DAG contains only nodes derived from that expansion
-	relevant := dag.MakeNodeSet(node0.Name())
-	ns := types.NewValueMap()
-	rdag, err := dag.Rebuild(relevant, ns)
-	savedag.verify()
-
-	assert.Nil(t, err)
-	assert.Equal(t, 2, len(rdag.nodes))
-	assert.Equal(t, "util.c", rdag.nodes[0].(*FileNode).name)
-	assert.Equal(t, "util.h", rdag.nodes[1].(*FileNode).name)
-
-	buf := new(bytes.Buffer)
-	dag.Dump(buf, "") // no panic
-
-	// second rebuild where all nodes are relevant, so the second
-	// FinderNode will be expanded
-	dag = savedag
-	dag.verify()
-	node2 = dag.nodes[2] // need the pre-Rebuild() copy
-	(*bit.Set)(relevant).AddRange(0, len(dag.nodes))
-	ns = types.NewValueMap()
-	rdag, err = dag.Rebuild(relevant, ns)
-	assert.Nil(t, err)
-
-	assert.Equal(t, 4, len(rdag.nodes))
-	assert.Equal(t, "util.c", rdag.nodes[0].(*FileNode).name)
-	assert.Equal(t, "util.h", rdag.nodes[1].(*FileNode).name)
-	assert.Equal(t, "misc.h", rdag.nodes[2].(*FileNode).name)
-	assert.Equal(t, "util.o", rdag.nodes[3].(*FileNode).name)
-
-	// parents of node2 (util.o) were correctly adjusted
-	parents := rdag.ParentNodes(node2)
-	assert.Equal(t, 2, len(parents))
-	assert.Equal(t, "util.c", parents[0].Name())
-	assert.Equal(t, "util.h", parents[1].Name())
 }
 
 func makeSimpleGraph() *DAG {
