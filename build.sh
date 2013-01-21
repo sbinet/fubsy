@@ -13,15 +13,16 @@ fi
 export GOPATH=$PWD
 set -e
 
-kyotodb="kyotodb"
+# by default, build with no optional features -- they will be enabled
+# based on what exists on the build system
+buildtags=""
+
 set +e
 run "pkg-config --silence-errors --cflags kyotocabinet"
 status=$?
 set -e
 if [ $status -eq 0 ]; then
-    kyotodb="kyotodb"
-else
-    kyotodb=""
+    buildtags="$buildtags,kyotodb"
 fi
 
 golex=bin/golex
@@ -52,11 +53,10 @@ packages="fubsy/log fubsy/dsl fubsy/types fubsy/dag fubsy/db fubsy/build fubsy/r
 #packages="fubsy/build"
 #packages="fubsy/runtime"
 
-fubsy_btags="$kyotodb"
-
-run "go install -v -gcflags '-N -l' -tags='$fubsy_btags' $packages"
+tagflag="-tags='$buildtags'"
+run "go install -v -gcflags '-N -l' $tagflag $packages"
 run "ln -sf fubsy bin/fubsydebug"
-run "go test -v -gcflags '-N -l' -tags='$fubsy_btags' -i $packages"
+run "go test -v -gcflags '-N -l' $tagflag -i $packages"
 
 if [ "$coverage" ]; then
     for pkg in $packages; do
@@ -68,7 +68,7 @@ if [ "$coverage" ]; then
         run "./bin/gocov report $json > $report"
     done
 else
-    run "go test -gcflags '-N -l' -tags='$fubsy_btags' $benchopt $packages $tests"
+    run "go test -gcflags '-N -l' $tagflag $benchopt $packages $tests"
 fi
 
 run "go vet $packages"
