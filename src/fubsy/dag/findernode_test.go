@@ -221,7 +221,7 @@ func Test_FinderNode_Expand_double_recursion(t *testing.T) {
 
 func assertExpand(t *testing.T, expect []string, obj types.FuObject) {
 	ns := types.NewValueMap()
-	actualobj, err := obj.Expand(ns)
+	actualobj, err := obj.ActionExpand(ns)
 	assert.Nil(t, err)
 
 	// convert FuList of FileNode to slice of string

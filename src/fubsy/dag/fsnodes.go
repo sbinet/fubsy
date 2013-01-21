@@ -72,7 +72,20 @@ func (self *FileNode) List() []types.FuObject {
 	return []types.FuObject{self}
 }
 
-func (self *FileNode) Expand(ns types.Namespace) (types.FuObject, error) {
+func (self *FileNode) NodeExpand(ns types.Namespace) (Node, error) {
+	expanded, name, err := types.ExpandString(self.name, ns)
+	if err != nil {
+		return nil, err
+	} else if !expanded {
+		return self, nil
+	}
+	return newFileNode(name), nil
+}
+
+func (self *FileNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
+	// By the time this happens, variable references should have been
+	// expanded, and one FileNode always just represents a single file
+	// ... so there's nothing to do here.
 	return self, nil
 }
 

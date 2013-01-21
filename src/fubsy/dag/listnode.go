@@ -101,13 +101,24 @@ func (self *ListNode) Nodes() []Node {
 	return result
 }
 
-func (self *ListNode) Expand(ns types.Namespace) (types.FuObject, error) {
-	//result := make([]Node, 0, len(self.FuList))
+func (self *ListNode) NodeExpand(ns types.Namespace) (Node, error) {
+	result := make(types.FuList, len(self.FuList))
+	var err error
+	for i, obj := range self.FuList {
+		result[i], err = obj.(Node).NodeExpand(ns)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return newListNode(result...), nil
+}
+
+func (self *ListNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
 	result := make(types.FuList, 0, len(self.FuList))
 	for _, obj := range self.FuList {
 		// ok to panic here: already enforced in newListNode()
 		node := obj.(Node)
-		exp, err := node.Expand(ns)
+		exp, err := node.ActionExpand(ns)
 		if err != nil {
 			return nil, err
 		} else if exp == nil {

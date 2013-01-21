@@ -124,7 +124,7 @@ func (self *FinderNode) List() []types.FuObject {
 	// More importantly, a FinderNode is a lazy list of filenames, not
 	// a list of patterns. And we should only go expanding the
 	// wildcard and searching for filenames when the FinderNode is
-	// explicitly Expand()ed, not before. So the only sensible list
+	// explicitly expanded, not before. So the only sensible list
 	// representation is a singleton.
 	return []types.FuObject{self}
 }
@@ -138,17 +138,55 @@ func (self *FinderNode) copy() Node {
 	return &c
 }
 
+func (self *FinderNode) NodeExpand(ns types.Namespace) (Node, error) {
+	// this does purely textual expansion, e.g. convert
+	// <$src/**/*.$ext> to a new FinderNode that will actually find
+	// files because '$src' and '$ext' get expanded
+	changes := false
+	expandlist := func(input []string) ([]string, error) {
+		var expanded bool
+		var err error
+		output := make([]string, len(self.includes))
+		for i, pat := range input {
+			expanded, output[i], err = types.ExpandString(pat, ns)
+			if err != nil {
+				return input, err
+			}
+			if expanded {
+				changes = true
+			}
+		}
+		return output, nil
+	}
+
+	includes, err := expandlist(self.includes)
+	if err != nil {
+		return self, err
+	}
+	excludes, err := expandlist(self.excludes)
+	if err != nil {
+		return self, err
+	}
+
+	if !changes {
+		return self, nil
+	}
+	result := NewFinderNode(includes...)
+	result.excludes = excludes
+	return result, nil
+}
+
 // Walk the filesystem for files matching this FinderNode's include
 // patterns. Return the list of matching filenames as a FuList of
 // FileNode.
-func (self *FinderNode) Expand(ns types.Namespace) (types.FuObject, error) {
+func (self *FinderNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
 	filenames, err := self.FindFiles()
 	if err != nil {
 		return nil, err
 	}
 	var result types.FuList
 	for _, filename := range filenames {
-		result = append(result, newFileNode(filename))
+		result = append(result, types.FuString(filename))
 	}
 	return result, nil
 }

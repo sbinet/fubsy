@@ -40,10 +40,10 @@ func Test_MakeListNode(t *testing.T) {
 	assert.Equal(t, &list1, &list2)
 }
 
-func Test_ListNode_ExpandNode(t *testing.T) {
+func Test_ListNode_ActionExpand(t *testing.T) {
 	ns := types.NewValueMap()
 	assertExpand := func(expect []Node, list *ListNode) {
-		actualobj, err := list.Expand(ns)
+		actualobj, err := list.ActionExpand(ns)
 		assert.Nil(t, err)
 		actual := make([]Node, len(actualobj.List()))
 		for i, obj := range actualobj.List() {
@@ -53,7 +53,7 @@ func Test_ListNode_ExpandNode(t *testing.T) {
 			assert.Equal(t, expect, actual)
 		} else {
 			t.Errorf(
-				"ListNode %v: expected ExpandNode() to return %d Nodes, "+
+				"ListNode %v: expected ActionExpand() to return %d Nodes, "+
 					"but got %d: %v",
 				list, len(expect), len(actual), actual)
 		}
