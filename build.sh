@@ -13,18 +13,15 @@ fi
 export GOPATH=$PWD
 set -e
 
-kyotodb=src/fubsy/db/kyotodb
-if [ ! -f "$kyotodb.go" ]; then
-    set +e
-    run "pkg-config --silence-errors --cflags kyotocabinet"
-    status=$?
-    set -e
-    if [ $status -eq 0 ]; then
-        run "ln -sf kyotodb.go.real ${kyotodb}.go"
-        run "ln -sf kyotodb_test.go.real ${kyotodb}_test.go"
-    else
-        run "ln -sf kyotodb.go.fake ${kyotodb}.go"
-    fi
+kyotodb="kyotodb"
+set +e
+run "pkg-config --silence-errors --cflags kyotocabinet"
+status=$?
+set -e
+if [ $status -eq 0 ]; then
+    kyotodb="kyotodb"
+else
+    kyotodb=""
 fi
 
 golex=bin/golex
@@ -55,9 +52,11 @@ packages="fubsy/log fubsy/dsl fubsy/types fubsy/dag fubsy/db fubsy/build fubsy/r
 #packages="fubsy/build"
 #packages="fubsy/runtime"
 
-run "go install -v -gcflags '-N -l' $packages"
+fubsy_btags="$kyotodb"
+
+run "go install -v -gcflags '-N -l' -tags='$fubsy_btags' $packages"
 run "ln -sf fubsy bin/fubsydebug"
-run "go test -v -gcflags '-N -l' -i $packages"
+run "go test -v -gcflags '-N -l' -tags='$fubsy_btags' -i $packages"
 
 if [ "$coverage" ]; then
     for pkg in $packages; do
@@ -69,7 +68,7 @@ if [ "$coverage" ]; then
         run "./bin/gocov report $json > $report"
     done
 else
-    run "go test -gcflags '-N -l' $benchopt $packages $tests"
+    run "go test -gcflags '-N -l' -tags='$fubsy_btags' $benchopt $packages $tests"
 fi
 
 run "go vet $packages"

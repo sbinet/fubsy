@@ -1,5 +1,7 @@
 // -*- mode: go; tab-width: 4; indent-tabs-mode: t -*-
 
+// +build kyotodb
+
 package db
 
 import (
