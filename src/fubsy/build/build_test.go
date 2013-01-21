@@ -24,7 +24,7 @@ func Test_BuildState_BuildTargets_all_changed(t *testing.T) {
 	oldsig := []byte{0}
 	newsig := []byte{1}
 	graph, executed := setupBuild(true, newsig)
-	db := makeDummyDB(graph, oldsig)
+	db := makeFakeDB(graph, oldsig)
 
 	expect := []buildexpect{
 		{"tool1.o", dag.BUILT},
@@ -50,7 +50,7 @@ func Test_BuildState_BuildTargets_all_changed(t *testing.T) {
 func Test_BuildState_BuildTargets_all_missing(t *testing.T) {
 	sig := []byte{0}
 	graph, executed := setupBuild(false, sig)
-	db := makeDummyDB(graph, sig)
+	db := makeFakeDB(graph, sig)
 
 	expect := []buildexpect{
 		{"tool1.o", dag.BUILT},
@@ -77,7 +77,7 @@ func Test_BuildState_BuildTargets_all_missing(t *testing.T) {
 func Test_BuildState_BuildTargets_empty_db(t *testing.T) {
 	sig := []byte{0}
 	graph, executed := setupBuild(true, sig)
-	bdb := db.NewDummyDB()
+	bdb := db.NewFakeDB()
 
 	expect := []buildexpect{
 		{"tool1.o", dag.BUILT},
@@ -130,7 +130,7 @@ func Test_BuildState_BuildTargets_rebuild(t *testing.T) {
 func Test_BuildState_BuildTargets_one_failure(t *testing.T) {
 	sig := []byte{0}
 	graph, executed := setupBuild(false, sig)
-	db := makeDummyDB(graph, sig)
+	db := makeFakeDB(graph, sig)
 
 	// fail to build misc.{c,h} -> misc.o: that will stop the build
 	rule := graph.Lookup("misc.o").BuildRule().(*dag.StubRule)
@@ -164,7 +164,7 @@ func Test_BuildState_BuildTargets_one_failure_keep_going(t *testing.T) {
 
 	sig := []byte{0}
 	graph, executed := setupBuild(false, sig)
-	db := makeDummyDB(graph, sig)
+	db := makeFakeDB(graph, sig)
 
 	rule := graph.Lookup("misc.o").BuildRule().(*dag.StubRule)
 	rule.SetFail(true)
@@ -353,8 +353,8 @@ func addTrackingRules(graph *dag.DAG) *[]string {
 	return &executed
 }
 
-func makeDummyDB(graph *dag.DAG, sig []byte) BuildDB {
-	var bdb BuildDB = db.NewDummyDB()
+func makeFakeDB(graph *dag.DAG, sig []byte) BuildDB {
+	var bdb BuildDB = db.NewFakeDB()
 	for _, node := range graph.Nodes() {
 		record := db.NewBuildRecord()
 		record.SetTargetSignature(sig)
@@ -369,7 +369,7 @@ func makeDummyDB(graph *dag.DAG, sig []byte) BuildDB {
 func fullBuild(t *testing.T, sig []byte) (
 	bdb BuildDB, goal *dag.NodeSet, opts BuildOptions) {
 	graph, executed := setupBuild(false, sig)
-	bdb = makeDummyDB(graph, sig)
+	bdb = makeFakeDB(graph, sig)
 	opts = BuildOptions{}
 	bstate := NewBuildState(graph, bdb, opts)
 	goal = graph.MakeNodeSet("tool1", "tool2")

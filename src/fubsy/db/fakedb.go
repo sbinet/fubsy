@@ -11,21 +11,21 @@ import (
 
 // In-memory implementation of BuildDB. Fully functional but not
 // persistent, so only suitable for use in test code.
-type DummyDB struct {
+type FakeDB struct {
 	parents map[string]*BuildRecord
 }
 
-func NewDummyDB() *DummyDB {
-	return &DummyDB{
+func NewFakeDB() *FakeDB {
+	return &FakeDB{
 		parents: make(map[string]*BuildRecord),
 	}
 }
 
-func (self *DummyDB) Close() error {
+func (self *FakeDB) Close() error {
 	return nil
 }
 
-func (self *DummyDB) LookupNode(name string) (*BuildRecord, error) {
+func (self *FakeDB) LookupNode(name string) (*BuildRecord, error) {
 	match, ok := self.parents[name]
 	if !ok {
 		return nil, nil
@@ -33,13 +33,13 @@ func (self *DummyDB) LookupNode(name string) (*BuildRecord, error) {
 	return match, nil
 }
 
-func (self *DummyDB) WriteNode(name string, record *BuildRecord) error {
+func (self *FakeDB) WriteNode(name string, record *BuildRecord) error {
 	record.check()
 	self.parents[name] = record
 	return nil
 }
 
-func (self *DummyDB) Dump(writer io.Writer, indent string) {
+func (self *FakeDB) Dump(writer io.Writer, indent string) {
 	for node, record := range self.parents {
 		fmt.Fprintf(writer, "%s%s:\n", indent, node)
 		record.Dump(writer, indent+"  ")

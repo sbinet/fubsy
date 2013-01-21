@@ -239,7 +239,7 @@ func openBuildDB() (build.BuildDB, error) {
 
 	bdb, err = db.OpenKyotoDB(".fubsy/buildstate.kch", true)
 	if _, ok := err.(db.NotAvailableError); ok {
-		bdb = db.NewDummyDB()
+		bdb = db.NewFakeDB()
 		err = nil
 		log.Warning(
 			"no database libraries available; build state will not be saved")
