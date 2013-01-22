@@ -79,18 +79,15 @@ type Node interface {
 	// original source node).
 	BuildRule() BuildRule
 
-	// Transform a node from its initial representation computed by
-	// the main phase to something that can be used to find/read/write
-	// actual resources in the real world. The canonical example is
-	// expanding variable references, e.g. a FinderNode
-	// <$src/$app/*.c> might expand to <some/deep/dir/*.c>, depending
-	// on the values of 'src' and 'app' -- but it remains a
-	// FinderNode. The returned Node replaces this node in the DAG.
-	// NodeExpand() should never return nil; nodes that do not need to
-	// be expanded should just return themselves. This is done to every
-	// node in the DAG very early in the build phase, before selecting
-	// targets to build.
-	NodeExpand(ns types.Namespace) (Node, error)
+	// Transform a node in-place from its initial representation
+	// (computed in the main phase) to something that can be used to
+	// find/read/write actual resources in the real world. The
+	// canonical example is expanding variable references, e.g. a
+	// FinderNode <$src/$app/*.c> might expand to <some/deep/dir/*.c>,
+	// depending on the values of 'src' and 'app' -- but it remains a
+	// FinderNode. This is done to every node in the DAG early in the
+	// build phase, before selecting targets to build.
+	NodeExpand(ns types.Namespace) error
 
 	// return true if the resource represented by this node already
 	// exists -- we don't care if it's stale or up-to-date, or whether
@@ -236,15 +233,13 @@ func (self *StubNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
 	return self, nil
 }
 
-func (self *StubNode) NodeExpand(ns types.Namespace) (Node, error) {
-	expanded, name, err := types.ExpandString(self.name, ns)
+func (self *StubNode) NodeExpand(ns types.Namespace) error {
+	_, name, err := types.ExpandString(self.name, ns)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if !expanded {
-		return self, nil
-	}
-	return NewStubNode(name), nil
+	self.name = name
+	return nil
 }
 
 func (self *StubNode) Signature() ([]byte, error) {

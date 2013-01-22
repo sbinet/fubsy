@@ -41,6 +41,9 @@ import (
 	"strings"
 
 	"code.google.com/p/go-bit/bit"
+
+	//"fubsy/log"
+	"fubsy/types"
 )
 
 type DAG struct {
@@ -201,6 +204,25 @@ func (self *DAG) Dump(writer io.Writer, indent string) {
 			}
 		}
 	}
+}
+
+// Run NodeExpand() on every node in the graph.
+func (self *DAG) ExpandNodes(ns types.Namespace) []error {
+	var errs []error
+	newindex := make(map[string]int)
+	for id, node := range self.nodes {
+		err := node.NodeExpand(ns)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		newindex[node.Name()] = id
+	}
+	if len(errs) > 0 {
+		return errs
+	}
+	self.index = newindex
+	return nil
 }
 
 // Return the set of nodes in this graph that match the names in
@@ -475,7 +497,11 @@ func (self *TestDAG) Finish() *DAG {
 	for _, name := range self.nodes {
 		node := dag.Lookup(name)
 		for _, pname := range self.parents[name] {
-			dag.AddParent(node, dag.Lookup(pname))
+			pnode := dag.Lookup(pname)
+			if pnode == nil {
+				panic(fmt.Sprintf("node %s: invalid parent %s", name, pname))
+			}
+			dag.AddParent(node, pnode)
 		}
 	}
 	return dag

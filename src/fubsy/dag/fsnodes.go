@@ -72,14 +72,14 @@ func (self *FileNode) List() []types.FuObject {
 	return []types.FuObject{self}
 }
 
-func (self *FileNode) NodeExpand(ns types.Namespace) (Node, error) {
-	expanded, name, err := types.ExpandString(self.name, ns)
+func (self *FileNode) NodeExpand(ns types.Namespace) error {
+	// XXX identical to StubNode: factor out to nodebase???
+	_, name, err := types.ExpandString(self.name, ns)
 	if err != nil {
-		return nil, err
-	} else if !expanded {
-		return self, nil
+		return err
 	}
-	return newFileNode(name), nil
+	self.name = name
+	return nil
 }
 
 func (self *FileNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {

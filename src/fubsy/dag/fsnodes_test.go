@@ -115,9 +115,9 @@ func Test_FileNode_Expand(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, node, xnode)
 
-	xnode, err = node.NodeExpand(ns)
+	err = node.NodeExpand(ns)
 	assert.Nil(t, err)
-	assert.Equal(t, node, xnode)
+	assert.Equal(t, "foobar", node.Name())
 }
 
 func Test_FileNode_Exists(t *testing.T) {

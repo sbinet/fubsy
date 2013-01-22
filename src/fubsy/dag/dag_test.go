@@ -13,6 +13,7 @@ import (
 	"github.com/stretchrcom/testify/assert"
 
 	"fubsy/testutils"
+	"fubsy/types"
 )
 
 func Test_DAG_add_lookup(t *testing.T) {
@@ -29,6 +30,47 @@ func Test_DAG_add_lookup(t *testing.T) {
 	assert.True(t, outnode.(*StubNode) == innode)
 
 	assert.Nil(t, dag.Lookup("bar"))
+}
+
+func Test_DAG_ExpandNodes(t *testing.T) {
+	ns := types.NewValueMap()
+	ns.Assign("sdir", types.FuString("src/tool1"))
+	ns.Assign("ext", types.FuString("cpp"))
+
+	tdag := NewTestDAG()
+	tdag.Add("bin/tool1", "$sdir/main.$ext", "$sdir/util.$ext", "$sdir/foo.h")
+	tdag.Add("$sdir/foo.h", "$sdir/foo.h.in")
+	tdag.Add("$sdir/main.$ext")
+	tdag.Add("$sdir/util.$ext", "$sdir/foo.h")
+	tdag.Add("$sdir/foo.h.in")
+	dag := tdag.Finish()
+
+	expect := []string{
+		"bin/tool1",
+		"src/tool1/foo.h",
+		"src/tool1/main.cpp",
+		"src/tool1/util.cpp",
+		"src/tool1/foo.h.in",
+	}
+	errs := dag.ExpandNodes(ns)
+	assert.Equal(t, 0, len(errs))
+	for i, node := range dag.nodes {
+		assert.Equal(t, expect[i], node.Name())
+	}
+	assert.Equal(t, len(expect), len(dag.nodes))
+
+	tdag = NewTestDAG()
+	tdag.Add("foo/$bogus/blah", "bam")
+	tdag.Add("bam", "$flop/bop")
+	tdag.Add("$flop/bop")
+	dag = tdag.Finish()
+	errs = dag.ExpandNodes(ns)
+	if len(errs) == 2 {
+		assert.Equal(t, "undefined variable 'bogus' in string", errs[0].Error())
+		assert.Equal(t, "undefined variable 'flop' in string", errs[1].Error())
+	} else {
+		t.Errorf("expected %d errors, but got %d:\n%v", 2, len(errs), errs)
+	}
 }
 
 func Test_DAG_MatchTargets(t *testing.T) {

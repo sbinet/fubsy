@@ -138,42 +138,30 @@ func (self *FinderNode) copy() Node {
 	return &c
 }
 
-func (self *FinderNode) NodeExpand(ns types.Namespace) (Node, error) {
+func (self *FinderNode) NodeExpand(ns types.Namespace) error {
 	// this does purely textual expansion, e.g. convert
 	// <$src/**/*.$ext> to a new FinderNode that will actually find
 	// files because '$src' and '$ext' get expanded
-	changes := false
-	expandlist := func(input []string) ([]string, error) {
-		var expanded bool
+	expandlist := func(strings []string) error {
 		var err error
-		output := make([]string, len(self.includes))
-		for i, pat := range input {
-			expanded, output[i], err = types.ExpandString(pat, ns)
+		for i, pat := range strings {
+			_, strings[i], err = types.ExpandString(pat, ns)
 			if err != nil {
-				return input, err
-			}
-			if expanded {
-				changes = true
+				return err
 			}
 		}
-		return output, nil
+		return nil
 	}
 
-	includes, err := expandlist(self.includes)
+	err := expandlist(self.includes)
 	if err != nil {
-		return self, err
+		return err
 	}
-	excludes, err := expandlist(self.excludes)
+	err = expandlist(self.excludes)
 	if err != nil {
-		return self, err
+		return err
 	}
-
-	if !changes {
-		return self, nil
-	}
-	result := NewFinderNode(includes...)
-	result.excludes = excludes
-	return result, nil
+	return nil
 }
 
 // Walk the filesystem for files matching this FinderNode's include

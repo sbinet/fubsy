@@ -101,16 +101,15 @@ func (self *ListNode) Nodes() []Node {
 	return result
 }
 
-func (self *ListNode) NodeExpand(ns types.Namespace) (Node, error) {
-	result := make(types.FuList, len(self.FuList))
+func (self *ListNode) NodeExpand(ns types.Namespace) error {
 	var err error
-	for i, obj := range self.FuList {
-		result[i], err = obj.(Node).NodeExpand(ns)
+	for _, obj := range self.FuList {
+		err = obj.(Node).NodeExpand(ns)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return newListNode(result...), nil
+	return nil
 }
 
 func (self *ListNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
