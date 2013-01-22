@@ -103,8 +103,9 @@ func (self *Runtime) runMainPhase() []error {
 		case dsl.ASTExpression:
 			_, errs = evaluate(self.stack, node)
 		default:
-			errs = append(errs, MakeLocationError(node, unsupportedAST(node)))
+			errs = append(errs, unsupportedAST(node))
 		}
+		errs = MakeLocationErrors(node_, errs)
 		allerrors = append(allerrors, errs...)
 	}
 
@@ -251,5 +252,5 @@ func openBuildDB() (build.BuildDB, error) {
 }
 
 func unsupportedAST(node dsl.ASTNode) error {
-	return fmt.Errorf("support not implemented for: %v", node)
+	return fmt.Errorf("syntax not supported yet: %v", node)
 }

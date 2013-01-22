@@ -138,6 +138,16 @@ func MakeLocationError(loc dsl.Locatable, err error) error {
 	return LocationError{loc.Location(), err}
 }
 
+func MakeLocationErrors(loc dsl.Locatable, errs []error) []error {
+	if errs == nil || len(errs) == 0 {
+		return errs
+	}
+	for i, err := range errs {
+		errs[i] = MakeLocationError(loc, err)
+	}
+	return errs
+}
+
 func (self LocationError) Error() string {
 	if self.location == nil {
 		return self.err.Error()
