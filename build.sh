@@ -22,7 +22,7 @@ run "pkg-config --silence-errors --cflags kyotocabinet"
 status=$?
 set -e
 if [ $status -eq 0 ]; then
-    buildtags="$buildtags,kyotodb"
+    buildtags="$buildtags kyotodb"
 fi
 
 golex=bin/golex
