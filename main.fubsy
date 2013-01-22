@@ -1,0 +1,28 @@
+# fubsy build script to build fubsy itself
+
+main {
+
+    #platform = "linux_amd64"
+    #pkg = "pkg/$platform"
+
+    # some tools needed to build/test
+    golex = "bin/golex"
+    gocov = "bin/gocov"
+    golex: <src/github.com/cznic/**/*.go> {
+        "go install -v github.com/cznic/golex"
+    }
+    gocov: <src/github.com/axw/gocov/**/*.go> {
+        "go install -v github.com/axw/gocov/gocov"
+    }
+
+    # generate lexer and parser
+    src = "src/fubsy"
+    "$src/dsl/fulex.go": "$src/dsl/fulex.l" {
+        "$golex -o $TARGET $SOURCE"
+        "gofmt -w $TARGET"
+    }
+    "$src/dsl/fugrammar.go": "$src/dsl/fugrammar.y" {
+        "go tool yacc -p fu -o $TARGET $SOURCE"
+        "gofmt -w $TARGET"
+    }
+}

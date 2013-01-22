@@ -106,7 +106,11 @@ func Test_nodify(t *testing.T) {
 	findersum, err := finder1.Add(finder2)
 	assert.Nil(t, err)
 	nodes = rt.nodify(findersum)
-	assert.Equal(t, 2, len(nodes))
-	assert.Equal(t, "<*.c *.h>", nodes[0].(*dag.FinderNode).String())
-	assert.Equal(t, "<**/*.java>", nodes[1].(*dag.FinderNode).String())
+	if len(nodes) == 2 {
+		assert.Equal(t, "<*.c *.h>", nodes[0].(*dag.FinderNode).String())
+		assert.Equal(t, "<**/*.java>", nodes[1].(*dag.FinderNode).String())
+	} else {
+		t.Errorf("expected nodify(%s) to return 2 nodes, but got %d: %v",
+			findersum, len(nodes), nodes)
+	}
 }

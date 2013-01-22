@@ -6,6 +6,8 @@ package dag
 
 import (
 	"errors"
+	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -32,9 +34,12 @@ type FinderNode struct {
 	// (currently unused)
 	excludes []string
 
-	// cache the result of calling Expand(), so subsequent calls are
-	// cheap and consistent
-	expansion types.FuObject
+	// cache the result of calling FindFiles(), so subsequent calls
+	// are cheap and consistent
+	matches []string
+
+	// cache the result of Signature()
+	sig []byte
 }
 
 func NewFinderNode(includes ...string) *FinderNode {
@@ -77,17 +82,38 @@ func (self *FinderNode) Add(other_ types.FuObject) (types.FuObject, error) {
 	var result types.FuObject
 	switch other := other_.(type) {
 	case types.FuList:
-		// <pat> + ["a", "b", "c"] = [<pat>, "a", "b", "c"]
-		list := make(types.FuList, 1+len(other))
-		list[0] = self
-		copy(list[1:], other)
-		result = list
+		// <pat> + [a, b, c] = [<pat>, a, b, c]
+		// (a, b, c must all be Nodes)
+		members := make([]types.FuObject, 1+len(other))
+		members[0] = self
+
+		for i, obj := range other {
+			switch obj := obj.(type) {
+			case types.FuString:
+				// <*.c> + ["extra/stuff.c"] should just work
+				members[i+1] = newFileNode(string(obj))
+			case Node:
+				members[i+1] = obj
+			default:
+				err := fmt.Errorf(
+					"unsupported operation: cannot add list containing "+
+						"%s %v to %s %v",
+					obj.Typename(), obj, self.Typename(), self)
+				return nil, err
+			}
+		}
+		result = newListNode(members...)
+	case types.FuString:
+		// <pat> + "foo" = [<pat>, FileNode("foo")]
+		result = newListNode(self, newFileNode(string(other)))
+	case Node:
+		result = newListNode(self, other)
 	default:
-		// <pat> + anything = [<pat>, anything]
-		list := make(types.FuList, 2)
-		list[0] = self
-		list[1] = other
-		result = list
+		err := fmt.Errorf(
+			"unsupported operation: cannot add "+
+				"%s %v to %s %v",
+			other.Typename(), other, self.Typename(), self)
+		return nil, err
 	}
 	return result, nil
 }
@@ -98,7 +124,7 @@ func (self *FinderNode) List() []types.FuObject {
 	// More importantly, a FinderNode is a lazy list of filenames, not
 	// a list of patterns. And we should only go expanding the
 	// wildcard and searching for filenames when the FinderNode is
-	// explicitly Expand()ed, not before. So the only sensible list
+	// explicitly expanded, not before. So the only sensible list
 	// representation is a singleton.
 	return []types.FuObject{self}
 }
@@ -112,15 +138,53 @@ func (self *FinderNode) copy() Node {
 	return &c
 }
 
+func (self *FinderNode) NodeExpand(ns types.Namespace) error {
+	// this does purely textual expansion, e.g. convert
+	// <$src/**/*.$ext> to a new FinderNode that will actually find
+	// files because '$src' and '$ext' get expanded
+	expandlist := func(strings []string) error {
+		var err error
+		for i, pat := range strings {
+			_, strings[i], err = types.ExpandString(pat, ns)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	err := expandlist(self.includes)
+	if err != nil {
+		return err
+	}
+	err = expandlist(self.excludes)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Walk the filesystem for files matching this FinderNode's include
 // patterns. Return the list of matching filenames as a FuList of
 // FileNode.
-func (self *FinderNode) Expand(ns types.Namespace) (types.FuObject, error) {
-	if self.expansion != nil {
-		return self.expansion, nil
+func (self *FinderNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
+	filenames, err := self.FindFiles()
+	if err != nil {
+		return nil, err
+	}
+	var result types.FuList
+	for _, filename := range filenames {
+		result = append(result, types.FuString(filename))
+	}
+	return result, nil
+}
+
+func (self *FinderNode) FindFiles() ([]string, error) {
+	if self.matches != nil {
+		return self.matches, nil
 	}
 
-	result := make(types.FuList, 0)
+	var result []string
 	var matches []string
 	for _, pattern := range self.includes {
 		recursive, prefix, tail, err := splitPattern(pattern)
@@ -135,26 +199,75 @@ func (self *FinderNode) Expand(ns types.Namespace) (types.FuObject, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, filename := range matches {
-			result = append(result, newFileNode(filename))
-		}
+		result = append(result, matches...)
 	}
-	self.expansion = result
+	self.matches = result
 	return result, nil
 }
 
 // Node methods
 
 func (self *FinderNode) Exists() (bool, error) {
-	// hmmm: it's perfectly meaningful to ask if a FinderNode exists,
-	// just unexpected and expensive (have to expand the wildcards)
-	panic("Exists() should not be called on a FinderNode " +
-		"(graph should have been rebuilt by this point)")
+	filenames, err := self.FindFiles()
+	if err != nil {
+		return false, err
+	}
+	return len(filenames) > 0, nil
 }
 
 func (self *FinderNode) Signature() ([]byte, error) {
-	panic("Signature() should never be called on a FinderNode " +
-		"(graph should have been rebuilt by this point)")
+	filenames, err := self.FindFiles()
+	if err != nil {
+		return nil, err
+	}
+
+	// the signature consists of:
+	//   sequence of {
+	//       filename_hash []byte
+	//       file_hash []byte
+	//   }
+	// this means we can do a simple bytewise comparison to detect
+	// change (file added, file removed, file modified), but later we
+	// can decode this and figure out *exactly what* changed, for
+	// better reporting to the user ("rebuilding x.jar because you
+	// added 3 files to <src/x/**/*.java>")
+
+	hash := fnv.New64a()
+	sig := make([]byte, 0, (2*hash.Size())*len(filenames))
+	for _, filename := range filenames {
+		hash.Reset()
+		hash.Write(([]byte)(filename))
+		sig = hash.Sum(sig)
+
+		hash.Reset()
+		err = HashFile(filename, hash)
+		if err != nil {
+			return nil, err
+		}
+		sig = hash.Sum(sig)
+	}
+	return sig, nil
+
+	// // the signature consists of:
+	// // - hash(concatenated filenames)
+	// // - hash(concatenated file contents)
+	// namehash := fnv.New64a()
+	// contenthash := fnv.New64a()
+	// zero := []byte{0}
+	// for _, filename := range filenames {
+	// 	namehash.Write(([]byte)(filename))
+	// 	namehash.Write(zero)
+	// 	err = HashFile(filename, contenthash)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
+
+	// signature := make([]byte, 0, namehash.Size()+contenthash.Size())
+	// signature = namehash.Sum(signature)
+	// signature = contenthash.Sum(signature)
+	// self.sig = signature
+	// return signature, nil
 }
 
 // Wildcard expansion -- nothing past here has anything to do with

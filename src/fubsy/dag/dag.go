@@ -42,6 +42,7 @@ import (
 
 	"code.google.com/p/go-bit/bit"
 
+	//"fubsy/log"
 	"fubsy/types"
 )
 
@@ -205,6 +206,25 @@ func (self *DAG) Dump(writer io.Writer, indent string) {
 	}
 }
 
+// Run NodeExpand() on every node in the graph.
+func (self *DAG) ExpandNodes(ns types.Namespace) []error {
+	var errs []error
+	newindex := make(map[string]int)
+	for id, node := range self.nodes {
+		err := node.NodeExpand(ns)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		newindex[node.Name()] = id
+	}
+	if len(errs) > 0 {
+		return errs
+	}
+	self.index = newindex
+	return nil
+}
+
 // Return the set of nodes in this graph that match the names in
 // targets. If targets is nil or empty, return all final targets
 // (nodes with no children). Otherwise, for each name in targets, find
@@ -265,21 +285,6 @@ func (self *DAG) FindFinalTargets() *NodeSet {
 	}
 	//fmt.Printf("  -> targets = %v\n", targets)
 	return (*NodeSet)(targets)
-}
-
-// Walk the graph starting from each node in goal to find the set of
-// original source nodes, i.e. nodes with no parents that are
-// ancestors of any node in goal. Store that set (along with some
-// other useful information discovered in the graph walk) in self.
-func (self *DAG) FindRelevantNodes(goal *NodeSet) *NodeSet {
-	relevant := bit.New()
-	self.DFS(goal, func(node Node) error {
-		relevant.Add(node.id())
-		return nil
-	})
-
-	//fmt.Printf("FindRelevantNodes: %v\n", relevant)
-	return (*NodeSet)(relevant)
 }
 
 // Callback function to visit nodes from DFS(). Return a non-nil error
@@ -363,71 +368,6 @@ func (self CycleError) Error() string {
 		result = append(result, "  "+strings.Join(names, " -> "))
 	}
 	return strings.Join(result, "\n")
-}
-
-// Build a new DAG that is ready to start building targets. The new
-// DAG preserves only relevant nodes and expands all expandable nodes
-// in the current DAG (e.g each FinderNode is replaced by FileNodes
-// for the files matching the glob's patterns). Any BuildState or
-// NodeSet objects derived from the old DAG are invalid with the new
-// DAG: throw them away and start over again. This is a destructive
-// operation; on return, self is unusable.
-func (self *DAG) Rebuild(relevant *NodeSet, ns types.Namespace) (*DAG, []error) {
-	var errors []error
-
-	// First, detach all nodes from the old DAG (and sabotage the old
-	// DAG while we're at it, so nobody accidentally uses it)
-	nodes := self.nodes
-	parents := self.parents
-	self.nodes = nil
-	self.index = nil
-	self.parents = nil
-	for _, node := range nodes {
-		node.setid(-1)
-	}
-
-	// Next, build the new DAG: expand all relevant nodes and add the
-	// result to the new DAG.
-	replacements := make(map[int]*bit.Set)
-	newdag := NewDAG()
-	for id, node := range nodes {
-		if !(*bit.Set)(relevant).Contains(id) {
-			continue
-		}
-		expansion, err := node.Expand(ns)
-		if err != nil {
-			errors = append(errors, err)
-		} else if expansion == nil {
-			panic("node.Expand() returned nil for node " + node.String())
-		}
-		repl := bit.New()
-		for _, expnode := range expansion.List() {
-			// if this type assertion panics, then node.Expand()
-			// returned FuObjects that don't implement Node
-			newid, _ := newdag.addNode(expnode.(Node))
-			repl.Add(newid)
-		}
-		replacements[id] = repl
-	}
-
-	// Finally, rebuild parent info in the new DAG.
-	for oldid := range nodes {
-		newids := replacements[oldid]
-		if newids == nil { // node not relevant (not preserved in new DAG)
-			continue
-		}
-
-		oldparents := parents[oldid]
-		newparents := bit.New()
-		for oldpid, ok := oldparents.Next(-1); ok; oldpid, ok = oldparents.Next(oldpid) {
-			newparents.SetOr(newparents, replacements[oldpid])
-		}
-		for newid, ok := newids.Next(-1); ok; newid, ok = newids.Next(newid) {
-			newdag.parents[newid] = newparents
-		}
-	}
-
-	return newdag, errors
 }
 
 // Inspect every node in the graph and figure out which ones are
@@ -557,7 +497,11 @@ func (self *TestDAG) Finish() *DAG {
 	for _, name := range self.nodes {
 		node := dag.Lookup(name)
 		for _, pname := range self.parents[name] {
-			dag.AddParent(node, dag.Lookup(pname))
+			pnode := dag.Lookup(pname)
+			if pnode == nil {
+				panic(fmt.Sprintf("node %s: invalid parent %s", name, pname))
+			}
+			dag.AddParent(node, pnode)
 		}
 	}
 	return dag

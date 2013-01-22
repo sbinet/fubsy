@@ -111,9 +111,13 @@ func Test_FileNode_buildrule(t *testing.T) {
 func Test_FileNode_Expand(t *testing.T) {
 	ns := types.NewValueMap()
 	node := newFileNode("foobar")
-	xnode, err := node.Expand(ns)
+	xnode, err := node.ActionExpand(ns)
 	assert.Nil(t, err)
 	assert.Equal(t, node, xnode)
+
+	err = node.NodeExpand(ns)
+	assert.Nil(t, err)
+	assert.Equal(t, "foobar", node.Name())
 }
 
 func Test_FileNode_Exists(t *testing.T) {

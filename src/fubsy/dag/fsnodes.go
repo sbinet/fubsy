@@ -7,9 +7,9 @@ package dag
 // Fubsy Node types for filesystem objects
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
+	"hash"
 	"hash/fnv"
 	"io"
 	"os"
@@ -72,7 +72,20 @@ func (self *FileNode) List() []types.FuObject {
 	return []types.FuObject{self}
 }
 
-func (self *FileNode) Expand(ns types.Namespace) (types.FuObject, error) {
+func (self *FileNode) NodeExpand(ns types.Namespace) error {
+	// XXX identical to StubNode: factor out to nodebase???
+	_, name, err := types.ExpandString(self.name, ns)
+	if err != nil {
+		return err
+	}
+	self.name = name
+	return nil
+}
+
+func (self *FileNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
+	// By the time this happens, variable references should have been
+	// expanded, and one FileNode always just represents a single file
+	// ... so there's nothing to do here.
 	return self, nil
 }
 
@@ -109,26 +122,28 @@ func (self *FileNode) Signature() ([]byte, error) {
 	if self.sig != nil {
 		return self.sig, nil
 	}
-	file, err := os.Open(self.Name())
+	hash := fnv.New64a()
+	err := HashFile(self.Name(), hash)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	hash := fnv.New64a()
-	block := 4096
-	reader := bufio.NewReaderSize(file, block)
-	data := make([]byte, block)
-	for {
-		nbytes, err := reader.Read(data)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		hash.Write(data[0:nbytes])
-	}
+
 	signature := make([]byte, 0, hash.Size())
 	signature = hash.Sum(signature)
 	self.sig = signature
 	return signature, nil
+}
+
+func HashFile(filename string, hasher hash.Hash) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(hasher, file)
+	if err != nil {
+		return err
+	}
+	return nil
 }

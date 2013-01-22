@@ -77,7 +77,7 @@ func (self *FuFunction) List() []FuObject {
 	return []FuObject{self}
 }
 
-func (self *FuFunction) Expand(ns Namespace) (FuObject, error) {
+func (self *FuFunction) ActionExpand(ns Namespace) (FuObject, error) {
 	return self, nil
 }
 

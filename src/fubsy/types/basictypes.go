@@ -37,15 +37,25 @@ type FuObject interface {
 	// since that might (or might not) affect the original object.
 	List() []FuObject
 
-	// Convert an object from its initial form, seen in the main phase
-	// (the result of evaluating an expression in the AST), to the
-	// final form seen in the build phase. For example, expansion
-	// might convert a string "$CC $CFLAGS" to "/usr/bin/gcc -Wall
-	// -O2". Expansion can involve conversions within Fubsy's type
-	// system: e.g. expanding a FinderNode might result in a FuList of
-	// file nodes. Expand() never returns nil; a value that needs no
-	// expansion should just return itself.
-	Expand(ns Namespace) (FuObject, error)
+	// Convert a value to the final form needed to run build actions.
+	// This happens late in the build phase, after we have determined
+	// that a particular target needs to be built, right before
+	// actually building it. ActionExpand() expands variable
+	// references, so a string "$CC $CFLAGS" might expand to
+	// "/usr/bin/gcc -O2 -Wall". ActionExpand() also turns abstract
+	// representations of a collection of resources into something
+	// that can actually be acted on: canonically, a FinderNode
+	// representing <*.c> might expand to a FuList of FuStrings
+	// {"foo.c", "bar.c"}. That list in turn will be incorporated into
+	// the value being expanded in the appropriate way: if 'src' is
+	// the FinderNode, then "cc -c $src" would expand to "cc -c foo.c
+	// bar.c". The precise semantics are type-dependent: expanding src
+	// in a list ["cc", src] might return ["cc", "foo.c", "bar.c"].
+	// ActionExpand() typically returns a value of the receiver's
+	// type, e.g. FuString.ActionExpand() returns a FuString, and
+	// FuList.ActionExpand() returns a FuList. FinalExpand() never
+	// returns nil.
+	ActionExpand(ns Namespace) (FuObject, error)
 
 	// Return a brief, human-readable description of the type of this
 	// object. Used in error messages.
@@ -102,60 +112,12 @@ func init() {
 		fmt.Sprintf("\\$(?:%s|\\{%s\\})", namepat, namepat))
 }
 
-func (self FuString) Expand(ns Namespace) (FuObject, error) {
-
-	match := expand_re.FindStringSubmatchIndex(string(self))
-	if match == nil { // fast path for common case
-		return self, nil
+func (self FuString) ActionExpand(ns Namespace) (FuObject, error) {
+	_, s, err := ExpandString(string(self), ns)
+	if err != nil {
+		return nil, err
 	}
-
-	pos := 0
-	cur := string(self)
-	result := ""
-	var name string
-	var start, end int
-	for match != nil {
-		group1 := match[2:4] // location of match for "$foo"
-		group2 := match[4:6] // location of match for "${foo}"
-		if group1[0] > 0 {
-			name = cur[group1[0]:group1[1]]
-			start = group1[0] - 1
-			end = group1[1]
-		} else if group2[0] > 0 {
-			name = cur[group2[0]:group2[1]]
-			start = group2[0] - 2
-			end = group2[1] + 1
-		} else {
-			// this should not happen: panic?
-			return self, nil
-		}
-
-		value, ok := ns.Lookup(name)
-		var cstring string
-		if !ok {
-			// XXX very similar to error reported by runtime.evaluateName()
-			// XXX location?
-			return self, fmt.Errorf("undefined variable '%s' in string", name)
-		} else if value != nil {
-			xvalue, err := value.Expand(ns)
-			if err != nil {
-				return nil, err
-			}
-			if xvalue == nil {
-				// this violates the contract for FuObject.Expand()
-				panic(fmt.Sprintf(
-					"value.Expand() returned nil (value == %#v)", value))
-			}
-			cstring = xvalue.CommandString()
-		}
-
-		result += cur[:start] + cstring
-		pos = end
-		cur = cur[pos:]
-		match = expand_re.FindStringSubmatchIndex(cur)
-	}
-	result += cur
-	return FuString(result), nil
+	return FuString(s), nil
 }
 
 func (self FuString) Typename() string {
@@ -198,10 +160,10 @@ func (self FuList) List() []FuObject {
 	return self
 }
 
-func (self FuList) Expand(ns Namespace) (FuObject, error) {
+func (self FuList) ActionExpand(ns Namespace) (FuObject, error) {
 	result := make(FuList, 0, len(self))
 	for _, val := range self {
-		xval, err := val.Expand(ns)
+		xval, err := val.ActionExpand(ns)
 		if err != nil {
 			return nil, err
 		}
@@ -232,6 +194,65 @@ const shellmeta = "# `\"'\\&?*[]{}();$><|"
 
 // initialized on demand
 var shellreplacer *strings.Replacer
+
+// Expand variables in s by looking them up in ns. If s has no
+// variable references, just return s; otherwise return a new expanded
+// string. Return non-nil error if there are problems expanding the
+// string, most likely references to undefined variables.
+func ExpandString(s string, ns Namespace) (bool, string, error) {
+	match := expand_re.FindStringSubmatchIndex(s)
+	if match == nil { // fast path for common case
+		return false, s, nil
+	}
+
+	pos := 0
+	cur := s
+	result := ""
+	var name string
+	var start, end int
+	for match != nil {
+		group1 := match[2:4] // location of match for "$foo"
+		group2 := match[4:6] // location of match for "${foo}"
+		if group1[0] > 0 {
+			name = cur[group1[0]:group1[1]]
+			start = group1[0] - 1
+			end = group1[1]
+		} else if group2[0] > 0 {
+			name = cur[group2[0]:group2[1]]
+			start = group2[0] - 2
+			end = group2[1] + 1
+		} else {
+			// this should not happen: panic?
+			return false, s, nil
+		}
+
+		value, ok := ns.Lookup(name)
+		var cstring string
+		if !ok {
+			// XXX very similar to error reported by runtime.evaluateName()
+			// XXX location?
+			err := fmt.Errorf("undefined variable '%s' in string", name)
+			return false, s, err
+		} else if value != nil {
+			xvalue, err := value.ActionExpand(ns)
+			if err != nil {
+				return false, s, err
+			} else if xvalue == nil {
+				// this violates the contract for FuObject.ActionExpand()
+				panic(fmt.Sprintf(
+					"value.ActionExpand() returned nil (value == %#v)", value))
+			}
+			cstring = xvalue.CommandString()
+		}
+
+		result += cur[:start] + cstring
+		pos = end
+		cur = cur[pos:]
+		match = expand_re.FindStringSubmatchIndex(cur)
+	}
+	result += cur
+	return true, result, nil
+}
 
 // Return s decorated with quote characters so it can safely be
 // included in a shell command.

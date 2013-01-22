@@ -184,7 +184,12 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 		for _, val := range targets {
 			result = append(result, self.nodify(val)...)
 		}
-	case *dag.FinderNode:
+	case *dag.ListNode:
+		result = targets.Nodes()
+		for i, node := range result {
+			result[i] = self.dag.AddNode(node)
+		}
+	case dag.Node:
 		result = []dag.Node{self.dag.AddNode(targets)}
 	}
 	return result
@@ -193,39 +198,35 @@ func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
 // Build user's requested targets according to the dependency graph in
 // self.dag (as constructed by runMainPhase()).
 func (self *Runtime) runBuildPhase() []error {
-	var errors []error
+	var errs []error
 
-	log.Debug(log.DAG, "initial dag:")
-	log.DebugDump(log.DAG, self.dag)
-
-	goal, errors := self.dag.MatchTargets(self.options.Targets)
-	if len(errors) > 0 {
-		return errors
-	}
-	relevant := self.dag.FindRelevantNodes(goal)
-
-	self.dag, errors = self.dag.Rebuild(relevant, self.stack)
-	if len(errors) > 0 {
-		return errors
+	errs = self.dag.ExpandNodes(self.stack)
+	if len(errs) > 0 {
+		return errs
 	}
 	self.dag.MarkSources()
-	log.Debug(log.DAG, "rebuilt dag:")
+
+	log.Debug(log.DAG, "dependency graph:")
 	log.DebugDump(log.DAG, self.dag)
+
+	goal, errs := self.dag.MatchTargets(self.options.Targets)
+	if len(errs) > 0 {
+		return errs
+	}
 
 	bdb, err := openBuildDB()
 	if err != nil {
-		errors = append(errors, err)
-		return errors
+		errs = append(errs, err)
+		return errs
 	}
 	defer bdb.Close()
 
 	bstate := build.NewBuildState(self.dag, bdb, self.options)
-	goal = self.dag.FindFinalTargets()
 	err = bstate.BuildTargets(goal)
 	if err != nil {
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
-	return errors
+	return errs
 }
 
 func openBuildDB() (build.BuildDB, error) {
