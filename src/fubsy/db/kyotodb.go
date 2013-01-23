@@ -1,10 +1,8 @@
-// -*- mode: go; tab-width: 4; indent-tabs-mode: t -*-
-
-// +build kyotodb
-
 // Copyright © 2013, Greg Ward. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can
 // be found in the LICENSE.txt file.
+
+// +build kyotodb
 
 package db
 
