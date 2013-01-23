@@ -1,9 +1,24 @@
 # fubsy build script to build fubsy itself
 
+# XXX this requires:
+#   * export GOPATH=`pwd`
+#
+# XXX this omits:
+#   * probing for database libraries (no configure phase!)
+#   * setting build tags based on that
+
 main {
 
     #platform = "linux_amd64"
     #pkg = "pkg/$platform"
+
+    # XXX what I really want is this:
+    #   buildtags = ["kyotodb"]
+    #   tagflag = "-tags='${buildtags.join(\' \')}'"
+    # but there's a bit more work to do before Fubsy supports
+    # that syntax, so for now we have to put up with
+    tagflag = "-tags='kyotodb'"
+    # ...and you'll just have to edit it manually to modify tags
 
     # some tools needed to build/test
     golex = "bin/golex"
@@ -25,4 +40,13 @@ main {
         "go tool yacc -p fu -o $TARGET $SOURCE"
         "gofmt -w $TARGET"
     }
+
+    # and build fubsy: all package *.a files and the binary
+    # (ignoring the package files because I don't know what
+    # the current platform is: need to run "go env" and parse
+    # out GOHOSTOS, GOHOSTARCH)
+    "bin/fubsy": <$src/**/*.go> {
+        "go install -v fubsy/..."
+    }
+
 }
