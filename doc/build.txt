@@ -1,0 +1,122 @@
+Building Fubsy from Source
+==========================
+
+I'm not currently distributing Fubsy binaries -- so if you want to
+give it a try, you'll have to build it from source. The same procedure
+applies whether you are building in a Mercurial working dir or from a
+release tarball.
+
+Requirements
+------------
+
+Fubsy is written in Go and (optionally) uses Kyoto Cabinet for
+persistent storage [1]. Thus:
+
+  * you must have Go 1.0.x installed
+
+  * you should have Kyoto Cabinet (including headers and development
+    library) installed
+
+Details follow.
+
+.. [1] If you build on a system without Kyoto Cabinet, the resulting
+       Fubsy binary will work, but it will be incapable of incremental
+       builds. Fubsy requires persistent storage for incremental
+       builds to work, and the only storage backend supported so far
+       is Kyoto Cabinet. (More coming in future.)
+
+Installing Go
+-------------
+
+If you are already able to build and run Go programs, skip to the next
+section. Fubsy has no exotic requirements in this regard.
+
+If you are running recent versions of Debian (>= 7.0 aka wheezy) or
+Ubuntu (>= 12.10 aka quantal), try installing the OS package::
+
+    sudo apt-get install golang
+
+On Mac OS X with MacPorts, try (untested!) ::
+
+    sudo port install go
+
+On Mac OS X with Homebrew, try (untested!) ::
+
+    brew install go
+
+If you are running any other Unix/Linux variant (including Mac OS X):
+
+  #. download the appropriate binary tarball for your platform from
+     `the Go project downloads page
+     <http://code.google.com/p/go/downloads/list>`_
+
+  #. unpack it to a dedicated directory, e.g. ::
+
+       cd /usr/local
+       rm -rf go
+       tar -xzf go1.0.3.linux-amd64.tar.gz   # filename may differ!
+
+  #. make sure your shell can find the ``go`` command, e.g. by adding
+     ``/usr/local/go/bin`` to your ``$PATH``
+
+If you are on Windows: see Go's `Getting Started
+<http://golang.org/doc/install>`_ page, and good luck! While I do
+intend for Windows to be a fully-supported first-class platform for
+Fubsy, it isn't yet. Have patience, be prepared for things to break,
+and *please* send patches if you can fix them!
+
+Third-party Go libraries
+------------------------
+
+Fubsy depends on several third-party Go libraries, but they are all
+included in the source repository. There's nothing to do here.
+
+Installing Kyoto Cabinet
+------------------------
+
+Remember: this is an optional dependency. If you can't get it to work,
+just skip it. You'll get a Fubsy binary that is incapable of
+incremental builds, but you should still be able to get a taste for
+how Fubsy works.
+
+On Debian/Ubuntu, try ::
+
+    sudo apt-get install libkyotocabinet-dev
+
+On Fedora/Red Hat, try (untested!) ::
+
+    sudo yum install kyotocabinet-devel
+
+On Mac OS X with MacPorts, try (untested!) ::
+
+    sudo port install kyotocabinet
+
+On Mac OS X with Homebrew, try (untested!) ::
+
+    brew install kyoto-cabinet
+
+Otherwise, try searching your OS' native package manager. Make sure
+you install the "dev" or "devel" package (if any); Fubsy requires the
+Kyoto Cabinet header files to build.
+
+If your OS doesn't package Kyoto Cabinet, or you are using an OS
+without a package manager, the source is here:
+http://fallabs.com/kyotocabinet/pkg/ .
+
+Building
+--------
+
+To build Fubsy and run all unit tests (Unix only)::
+
+    ./build.sh
+
+Obviously this won't work on Windows, and I haven't written an
+equivalent batch file yet. Patches are welcome!
+
+To prove that Fubsy can build itself using its own build script:
+
+    ./bin/fubsy
+
+(If that fails because you don't have Kyoto Cabinet installed, you'll
+have to edit ``main.fubsy``. Fubsy doesn't have a auto-configuration
+feature yet, although it's in the plan.)
