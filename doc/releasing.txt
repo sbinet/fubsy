@@ -43,6 +43,7 @@ Fubsy Release Process
        hg push
 
   8. Update doc/announce.txt (version number, major changes).
+     Duplicate in www/content/news.rst.
 
      Useful command for reviewing history:
 
@@ -63,5 +64,6 @@ Fubsy Release Process
        subj="ANNOUNCE: Fubsy 0.0.2: the universal build tool"
        mutt -s "$subj" fubsydev@librelist.org < doc/announce.txt
        mutt -s "$subj" editor@lwn.net < doc/announce.txt
+       mutt -s "$subj" golang-nuts@googlegroups.com < doc/announce.txt
 
  12. Post on Twitter, Google+, etc.
