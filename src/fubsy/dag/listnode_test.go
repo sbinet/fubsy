@@ -50,7 +50,13 @@ func Test_ListNode_ActionExpand(t *testing.T) {
 			actual[i] = obj.(Node)
 		}
 		if len(expect) == len(actual) {
-			assert.Equal(t, expect, actual)
+			for i, enode := range expect {
+				anode := actual[i]
+				if !enode.Equal(anode) {
+					t.Errorf("ListNode[%d]: expected <%T: %s> but got <%T: %s>",
+						i, enode, enode, anode, anode)
+				}
+			}
 		} else {
 			t.Errorf(
 				"ListNode %v: expected ActionExpand() to return %d Nodes, "+
@@ -74,6 +80,10 @@ func Test_ListNode_ActionExpand(t *testing.T) {
 	// resulting list)
 	list = newListNode(node1, list, node0)
 	assertExpand([]Node{node1, node0, node1, node0}, list)
+
+	ns.Assign("a", types.FuString("argghh"))
+	list = newListNode(node1, NewStubNode("say $a"), node0)
+	assertExpand([]Node{node1, NewStubNode("say argghh"), node0}, list)
 }
 
 func Test_ListNode_expand_cycle(t *testing.T) {

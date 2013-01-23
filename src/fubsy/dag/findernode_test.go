@@ -5,7 +5,6 @@
 package dag
 
 import (
-	"fmt"
 	"regexp"
 	"testing"
 
@@ -52,35 +51,35 @@ func Test_FinderNode_Add_Expand(t *testing.T) {
 		"main.c", "src/foo.c", "doc/stuff.txt"}
 	sum, err := finder1.Add(finder2)
 	assert.Nil(t, err)
-	assertExpand(t, expect, sum)
+	assertExpand(t, nil, expect, sum)
 
 	// sum = sum + <"*c*/?o?.h">
 	finder3 := NewFinderNode("*c*/?o?.h")
 	expect = append(expect, "include/bop.h", "src/foo.h")
 	sum, err = sum.Add(finder3)
 	assert.Nil(t, err)
-	assertExpand(t, expect, sum)
+	assertExpand(t, nil, expect, sum)
 
 	// sum = <*c*/?o?.h> + <**/*.c>
 	expect = []string{
 		"include/bop.h", "src/foo.h", "main.c", "src/foo.c"}
 	sum, err = finder3.Add(finder1)
 	assert.Nil(t, err)
-	assertExpand(t, expect, sum)
+	assertExpand(t, nil, expect, sum)
 
 	// sum = <doc/*.txt> + sum
 	// (effectively: sum = <doc/*.txt> + (<*c*/?o?.h> + <**/*.c>))
 	expect = append([]string{"doc/stuff.txt"}, expect...)
 	sum, err = finder2.Add(sum)
 	assert.Nil(t, err)
-	assertExpand(t, expect, sum)
+	assertExpand(t, nil, expect, sum)
 
 	// sum = <**/*.c> + "urgh"
 	expect = []string{
 		"main.c", "src/foo.c", "urgh"}
 	sum, err = finder1.Add(types.FuString("urgh"))
 	assert.Nil(t, err)
-	assertExpand(t, expect, sum)
+	assertExpand(t, nil, expect, sum)
 
 	// sum = <**/*.c> + ["a", "b", "c"]
 	expect = []string{
@@ -88,7 +87,7 @@ func Test_FinderNode_Add_Expand(t *testing.T) {
 	list := types.MakeFuList("a", "b", "c")
 	sum, err = finder1.Add(list)
 	assert.Nil(t, err)
-	assertExpand(t, expect, sum)
+	assertExpand(t, nil, expect, sum)
 }
 
 // hmmmm: interface-wise, this tests that FinderNode.Add() returns an
@@ -131,17 +130,17 @@ func Test_FinderNode_Expand_empty(t *testing.T) {
 
 	// no patterns, no files: of course we find nothing
 	finder := &FinderNode{}
-	assertExpand(t, []string{}, finder)
+	assertExpand(t, nil, []string{}, finder)
 
 	// patterns, but no files: still nothing
 	finder.includes = []string{"**/*.c", "include/*.h", "*/*.txt"}
-	assertExpand(t, []string{}, finder)
+	assertExpand(t, nil, []string{}, finder)
 
 	// no patterns, some files: still nothing
 	finder.includes = finder.includes[0:0]
 	testutils.TouchFiles(
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
-	assertExpand(t, []string{}, finder)
+	assertExpand(t, nil, []string{}, finder)
 }
 
 func Test_FinderNode_Expand_single_include(t *testing.T) {
@@ -152,28 +151,29 @@ func Test_FinderNode_Expand_single_include(t *testing.T) {
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
 
 	finder := NewFinderNode("*/*.c")
-	assertExpand(t, []string{"lib1/foo.c"}, finder)
+	assertExpand(t, nil, []string{"lib1/foo.c"}, finder)
 
 	finder = NewFinderNode("**/*.c")
-	assertExpand(t, []string{"lib1/foo.c", "lib1/sub/blah.c"}, finder)
+	assertExpand(t, nil, []string{"lib1/foo.c", "lib1/sub/blah.c"}, finder)
 
 	finder = NewFinderNode("l?b?/**/*.c")
-	assertExpand(t, []string{"lib1/foo.c", "lib1/sub/blah.c"}, finder)
+	assertExpand(t, nil, []string{"lib1/foo.c", "lib1/sub/blah.c"}, finder)
 
 	finder = NewFinderNode("in?lu?e/*.h")
-	assertExpand(t, []string{"include/bip.h", "include/bop.h"}, finder)
+	assertExpand(t, nil, []string{"include/bip.h", "include/bop.h"}, finder)
 
 	finder = NewFinderNode("inc*/?i*.h")
-	assertExpand(t, []string{"include/bip.h"}, finder)
+	assertExpand(t, nil, []string{"include/bip.h"}, finder)
 
 	// adding new files changes nothing, because FinderNode caches the
 	// result of Expand()
 	testutils.TouchFiles("include/mip.h", "include/fibbb.h")
-	assertExpand(t, []string{"include/bip.h"}, finder)
+	assertExpand(t, nil, []string{"include/bip.h"}, finder)
 
 	// but a new FileFinder instance will see them
 	finder = NewFinderNode("inc*/?i*.h")
 	assertExpand(t,
+		nil,
 		[]string{"include/bip.h", "include/fibbb.h", "include/mip.h"},
 		finder)
 }
@@ -206,7 +206,7 @@ func Test_FinderNode_Expand_double_recursion(t *testing.T) {
 		"app1/src/test/org/example/app1/StuffTest.java",
 		"misc/app3/src/test/org/example/app3/TestHelpers.java",
 	}
-	assertExpand(t, expect, finder)
+	assertExpand(t, nil, expect, finder)
 
 	finder = NewFinderNode("**/test/**/*")
 	expect = []string{
@@ -214,10 +214,39 @@ func Test_FinderNode_Expand_double_recursion(t *testing.T) {
 		"misc/app3/src/test/org/example/app3/TestHelpers.java",
 		"misc/app3/src/test/org/example/app3/testdata",
 	}
-	assertExpand(t, expect, finder)
+	assertExpand(t, nil, expect, finder)
 
 	finder = NewFinderNode("**/test/**")
-	assertExpand(t, expect, finder)
+	assertExpand(t, nil, expect, finder)
+}
+
+func Test_FinderNode_Expand_vars(t *testing.T) {
+	// imagine code like this:
+	//   srcdir = "src/stuff"
+	//   files = <$srcdir/*.c>
+	//   "myapp": "$srcdir/main.c" {
+	//       "cc -c $files"
+	//   }
+	// ...i.e. a FinderNode that is not in the DAG, so variable
+	// references do not get expanded by DAG.ExpandNodes(). This is
+	// clearly a bogus build script, but that's beside the point. We
+	// need to ensure that the wildcard expanded is not "$srcdir/*.c"
+	// but "src/stuff/*.c".
+
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	testutils.TouchFiles(
+		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
+
+	ns := types.NewValueMap()
+	ns.Assign("libsrc", types.FuString("lib1"))
+	finder := NewFinderNode("$libsrc/**/*.c")
+	expect := []string{
+		"lib1/foo.c",
+		"lib1/sub/blah.c",
+	}
+	assertExpand(t, ns, expect, finder)
 }
 
 func Test_FinderNode_expand_cycle(t *testing.T) {
@@ -229,21 +258,18 @@ func Test_FinderNode_expand_cycle(t *testing.T) {
 	var err error
 	finder := NewFinderNode("src/$a/*.h")
 
-	// XXX ooops, ActionExpand() does not expand variable refs!
-	// _, err = finder.ActionExpand(ns, nil)
-	// fmt.Println("finder =", finder)
-	// fmt.Println("err =", err)
-	// assert.NotNil(t, err)
-	// assert.Equal(t, "cyclic variable reference: a -> b -> c -> a", err.Error())
+	_, err = finder.ActionExpand(ns, nil)
+	assert.Equal(t, "cyclic variable reference: a -> b -> c -> a", err.Error())
 
 	err = finder.NodeExpand(ns)
-	fmt.Println("finder =", finder)
-	fmt.Println("err =", err)
 	assert.Equal(t, "cyclic variable reference: a -> b -> c -> a", err.Error())
 }
 
-func assertExpand(t *testing.T, expect []string, obj types.FuObject) {
-	ns := types.NewValueMap()
+func assertExpand(
+	t *testing.T, ns types.Namespace, expect []string, obj types.FuObject) {
+	if ns == nil {
+		ns = types.NewValueMap()
+	}
 	actualobj, err := obj.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 

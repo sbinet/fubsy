@@ -139,6 +139,10 @@ func (self *FinderNode) copy() Node {
 }
 
 func (self *FinderNode) NodeExpand(ns types.Namespace) error {
+	if self.expanded {
+		return nil
+	}
+
 	// this does purely textual expansion, e.g. convert
 	// <$src/**/*.$ext> to a new FinderNode that will actually find
 	// files because '$src' and '$ext' get expanded
@@ -161,13 +165,25 @@ func (self *FinderNode) NodeExpand(ns types.Namespace) error {
 	if err != nil {
 		return err
 	}
+	self.expanded = true
 	return nil
 }
 
 // Walk the filesystem for files matching this FinderNode's include
 // patterns. Return the list of matching filenames as a FuList of
 // FileNode.
-func (self *FinderNode) ActionExpand(ns types.Namespace, ctx *types.ExpandContext) (types.FuObject, error) {
+func (self *FinderNode) ActionExpand(
+	ns types.Namespace, ctx *types.ExpandContext) (
+	types.FuObject, error) {
+
+	// if case this node was not already expanded by
+	// DAG.ExpandNodes(), do it now so variable references are
+	// followed
+	var err error
+	err = self.NodeExpand(ns)
+	if err != nil {
+		return nil, err
+	}
 	filenames, err := self.FindFiles()
 	if err != nil {
 		return nil, err

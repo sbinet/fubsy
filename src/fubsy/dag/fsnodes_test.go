@@ -118,6 +118,20 @@ func Test_FileNode_Expand(t *testing.T) {
 	err = node.NodeExpand(ns)
 	assert.Nil(t, err)
 	assert.Equal(t, "foobar", node.Name())
+
+	// test that ActionExpand() follows variable references
+	node = newFileNode("$foo$bar")
+	xnode, err = node.ActionExpand(ns, nil)
+	assert.Equal(t, "undefined variable 'foo' in string", err.Error())
+
+	// make it so "$foo$bar" expands to "$foo", and ensure that
+	// expansion stops there
+	// XXX argh: currently this expands to "'$'foo": hmmmmm
+	// ns.Assign("foo", types.FuString("$"))
+	// ns.Assign("bar", types.FuString("foo"))
+	// xnode, err = node.ActionExpand(ns, nil)
+	// assert.Nil(t, err)
+	// assert.Equal(t, "$foo", xnode.String())
 }
 
 func Test_FileNode_Exists(t *testing.T) {

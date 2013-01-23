@@ -102,6 +102,10 @@ func (self *ListNode) Nodes() []Node {
 }
 
 func (self *ListNode) NodeExpand(ns types.Namespace) error {
+	if self.expanded {
+		return nil
+	}
+
 	var err error
 	for _, obj := range self.FuList {
 		err = obj.(Node).NodeExpand(ns)
@@ -109,10 +113,17 @@ func (self *ListNode) NodeExpand(ns types.Namespace) error {
 			return err
 		}
 	}
+	self.expanded = true
 	return nil
 }
 
-func (self *ListNode) ActionExpand(ns types.Namespace, ctx *types.ExpandContext) (types.FuObject, error) {
+func (self *ListNode) ActionExpand(
+	ns types.Namespace, ctx *types.ExpandContext) (
+	types.FuObject, error) {
+	err := self.NodeExpand(ns)
+	if err != nil {
+		return nil, err
+	}
 	result := make(types.FuList, 0, len(self.FuList))
 	for _, obj := range self.FuList {
 		// ok to panic here: already enforced in newListNode()

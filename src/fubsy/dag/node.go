@@ -140,6 +140,12 @@ type nodebase struct {
 	name  string
 	rule  BuildRule
 	state NodeState
+
+	// make sure we only call NodeExpand() once (imagine expanding
+	// "$a$b" where a = "$" and b = "x": if we call NodeExpand() a
+	// second time, then we'll try to expand "$x", which would be
+	// insane)
+	expanded bool
 }
 
 func makenodebase(name string) nodebase {
@@ -234,11 +240,15 @@ func (self *StubNode) ActionExpand(ns types.Namespace, ctx *types.ExpandContext)
 }
 
 func (self *StubNode) NodeExpand(ns types.Namespace) error {
+	if self.expanded {
+		return nil
+	}
 	_, name, err := types.ExpandString(self.name, ns, nil)
 	if err != nil {
 		return err
 	}
 	self.name = name
+	self.expanded = true
 	return nil
 }
 
