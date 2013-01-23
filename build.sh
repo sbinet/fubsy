@@ -42,11 +42,7 @@ run "gofmt -w src/fubsy/dsl/fulex.go src/fubsy/dsl/fugrammar.go"
 # uncomment this to run benchmarks
 #benchopt="-test.bench=.*"
 
-# uncomment this to get test coverage
-#coverage=y
-
-# only explicitly build packages with tests
-packages="fubsy/log fubsy/dsl fubsy/types fubsy/dag fubsy/db fubsy/build fubsy/runtime fubsy"
+packages="fubsy/..."
 #packages="fubsy/dsl"
 #packages="fubsy/types"
 #packages="fubsy/dag"
@@ -56,20 +52,8 @@ packages="fubsy/log fubsy/dsl fubsy/types fubsy/dag fubsy/db fubsy/build fubsy/r
 tagflag="-tags='$buildtags'"
 run "go install -v -gcflags '-N -l' $tagflag $packages"
 run "ln -sf fubsy bin/fubsydebug"
-run "go test -v -gcflags '-N -l' $tagflag -i $packages"
-
-if [ "$coverage" ]; then
-    for pkg in $packages; do
-        json=coverage-`basename $pkg`.json
-        report=coverage-`basename $pkg`.txt
-        run "./bin/gocov test \
-            -exclude fubsy/testutils,github.com/stretchrcom/testify/assert,code.google.com/p/go-bit/bit \
-            $pkg > $json"
-        run "./bin/gocov report $json > $report"
-    done
-else
-    run "go test -gcflags '-N -l' $tagflag $benchopt $packages $tests"
-fi
+run "go test -v -i -gcflags '-N -l' $tagflag $packages"
+run "go test -gcflags '-N -l' $tagflag $benchopt $packages $tests"
 
 run "go vet $packages"
 
