@@ -3,7 +3,7 @@ Fubsy Release Process
 
   1. Pick the version number, e.g. ::
 
-      ver=0.0.1
+      ver=0.0.2
 
   2. Tag the release::
 
@@ -18,17 +18,21 @@ Fubsy Release Process
        tar -C /tmp -xzf fubsy-$ver.tar.gz
        cd /tmp/fubsy-$ver
        ./build.sh
+       GOPATH=$PWD ./bin/fubsy -v
+       GOPATH=$PWD ./bin/fubsy -v
 
   5. Test it remotely (preferably on a machine with different OS
      and/or architecture)::
 
        scp -p fubsy-$ver.tar.gz morgoth.gerg.ca:/tmp
        ssh morgoth.gerg.ca
-       ver=0.0.1            # or whatever
+       ver=0.0.2            # or whatever
        cd /tmp
        tar -xzf fubsy-$ver.tar.gz
        cd fubsy-$ver
        ./build.sh
+       GOPATH=$PWD ./bin/fubsy -v
+       GOPATH=$PWD ./bin/fubsy -v
        exit
 
   6. Upload source tarball to Bitbucket
@@ -39,6 +43,10 @@ Fubsy Release Process
        hg push
 
   8. Update doc/announce.txt (version number, major changes).
+
+     Useful command for reviewing history:
+
+         hg log -r '0.0.1::0.0.2 - 0.0.1' | less
 
   9. Submit release to freecode.com:
 
@@ -52,7 +60,7 @@ Fubsy Release Process
 
  11. Email the announcement:
 
-       subj="ANNOUNCE: Fubsy 0.0.1: the universal build tool"
+       subj="ANNOUNCE: Fubsy 0.0.2: the universal build tool"
        mutt -s "$subj" fubsydev@librelist.org < doc/announce.txt
        mutt -s "$subj" editor@lwn.net < doc/announce.txt
 

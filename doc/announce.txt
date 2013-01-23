@@ -1,7 +1,7 @@
 Fubsy: The Universal Build Tool
 ===============================
 
-I am pleased to announce version 0.0.1 of Fubsy, a new tool for
+I am pleased to announce version 0.0.2 of Fubsy, a new tool for
 efficiently building software. In concrete terms, it lets you
 conditionally (re)build targets from sources, based on which sources
 have changed since the last build. Typically, targets and sources are
@@ -53,5 +53,18 @@ For more information:
 
 Or jump straight to the user guide:
 
-    http://fubsy.readthedocs.org/en/0.0.1/
+    http://fubsy.readthedocs.org/en/0.0.2/
 
+
+Changes in version 0.0.2
+------------------------
+
+* incremental builds (if built with a database backend; currently only
+  Kyoto Cabinet is supported, but more backends will be added in
+  future)
+
+* partly self-hosting: Fubsy can now build itself (although the build
+  script doesn't run unit tests yet)
+
+* add fubsydebug tool for debugging hacks that don't belong in the
+  main interface
