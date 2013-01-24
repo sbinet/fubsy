@@ -7,6 +7,7 @@ package runtime
 import (
 	"os"
 
+	"fubsy/dag"
 	"fubsy/types"
 )
 
@@ -18,6 +19,9 @@ func defineBuiltins(ns types.Namespace) {
 		types.NewVariadicFunction("println", 0, -1, fn_println),
 		types.NewVariadicFunction("mkdir", 0, -1, fn_mkdir),
 		types.NewVariadicFunction("remove", 0, -1, fn_remove),
+
+		// node constructors
+		types.NewFixedFunction("ActionNode", 1, fn_ActionNode),
 	}
 
 	for _, function := range functions {
@@ -66,4 +70,10 @@ func fn_remove(
 		}
 	}
 	return nil, errs
+}
+
+func fn_ActionNode(
+	args []types.FuObject, kwargs map[string]types.FuObject) (
+	types.FuObject, []error) {
+	return dag.NewActionNode(args[0].String()), nil
 }

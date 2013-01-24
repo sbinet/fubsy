@@ -221,6 +221,16 @@ func defaultNodeAdd(self Node, other types.FuObject) (types.FuObject, error) {
 	return result, nil
 }
 
+func defaultNodeActionExpand(
+	self Node, ns types.Namespace) (
+	types.FuObject, error) {
+	err := self.NodeExpand(ns)
+	if err != nil {
+		return nil, err
+	}
+	return self, nil
+}
+
 // StubNode is test code only, but it's used by tests in other
 // packages, so cannot be in node_test.go.
 

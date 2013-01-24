@@ -71,11 +71,7 @@ func (self *FileNode) List() []types.FuObject {
 func (self *FileNode) ActionExpand(
 	ns types.Namespace, ctx *types.ExpandContext) (
 	types.FuObject, error) {
-	err := self.NodeExpand(ns)
-	if err != nil {
-		return nil, err
-	}
-	return self, nil
+	return defaultNodeActionExpand(self, ns)
 }
 
 func (self *FileNode) Exists() (bool, error) {
