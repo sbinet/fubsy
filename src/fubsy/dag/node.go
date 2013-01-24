@@ -229,12 +229,12 @@ func (self *StubNode) Exists() (bool, error) {
 	return self.exists, nil
 }
 
-func (self *StubNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
+func (self *StubNode) ActionExpand(ns types.Namespace, ctx *types.ExpandContext) (types.FuObject, error) {
 	return self, nil
 }
 
 func (self *StubNode) NodeExpand(ns types.Namespace) error {
-	_, name, err := types.ExpandString(self.name, ns)
+	_, name, err := types.ExpandString(self.name, ns, nil)
 	if err != nil {
 		return err
 	}

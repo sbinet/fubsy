@@ -145,7 +145,7 @@ func (self *FinderNode) NodeExpand(ns types.Namespace) error {
 	expandlist := func(strings []string) error {
 		var err error
 		for i, pat := range strings {
-			_, strings[i], err = types.ExpandString(pat, ns)
+			_, strings[i], err = types.ExpandString(pat, ns, nil)
 			if err != nil {
 				return err
 			}
@@ -167,7 +167,7 @@ func (self *FinderNode) NodeExpand(ns types.Namespace) error {
 // Walk the filesystem for files matching this FinderNode's include
 // patterns. Return the list of matching filenames as a FuList of
 // FileNode.
-func (self *FinderNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
+func (self *FinderNode) ActionExpand(ns types.Namespace, ctx *types.ExpandContext) (types.FuObject, error) {
 	filenames, err := self.FindFiles()
 	if err != nil {
 		return nil, err

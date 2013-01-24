@@ -74,7 +74,7 @@ func (self *FileNode) List() []types.FuObject {
 
 func (self *FileNode) NodeExpand(ns types.Namespace) error {
 	// XXX identical to StubNode: factor out to nodebase???
-	_, name, err := types.ExpandString(self.name, ns)
+	_, name, err := types.ExpandString(self.name, ns, nil)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (self *FileNode) NodeExpand(ns types.Namespace) error {
 	return nil
 }
 
-func (self *FileNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
+func (self *FileNode) ActionExpand(ns types.Namespace, ctx *types.ExpandContext) (types.FuObject, error) {
 	// By the time this happens, variable references should have been
 	// expanded, and one FileNode always just represents a single file
 	// ... so there's nothing to do here.

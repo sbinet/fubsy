@@ -43,7 +43,7 @@ func Test_MakeListNode(t *testing.T) {
 func Test_ListNode_ActionExpand(t *testing.T) {
 	ns := types.NewValueMap()
 	assertExpand := func(expect []Node, list *ListNode) {
-		actualobj, err := list.ActionExpand(ns)
+		actualobj, err := list.ActionExpand(ns, nil)
 		assert.Nil(t, err)
 		actual := make([]Node, len(actualobj.List()))
 		for i, obj := range actualobj.List() {
@@ -74,4 +74,21 @@ func Test_ListNode_ActionExpand(t *testing.T) {
 	// resulting list)
 	list = newListNode(node1, list, node0)
 	assertExpand([]Node{node1, node0, node1, node0}, list)
+}
+
+func Test_ListNode_expand_cycle(t *testing.T) {
+	ns := types.NewValueMap()
+	ns.Assign("a", types.FuString("$b"))
+	ns.Assign("b", types.FuString("$a"))
+
+	var err error
+	inner := NewStubNode("foo/$a")
+	list := newListNode(inner)
+
+	// XXX ooops, ActionExpand() does not expand variable refs!
+	// _, err = list.ActionExpand(ns, nil)
+	// assert.Equal(t, "cyclic variable reference: a -> b -> a", err.Error())
+
+	err = list.NodeExpand(ns)
+	assert.Equal(t, "cyclic variable reference: a -> b -> a", err.Error())
 }

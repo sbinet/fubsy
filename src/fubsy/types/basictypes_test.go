@@ -110,27 +110,27 @@ func Test_expand_re(t *testing.T) {
 func Test_FuString_ActionExpand(t *testing.T) {
 	ns := makeNamespace("foo", "hello", "meep", "blorf")
 	input := FuString("meep meep!")
-	output, err := input.ActionExpand(ns)
+	output, err := input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
 
 	input = FuString("meep $foo blah")
-	output, err = input.ActionExpand(ns)
+	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "meep hello blah", output.String())
 
 	input = FuString("hello ${foo} $meep")
-	output, err = input.ActionExpand(ns)
+	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "hello hello blorf", output.String())
 
 	ns.Assign("foo", nil)
-	output, err = input.ActionExpand(ns)
+	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "hello  blorf", output.String())
 
 	ns.Assign("foo", FuString("ping$pong"))
-	output, err = input.ActionExpand(ns)
+	output, err = input.ActionExpand(ns, nil)
 	assert.Equal(t, "undefined variable 'pong' in string", err.Error())
 	assert.Nil(t, output)
 }
@@ -142,15 +142,23 @@ func Test_FuString_ActionExpand_recursive(t *testing.T) {
 		"file", "f1.c")
 	expect := "/usr/bin/gcc -c f1.c"
 	input := FuString("$CC -c $sources")
-	output, err := input.ActionExpand(ns)
+	output, err := input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, expect, output.String())
 
 	// same thing, but now files is a list
 	ns.Assign("files", FuList([]FuObject{FuString("f1.c")}))
-	output, err = input.ActionExpand(ns)
+	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, expect, output.String())
+}
+
+func Test_FuString_ActionExpand_cycle(t *testing.T) {
+	ns := makeNamespace(
+		"a", "x.$a.y")
+	s := FuString("oh hi it's $a")
+	_, err := s.ActionExpand(ns, nil)
+	assert.Equal(t, "cyclic variable reference: a -> a", err.Error())
 }
 
 func Test_FuList_String(t *testing.T) {
@@ -194,9 +202,44 @@ func Test_FuList_Add_string(t *testing.T) {
 func Test_FuList_ActionExpand(t *testing.T) {
 	ns := makeNamespace()
 	input := MakeFuList("gob", "mob")
-	output, err := input.ActionExpand(ns)
+	output, err := input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
+}
+
+func Test_FuList_ActionExpand_cycle(t *testing.T) {
+	ns := makeNamespace(
+		"a", "b",
+		"b", "a",
+		"c", "it's a $list",
+		"foo", "ok")
+	list := MakeFuList("yo", "$foo", "$c", "$b")
+	ns.Assign("list", list)
+
+	_, err := list.ActionExpand(ns, nil)
+	assert.Equal(t, "cyclic variable reference: c -> list -> c", err.Error())
+}
+
+func Test_ExpandString_cycle(t *testing.T) {
+	ns := makeNamespace()
+	ns.Assign("a", FuString("aaa$b"))
+	ns.Assign("b", FuString("$d bbb$c"))
+	ns.Assign("c", FuString("${a}ccc"))
+	ns.Assign("d", FuString("no problem"))
+
+	_, _, err := ExpandString("hello $a", ns, nil)
+	assert.Equal(t, "cyclic variable reference: a -> b -> c -> a", err.Error())
+
+	// we only detect and report the first cycle
+	ns.Assign("c", FuString("${b}ccc${a}"))
+	_, _, err = ExpandString("hello $c", ns, nil)
+	assert.Equal(t, "cyclic variable reference: c -> b -> c", err.Error())
+
+	// same treatment mixing types
+	ns.Assign("s", FuString("list = $l"))
+	ns.Assign("l", MakeFuList("foo", "string = $s", "bar"))
+	_, _, err = ExpandString("${s}", ns, nil)
+	assert.Equal(t, "cyclic variable reference: s -> l -> s", err.Error())
 }
 
 func Test_ShellQuote(t *testing.T) {

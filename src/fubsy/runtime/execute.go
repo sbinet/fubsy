@@ -109,7 +109,7 @@ func evaluateCall(
 		}
 	}
 
-	argobj, err = arglist.ActionExpand(ns)
+	argobj, err = arglist.ActionExpand(ns, nil)
 	if err != nil {
 		return nil, []error{err}
 	}

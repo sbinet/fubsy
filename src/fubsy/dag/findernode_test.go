@@ -5,6 +5,7 @@
 package dag
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -219,9 +220,31 @@ func Test_FinderNode_Expand_double_recursion(t *testing.T) {
 	assertExpand(t, expect, finder)
 }
 
+func Test_FinderNode_expand_cycle(t *testing.T) {
+	ns := types.NewValueMap()
+	ns.Assign("a", types.FuString("$b"))
+	ns.Assign("b", types.FuString("$c$d"))
+	ns.Assign("c", types.FuString("$a"))
+
+	var err error
+	finder := NewFinderNode("src/$a/*.h")
+
+	// XXX ooops, ActionExpand() does not expand variable refs!
+	// _, err = finder.ActionExpand(ns, nil)
+	// fmt.Println("finder =", finder)
+	// fmt.Println("err =", err)
+	// assert.NotNil(t, err)
+	// assert.Equal(t, "cyclic variable reference: a -> b -> c -> a", err.Error())
+
+	err = finder.NodeExpand(ns)
+	fmt.Println("finder =", finder)
+	fmt.Println("err =", err)
+	assert.Equal(t, "cyclic variable reference: a -> b -> c -> a", err.Error())
+}
+
 func assertExpand(t *testing.T, expect []string, obj types.FuObject) {
 	ns := types.NewValueMap()
-	actualobj, err := obj.ActionExpand(ns)
+	actualobj, err := obj.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 
 	// convert FuList of FileNode to slice of string

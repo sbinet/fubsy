@@ -114,7 +114,7 @@ func (self *CommandAction) Execute(ns types.Namespace) []error {
 	//fmt.Println(self.raw)
 
 	var err error
-	self.expanded, err = self.raw.ActionExpand(ns)
+	self.expanded, err = self.raw.ActionExpand(ns, nil)
 	if err != nil {
 		return []error{err}
 	}

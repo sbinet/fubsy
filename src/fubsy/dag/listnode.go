@@ -112,12 +112,12 @@ func (self *ListNode) NodeExpand(ns types.Namespace) error {
 	return nil
 }
 
-func (self *ListNode) ActionExpand(ns types.Namespace) (types.FuObject, error) {
+func (self *ListNode) ActionExpand(ns types.Namespace, ctx *types.ExpandContext) (types.FuObject, error) {
 	result := make(types.FuList, 0, len(self.FuList))
 	for _, obj := range self.FuList {
 		// ok to panic here: already enforced in newListNode()
 		node := obj.(Node)
-		exp, err := node.ActionExpand(ns)
+		exp, err := node.ActionExpand(ns, ctx)
 		if err != nil {
 			return nil, err
 		} else if exp == nil {

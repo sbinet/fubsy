@@ -55,7 +55,7 @@ type FuObject interface {
 	// type, e.g. FuString.ActionExpand() returns a FuString, and
 	// FuList.ActionExpand() returns a FuList. FinalExpand() never
 	// returns nil.
-	ActionExpand(ns Namespace) (FuObject, error)
+	ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, error)
 
 	// Return a brief, human-readable description of the type of this
 	// object. Used in error messages.
@@ -112,8 +112,8 @@ func init() {
 		fmt.Sprintf("\\$(?:%s|\\{%s\\})", namepat, namepat))
 }
 
-func (self FuString) ActionExpand(ns Namespace) (FuObject, error) {
-	_, s, err := ExpandString(string(self), ns)
+func (self FuString) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, error) {
+	_, s, err := ExpandString(string(self), ns, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -160,10 +160,10 @@ func (self FuList) List() []FuObject {
 	return self
 }
 
-func (self FuList) ActionExpand(ns Namespace) (FuObject, error) {
+func (self FuList) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, error) {
 	result := make(FuList, 0, len(self))
 	for _, val := range self {
-		xval, err := val.ActionExpand(ns)
+		xval, err := val.ActionExpand(ns, ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -195,14 +195,30 @@ const shellmeta = "# `\"'\\&?*[]{}();$><|"
 // initialized on demand
 var shellreplacer *strings.Replacer
 
+// object passed around when expanding values in order to detect and
+// report cyclic variable references nicely
+type ExpandContext struct {
+	names []string
+}
+
+type CyclicReferenceError ExpandContext
+
+func (err CyclicReferenceError) Error() string {
+	return "cyclic variable reference: " + strings.Join(err.names, " -> ")
+}
+
 // Expand variables in s by looking them up in ns. If s has no
 // variable references, just return s; otherwise return a new expanded
 // string. Return non-nil error if there are problems expanding the
 // string, most likely references to undefined variables.
-func ExpandString(s string, ns Namespace) (bool, string, error) {
+func ExpandString(s string, ns Namespace, ctx *ExpandContext) (bool, string, error) {
 	match := expand_re.FindStringSubmatchIndex(s)
 	if match == nil { // fast path for common case
 		return false, s, nil
+	}
+
+	if ctx == nil {
+		ctx = &ExpandContext{}
 	}
 
 	pos := 0
@@ -226,6 +242,14 @@ func ExpandString(s string, ns Namespace) (bool, string, error) {
 			return false, s, nil
 		}
 
+		// check for recursive variable reference
+		for _, already := range ctx.names {
+			if name == already {
+				ctx.names = append(ctx.names, name)
+				return false, s, CyclicReferenceError(*ctx)
+			}
+		}
+
 		value, ok := ns.Lookup(name)
 		var cstring string
 		if !ok {
@@ -234,7 +258,9 @@ func ExpandString(s string, ns Namespace) (bool, string, error) {
 			err := fmt.Errorf("undefined variable '%s' in string", name)
 			return false, s, err
 		} else if value != nil {
-			xvalue, err := value.ActionExpand(ns)
+			ctx.names = append(ctx.names, name)
+			xvalue, err := value.ActionExpand(ns, ctx)
+			ctx.names = ctx.names[0 : len(ctx.names)-1]
 			if err != nil {
 				return false, s, err
 			} else if xvalue == nil {
