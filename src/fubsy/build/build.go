@@ -96,9 +96,9 @@ func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 			}
 			if ok {
 				err = self.recordNode(node)
-				//if err != nil {
-				//	return err
-				//}
+				if err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -303,7 +303,8 @@ func (self *BuildState) recordNode(node dag.Node) error {
 	sig, err := node.Signature()
 	log.Debug(log.BUILD, "sig=%v, err=%v", sig, err)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not compute signature of target '%s': %s",
+			node, err)
 	}
 
 	record := db.NewBuildRecord()

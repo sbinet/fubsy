@@ -5,6 +5,7 @@
 package build
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -277,6 +278,36 @@ func Test_BuildState_BuildTargets_modify_shared_source(t *testing.T) {
 	assertBuild(t, graph, expect, *executed)
 }
 
+func Test_BuildState_BuildTargets_unsignable_target(t *testing.T) {
+	// if we run an action that is supposed to build a target, but the
+	// target is unreadable (doesn't exist, permission denied, ...),
+	// then the build fails immediately
+	snode := dag.NewStubNode("source")
+	tnode := NewUnsignableNode("target")
+	graph := dag.NewDAG()
+	graph.AddNode(snode)
+	graph.AddNode(tnode)
+	graph.AddParent(tnode, snode)
+	executed := addTrackingRules(graph)
+	graph.MarkSources()
+
+	sig := []byte{0}
+	db := makeFakeDB(graph, sig)
+	opts := BuildOptions{}
+	bstate := NewBuildState(graph, db, opts)
+
+	// target gets built; the build fails after that, calculating its
+	// signature
+	goal := graph.MakeNodeSet("target")
+	expect := []buildexpect{
+		{"target", dag.BUILT},
+	}
+	err := bstate.BuildTargets(goal)
+	assert.Equal(t,
+		"could not compute signature of target 'target': nah", err.Error())
+	assertBuild(t, graph, expect, *executed)
+}
+
 func setupBuild(exists bool, sig []byte) (*dag.DAG, *[]string) {
 	graph := makeSimpleGraph()
 	setNodeExists(graph, exists)
@@ -456,4 +487,16 @@ func mknodelist(graph *dag.DAG, names ...string) []dag.Node {
 		result[i] = dag.MakeStubNode(graph, name)
 	}
 	return result
+}
+
+type UnsignableNode struct {
+	dag.StubNode
+}
+
+func NewUnsignableNode(name string) *UnsignableNode {
+	return &UnsignableNode{StubNode: *dag.NewStubNode(name)}
+}
+
+func (self *UnsignableNode) Signature() ([]byte, error) {
+	return nil, errors.New("nah")
 }
