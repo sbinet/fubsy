@@ -95,7 +95,10 @@ func (self *BuildState) BuildTargets(targets *dag.NodeSet) error {
 				return builderr
 			}
 			if ok {
-				self.recordNode(node)
+				err = self.recordNode(node)
+				//if err != nil {
+				//	return err
+				//}
 			}
 		}
 		return nil
@@ -296,7 +299,9 @@ func (self *BuildState) reportFailure(errs []error) {
 }
 
 func (self *BuildState) recordNode(node dag.Node) error {
+	log.Debug(log.BUILD, "recording successful build of %s %s", node.Typename(), node)
 	sig, err := node.Signature()
+	log.Debug(log.BUILD, "sig=%v, err=%v", sig, err)
 	if err != nil {
 		return err
 	}

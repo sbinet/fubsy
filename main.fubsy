@@ -45,8 +45,16 @@ main {
     # (ignoring the package files because I don't know what
     # the current platform is: need to run "go env" and parse
     # out GOHOSTOS, GOHOSTARCH)
-    "bin/fubsy": <$src/**/*.go> {
+    localsrc = <$src/**/*.go>
+    "bin/fubsy": localsrc {
         "go install -v fubsy/..."
     }
 
+    ActionNode("action:vet"): localsrc {
+        "go vet fubsy/..."
+    }
+    # XXX can't do this yet: no backslash escapes, no multiline strings
+    #ActionNode("action:fmt"): localsrc {
+    #    "needfmt=`gofmt -l $src` ; if [ \"$needfmt\" ]; then exit 1; fi"
+    #}
 }
