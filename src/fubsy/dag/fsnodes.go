@@ -7,7 +7,6 @@ package dag
 // Fubsy Node types for filesystem objects
 
 import (
-	"bytes"
 	"errors"
 	"hash"
 	"hash/fnv"
@@ -118,11 +117,6 @@ func (self *FileNode) Exists() (bool, error) {
 			Err:  errors.New("is a directory, not a regular file")}
 	}
 	return true, nil
-}
-
-// temporary until Signature() returns something useful
-func (self *FileNode) Changed(oldsig, newsig []byte) bool {
-	return !bytes.Equal(oldsig, newsig)
 }
 
 func (self *FileNode) Signature() ([]byte, error) {
