@@ -108,6 +108,36 @@ func Test_FileNode_buildrule(t *testing.T) {
 	assert.Equal(t, rule, node.BuildRule())
 }
 
+func Test_FileNode_Add(t *testing.T) {
+	node0 := newFileNode("foo/bar")
+	node1 := newFileNode("foo/baz")
+	obj0 := types.FuString(".c")
+	obj1 := types.MakeFuList("a", "b")
+
+	var err error
+	var expect types.FuObject
+	var actual types.FuObject
+
+	// node + node = list of nodes
+	expect = types.FuList([]types.FuObject{node0, node1})
+	actual, err = node0.Add(node1)
+	assert.Nil(t, err)
+	assert.True(t, expect.Equal(actual))
+
+	// node + string = new node
+	expect = newFileNode("foo/bar.c")
+	actual, err = node0.Add(obj0)
+	assert.Nil(t, err)
+	assert.True(t, expect.Equal(actual))
+
+	// node + list = flattened list
+	expect = types.FuList([]types.FuObject{
+		node0, types.FuString("a"), types.FuString("b")})
+	actual, err = node0.Add(obj1)
+	assert.Nil(t, err)
+	assert.True(t, expect.Equal(actual))
+}
+
 func Test_FileNode_Expand(t *testing.T) {
 	ns := types.NewValueMap()
 	node := newFileNode("foobar")

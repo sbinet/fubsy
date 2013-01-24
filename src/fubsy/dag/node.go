@@ -175,6 +175,19 @@ func (self *nodebase) BuildRule() BuildRule {
 	return self.rule
 }
 
+func (self *nodebase) NodeExpand(ns types.Namespace) error {
+	if self.expanded {
+		return nil
+	}
+	_, name, err := types.ExpandString(self.name, ns, nil)
+	if err != nil {
+		return err
+	}
+	self.name = name
+	self.expanded = true
+	return nil
+}
+
 func (self *nodebase) Changed(oldsig, newsig []byte) bool {
 	if oldsig == nil || newsig == nil {
 		panic("node signatures must not be nil")
@@ -198,6 +211,14 @@ func (self *nodebase) String() string {
 
 func (self *nodebase) CommandString() string {
 	return types.ShellQuote(self.name)
+}
+
+func defaultNodeAdd(self Node, other types.FuObject) (types.FuObject, error) {
+	otherlist := other.List()
+	result := make(types.FuList, 0, 1+len(otherlist))
+	result = append(result, self)
+	result = append(result, otherlist...)
+	return result, nil
 }
 
 // StubNode is test code only, but it's used by tests in other
@@ -237,19 +258,6 @@ func (self *StubNode) Exists() (bool, error) {
 
 func (self *StubNode) ActionExpand(ns types.Namespace, ctx *types.ExpandContext) (types.FuObject, error) {
 	return self, nil
-}
-
-func (self *StubNode) NodeExpand(ns types.Namespace) error {
-	if self.expanded {
-		return nil
-	}
-	_, name, err := types.ExpandString(self.name, ns, nil)
-	if err != nil {
-		return err
-	}
-	self.name = name
-	self.expanded = true
-	return nil
 }
 
 func (self *StubNode) Signature() ([]byte, error) {

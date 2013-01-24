@@ -52,37 +52,20 @@ func (self *FileNode) Equal(other_ types.FuObject) bool {
 }
 
 func (self *FileNode) Add(other_ types.FuObject) (types.FuObject, error) {
+	var err error
 	var result types.FuObject
 	switch other := other_.(type) {
 	case types.FuString:
 		// caller must add it to the appropriate DAG!
 		result = newFileNode(self.name + string(other))
 	default:
-		otherlist := other.List()
-		list := make(types.FuList, 1+len(otherlist))
-		list[0] = self
-		copy(list[1:], otherlist)
-		result = list
+		result, err = defaultNodeAdd(self, other)
 	}
-	return result, nil
+	return result, err
 }
 
 func (self *FileNode) List() []types.FuObject {
 	return []types.FuObject{self}
-}
-
-func (self *FileNode) NodeExpand(ns types.Namespace) error {
-	// XXX identical to StubNode: factor out to nodebase???
-	if self.expanded {
-		return nil
-	}
-	_, name, err := types.ExpandString(self.name, ns, nil)
-	if err != nil {
-		return err
-	}
-	self.name = name
-	self.expanded = true
-	return nil
 }
 
 func (self *FileNode) ActionExpand(
