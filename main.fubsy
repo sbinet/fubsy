@@ -17,7 +17,7 @@ main {
     #   tagflag = "-tags='${buildtags.join(\' \')}'"
     # but there's a bit more work to do before Fubsy supports
     # that syntax, so for now we have to put up with
-    tagflag = "-tags='kyotodb'"
+    tagflag = "-tags=kyotodb"
     # ...and you'll just have to edit it manually to modify tags
 
     # some tools needed to build/test
@@ -47,7 +47,7 @@ main {
     # out GOHOSTOS, GOHOSTARCH)
     localsrc = <$src/**/*.go>
     "bin/fubsy": localsrc {
-        "go install -v fubsy/..."
+        "go install $tagflag -v fubsy/..."
     }
 
     # One way to do incremental testing. There are many possible
@@ -65,25 +65,25 @@ main {
     # until we have plugins.
 
     ActionNode("test/fubsy/build:action"): <$src/build/*.go> {
-        "go test fubsy/build"
+        "go test $tagflag fubsy/build"
     }
     ActionNode("test/fubsy/dag:action"): <$src/dag/*.go> {
-        "go test fubsy/dag"
+        "go test $tagflag fubsy/dag"
     }
     ActionNode("test/fubsy/db:action"): <$src/db/*.go> {
-        "go test fubsy/db"
+        "go test $tagflag fubsy/db"
     }
     ActionNode("test/fubsy/dsl:action"): <$src/dsl/*.go> {
-        "go test fubsy/dsl"
+        "go test $tagflag fubsy/dsl"
     }
     ActionNode("test/fubsy/log:action"): <$src/log/*.go> {
-        "go test fubsy/log"
+        "go test $tagflag fubsy/log"
     }
     ActionNode("test/fubsy/runtime:action"): <$src/runtime/*.go> {
-        "go test fubsy/runtime"
+        "go test $tagflag fubsy/runtime"
     }
     ActionNode("test/fubsy/types:action"): <$src/types/*.go> {
-        "go test fubsy/types"
+        "go test $tagflag fubsy/types"
     }
 
     ActionNode("check/vet:action"): localsrc {
