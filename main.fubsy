@@ -50,11 +50,47 @@ main {
         "go install -v fubsy/..."
     }
 
-    ActionNode("action:vet"): localsrc {
+    # One way to do incremental testing. There are many possible
+    # variations on this theme:
+    # - depend on the binary pkg file, so we only re-run tests
+    #   after changes that affect compiler output (but then
+    #   we have to explicitly build the binary pkg file)
+    # - re-run tests in downstream packages: e.g. changes to
+    #   fubsy/types could affect fubsy/dag, so we should run
+    #   both tests after modifying fubsy/types
+    # - explicitly build the test executable and depend on it
+    #
+    # Also, it would obviously be nice to discover the list of
+    # packages dynamically and loop over them. That'll have to wait
+    # until we have plugins.
+
+    ActionNode("test/fubsy/build:action"): <$src/build/*.go> {
+        "go test fubsy/build"
+    }
+    ActionNode("test/fubsy/dag:action"): <$src/dag/*.go> {
+        "go test fubsy/dag"
+    }
+    ActionNode("test/fubsy/db:action"): <$src/db/*.go> {
+        "go test fubsy/db"
+    }
+    ActionNode("test/fubsy/dsl:action"): <$src/dsl/*.go> {
+        "go test fubsy/dsl"
+    }
+    ActionNode("test/fubsy/log:action"): <$src/log/*.go> {
+        "go test fubsy/log"
+    }
+    ActionNode("test/fubsy/runtime:action"): <$src/runtime/*.go> {
+        "go test fubsy/runtime"
+    }
+    ActionNode("test/fubsy/types:action"): <$src/types/*.go> {
+        "go test fubsy/types"
+    }
+
+    ActionNode("check/vet:action"): localsrc {
         "go vet fubsy/..."
     }
     # XXX can't do this yet: no backslash escapes, no multiline strings
-    #ActionNode("action:fmt"): localsrc {
+    #ActionNode("check/fmt:action"): localsrc {
     #    "needfmt=`gofmt -l $src` ; if [ \"$needfmt\" ]; then exit 1; fi"
     #}
 }
