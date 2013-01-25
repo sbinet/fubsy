@@ -85,6 +85,14 @@ func Test_FuString_Add_list(t *testing.T) {
 	assert.Equal(t, "[ls,-l,-a,foo]", result.String())
 }
 
+func Test_FuString_Lookup(t *testing.T) {
+	// strings have no attributes
+	s := FuString("blah")
+	val, ok := s.Lookup("foo")
+	assert.Nil(t, val)
+	assert.False(t, ok)
+}
+
 // this really just tests that I understand the regexp API
 func Test_expand_re(t *testing.T) {
 	s := "blah blah no matches here"

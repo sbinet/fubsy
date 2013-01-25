@@ -30,6 +30,12 @@ type FuObject interface {
 	Equal(FuObject) bool
 	Add(FuObject) (FuObject, error)
 
+	// Lookup the specified attribute of this object. Return (value,
+	// true) if the attribute exists or (*, false) if not. (This is
+	// deliberately the same signature as Namespace.Lookup().) Most
+	// common use is for looking up methods to call.
+	Lookup(name string) (FuObject, bool)
+
 	// Return a slice of FuObjects that you can loop over; intended
 	// for easy access to the elements of compound types like FuList.
 	// Scalar types (e.g. FuString) should just return themselves in a
@@ -99,6 +105,10 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 	panic("unreachable code")
 }
 
+func (self FuString) Lookup(name string) (FuObject, bool) {
+	return DefaultLookup(self, name)
+}
+
 func (self FuString) List() []FuObject {
 	return []FuObject{self}
 }
@@ -156,6 +166,10 @@ func (self FuList) Add(other FuObject) (FuObject, error) {
 	return result, nil
 }
 
+func (self FuList) Lookup(name string) (FuObject, bool) {
+	return DefaultLookup(self, name)
+}
+
 func (self FuList) List() []FuObject {
 	return self
 }
@@ -189,11 +203,6 @@ func MakeFuList(strings ...string) FuList {
 	}
 	return result
 }
-
-const shellmeta = "# `\"'\\&?*[]{}();$><|"
-
-// initialized on demand
-var shellreplacer *strings.Replacer
 
 // object passed around when expanding values in order to detect and
 // report cyclic variable references nicely
@@ -279,6 +288,17 @@ func ExpandString(s string, ns Namespace, ctx *ExpandContext) (bool, string, err
 	result += cur
 	return true, result, nil
 }
+
+// A default implementation of FuObject.Lookup() for use by types that
+// have no attributes.
+func DefaultLookup(obj FuObject, name string) (FuObject, bool) {
+	return nil, false
+}
+
+const shellmeta = "# `\"'\\&?*[]{}();$><|"
+
+// initialized on demand
+var shellreplacer *strings.Replacer
 
 // Return s decorated with quote characters so it can safely be
 // included in a shell command.

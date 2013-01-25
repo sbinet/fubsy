@@ -146,6 +146,9 @@ type nodebase struct {
 	// second time, then we'll try to expand "$x", which would be
 	// insane)
 	expanded bool
+
+	// implement Lookup() for attributes
+	types.ValueMap
 }
 
 func makenodebase(name string) nodebase {
@@ -274,12 +277,12 @@ func (self *StubNode) Signature() ([]byte, error) {
 	return self.sig, nil
 }
 
-func (self *StubNode) List() []types.FuObject {
-	return []types.FuObject{self}
-}
-
 func (self *StubNode) Add(other types.FuObject) (types.FuObject, error) {
 	panic("should be unused in tests")
+}
+
+func (self *StubNode) List() []types.FuObject {
+	return []types.FuObject{self}
 }
 
 func NewStubNode(name string) *StubNode {

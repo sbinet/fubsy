@@ -125,6 +125,13 @@ func Test_FinderNode_Add_CommandString(t *testing.T) {
 		sum3.CommandString())
 }
 
+func Test_FinderNode_Lookup(t *testing.T) {
+	node := NewFinderNode("*.txt")
+	val, ok := node.Lookup("foo")
+	assert.Nil(t, val)
+	assert.False(t, ok)
+}
+
 func Test_FinderNode_Expand_empty(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()

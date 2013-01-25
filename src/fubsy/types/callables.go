@@ -73,6 +73,10 @@ func (self *FuFunction) Add(other_ FuObject) (FuObject, error) {
 	return nil, unsupportedOperation(self, other_, "cannot add %s to %s")
 }
 
+func (self *FuFunction) Lookup(name string) (FuObject, bool) {
+	return DefaultLookup(self, name)
+}
+
 func (self *FuFunction) List() []FuObject {
 	return []FuObject{self}
 }
