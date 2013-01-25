@@ -5,6 +5,7 @@
 package dag
 
 import (
+	"reflect"
 	"regexp"
 	"testing"
 
@@ -263,6 +264,117 @@ func Test_FinderNode_expand_cycle(t *testing.T) {
 
 	err = finder.NodeExpand(ns)
 	assert.Equal(t, "cyclic variable reference: a -> b -> c -> a", err.Error())
+}
+
+func Test_dirset_contains(t *testing.T) {
+
+	type expect struct {
+		name   string
+		exact  bool
+		pruned bool
+	}
+
+	runtests := func(tests []expect, prune dirset) {
+		for _, test := range tests {
+			actual := prune.contains(test.name, test.exact)
+			if actual && !test.pruned {
+				t.Errorf("prune = %v, name = %v: was unexpectedly pruned",
+					prune, test.name)
+			} else if !actual && test.pruned {
+				t.Errorf("prune = %v, name = %v: was unexpectedly not pruned",
+					prune, test.name)
+			}
+		}
+	}
+
+	// nothing is pruned when the prune set is nil
+	var prune dirset = nil
+	tests := []expect{
+		{"", true, false},
+		{"/", true, false},
+		{"foo", false, false},
+		{"foo/bar/baz", true, false},
+	}
+	runtests(tests, prune)
+
+	// same thing if it's an empty map
+	prune = make(dirset)
+	runtests(tests, prune)
+
+	prune["foo/bar"] = true
+	tests = []expect{
+		{"", true, false},
+		{"/", true, false},
+		{"", false, false},
+		{"/", false, false},
+		{"foo", false, false},
+		{"foo", true, false},
+		{"foo/bar", false, true},
+		{"foo/bar", true, true},
+		{"foo/bar/baz", true, false},
+		{"foo/bar/baz", false, true},
+	}
+	runtests(tests, prune)
+}
+
+func Test_FinderNode_FindFiles_prune(t *testing.T) {
+	cleanup := testutils.Chtemp()
+	defer cleanup()
+
+	testutils.TouchFiles(
+		"src/a/1.c", "src/a/2.c", "src/a/2.h", "src/a/3.h",
+		"src/b/1.c", "src/b/2.c", "src/b/2.h", "src/b/3.h",
+		"src/b/b/1.c", "src/b/b/2.c", "src/b/b/2.h",
+		"lib/x.c", "lib/sub/x.c")
+
+	var finder *FinderNode
+	var expect []string
+
+	test := func(expect []string) {
+		actual, err := finder.FindFiles()
+		assert.Nil(t, err)
+		if !reflect.DeepEqual(expect, actual) {
+			t.Errorf("includes = %v, prune = %v:\nexpected:\n%#v\nbut got:\n%#v",
+				finder.includes, finder.prune, expect, actual)
+		}
+		// wipe the cache so this finder can be used again
+		finder.matches = nil
+	}
+
+	finder = NewFinderNode("src/**/*.c", "src/b/**/*.h")
+	finder.Prune("src/a")
+	expect = []string{
+		"src/b/1.c", "src/b/2.c", "src/b/b/1.c", "src/b/b/2.c",
+		"src/b/2.h", "src/b/3.h", "src/b/b/2.h"}
+	test(expect)
+
+	// successive calls to Prune() build up the prune set
+	finder = NewFinderNode("*/*.c")
+	finder.Prune("src")
+	expect = []string{"lib/x.c"}
+	test(expect)
+	finder.Prune("lib")
+	expect = []string{}
+	test(expect)
+
+	finder = NewFinderNode("*/*/?.c")
+	expect = []string{
+		"lib/sub/x.c", "src/a/1.c", "src/a/2.c", "src/b/1.c", "src/b/2.c"}
+	test(expect)
+	finder.Prune("src/b")
+	expect = []string{
+		"lib/sub/x.c", "src/a/1.c", "src/a/2.c"}
+	test(expect)
+
+	finder = NewFinderNode("**/b/?.h")
+	expect = []string{"src/b/2.h", "src/b/3.h", "src/b/b/2.h"}
+	test(expect)
+	finder.Prune("src/b/b")
+	expect = []string{"src/b/2.h", "src/b/3.h"}
+	test(expect)
+	finder.Prune("src/b")
+	expect = []string{}
+	test(expect)
 }
 
 func assertExpand(

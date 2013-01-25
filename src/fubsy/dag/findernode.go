@@ -17,12 +17,13 @@ import (
 	"fubsy/types"
 )
 
+type dirset map[string]bool
+
 // Node type that represents filefinders. Code like
 //    a = <**/*.c>
 // results in one FinderNode being created and assigned to variable
 // 'a'. (It's *not* added to the DAG, though, until it's mentioned in
 // a build rule.)
-
 type FinderNode struct {
 	nodebase
 
@@ -33,6 +34,10 @@ type FinderNode struct {
 	// exclude patterns (can only be added by exclude() method)
 	// (currently unused)
 	excludes []string
+
+	// set of directories to prune the walk: if we enter a directory in
+	// this set, leave it immediately -- don't look for any files there
+	prune dirset
 
 	// cache the result of calling FindFiles(), so subsequent calls
 	// are cheap and consistent
@@ -195,22 +200,30 @@ func (self *FinderNode) ActionExpand(
 	return result, nil
 }
 
+// Add dir to the set of prune directories.
+func (self *FinderNode) Prune(dir string) {
+	if self.prune == nil {
+		self.prune = make(dirset)
+	}
+	self.prune[dir] = true
+}
+
 func (self *FinderNode) FindFiles() ([]string, error) {
 	if self.matches != nil {
 		return self.matches, nil
 	}
 
-	var result []string
 	var matches []string
+	result := []string{}
 	for _, pattern := range self.includes {
 		recursive, prefix, tail, err := splitPattern(pattern)
 		if err != nil {
 			return nil, err
 		}
 		if recursive {
-			matches, err = recursiveGlob(prefix, tail)
+			matches, err = recursiveGlob(self.prune, prefix, tail)
 		} else {
-			matches, err = simpleGlob(pattern)
+			matches, err = simpleGlob(self.prune, pattern)
 		}
 		if err != nil {
 			return nil, err
@@ -290,6 +303,36 @@ func (self *FinderNode) Signature() ([]byte, error) {
 // FuObject, Node, FinderNode, or any of that high-level stuff. It's
 // purely about filename patterns and walking the filesystem.
 
+func (self dirset) String() string {
+	keys := make([]string, 0, len(self))
+	for key := range self {
+		keys = append(keys, key)
+	}
+	return "{" + strings.Join(keys, ",") + "}"
+}
+
+func (self dirset) contains(name string, exact bool) bool {
+	if len(self) == 0 {
+		return false
+	}
+	if self[name] {
+		return true
+	}
+	if !exact {
+		name = filepath.Dir(name)
+		for {
+			if self[name] {
+				return true
+			}
+			name = filepath.Dir(name)
+			if len(name) == 1 && (name[0] == '.' || name[0] == os.PathSeparator) {
+				break
+			}
+		}
+	}
+	return false
+}
+
 // Scan pattern for the recursive glob pattern "**". If any are found,
 // return recursive = true, prefix = pattern up to the first "**/" and
 // tail = the part after it. If no recursive glob found, return
@@ -328,11 +371,23 @@ func splitPattern(pattern string) (
 	return
 }
 
-func simpleGlob(pattern string) ([]string, error) {
-	return filepath.Glob(pattern)
+func simpleGlob(prune dirset, pattern string) ([]string, error) {
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return matches, err
+	}
+	result := make([]string, 0, len(matches))
+	for _, name := range matches {
+		// for non-recursive patterns, pruning just ends up being like
+		// an exclude pattern
+		if !prune.contains(filepath.Dir(name), false) {
+			result = append(result, name)
+		}
+	}
+	return result, nil
 }
 
-func recursiveGlob(prefix, tail string) ([]string, error) {
+func recursiveGlob(prune dirset, prefix, tail string) ([]string, error) {
 	// prefix might be "", "foo", "fo?", or "fo?/*/b*r": let
 	// filepath.Glob() find all matching filenames, and then reduce
 	// the list to matching directories
@@ -346,13 +401,13 @@ func recursiveGlob(prefix, tail string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var dirmatches []string
+	dirmatches := []string{}
 	for _, name := range allmatches {
 		info, err := os.Stat(name)
 		if err != nil {
 			return nil, err
 		}
-		if info.IsDir() {
+		if info.IsDir() && !prune.contains(name, false) {
 			dirmatches = append(dirmatches, name)
 		}
 	}
@@ -372,7 +427,12 @@ func recursiveGlob(prefix, tail string) ([]string, error) {
 	var matches []string
 	var choplen int // leading bytes to ignore
 	visit := func(path string, info os.FileInfo, err error) error {
-		// fail if anything is unreadable (do not silently ignore)
+		if prune.contains(path, true) {
+			return filepath.SkipDir
+		}
+
+		// fail if anything is unreadable (do not silently ignore, unless
+		// this directory was pruned)
 		if err != nil {
 			return err
 		}
