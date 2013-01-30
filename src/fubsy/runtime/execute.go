@@ -141,7 +141,11 @@ func evaluateCall(
 	if err != nil {
 		return nil, []error{err}
 	}
-	return callable.Code()(robj, arglist, nil)
+	args := FunctionArgs{
+		robj: robj,
+		args: arglist,
+	}
+	return callable.Code()(args)
 }
 
 func evaluateLookup(
@@ -190,4 +194,38 @@ func (self LocationError) Error() string {
 		return self.err.Error()
 	}
 	return self.location.ErrorPrefix() + self.err.Error()
+}
+
+type FunctionArgs struct {
+	runtime *Runtime
+	robj    types.FuObject
+	args    []types.FuObject
+	kwargs  types.ValueMap
+}
+
+// implement types.ArgSource
+func (self FunctionArgs) Receiver() types.FuObject {
+	return self.robj
+}
+
+func (self FunctionArgs) Args() []types.FuObject {
+	return self.args
+}
+
+func (self FunctionArgs) Arg(i int) types.FuObject {
+	return self.args[i]
+}
+
+func (self FunctionArgs) KeywordArgs() types.ValueMap {
+	return self.kwargs
+}
+
+func (self FunctionArgs) KeywordArg(name string) (types.FuObject, bool) {
+	value, ok := self.kwargs[name]
+	return value, ok
+}
+
+// other methods that might come in handy
+func (self FunctionArgs) Graph() *dag.DAG {
+	return self.runtime.dag
 }

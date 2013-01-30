@@ -8,11 +8,19 @@ import (
 	"fmt"
 )
 
+// object passed to every Fubsy function or method that encapsulates
+// all the information required by it
+type ArgSource interface {
+	Receiver() FuObject
+	Args() []FuObject
+	Arg(i int) FuObject
+	KeywordArgs() ValueMap
+	KeywordArg(name string) (FuObject, bool)
+}
+
 // the inner heart of a function or method, the code that is actually called
 // XXX should we allow multiple return values ([]FuObject)?
-type FuCode func(
-	robj FuObject, args []FuObject, kwargs map[string]FuObject) (
-	FuObject, []error)
+type FuCode func(args ArgSource) (FuObject, []error)
 
 // Every function (method) may take required (positional) arguments
 // and optional (keyword) arguments. Each function specifies how many

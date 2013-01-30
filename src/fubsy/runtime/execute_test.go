@@ -93,22 +93,20 @@ func Test_evaluateCall(t *testing.T) {
 	// bar() takes exactly one arg and always fails
 	calls := make([]string, 0) // list of function names
 
-	fn_foo := func(robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
-		types.FuObject, []error) {
-		if len(args) != 0 {
+	fn_foo := func(args types.ArgSource) (types.FuObject, []error) {
+		if len(args.Args()) != 0 {
 			panic("foo() called with wrong number of args")
 		}
 		calls = append(calls, "foo")
 		return types.FuString("foo!"), nil
 	}
-	fn_bar := func(robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
-		types.FuObject, []error) {
-		if len(args) != 1 {
+	fn_bar := func(args types.ArgSource) (types.FuObject, []error) {
+		if len(args.Args()) != 1 {
 			panic("bar() called with wrong number of args")
 		}
 		calls = append(calls, "bar")
 		return nil, []error{
-			fmt.Errorf("bar failed (%s)", args[0])}
+			fmt.Errorf("bar failed (%s)", args.Arg(0))}
 	}
 
 	ns := types.NewValueMap()
@@ -222,15 +220,15 @@ func Test_evaluateCall_method(t *testing.T) {
 	// make sure a.b.c is a method
 	calls := make([]string, 0) // list of function names
 	var meth_c types.FuCode
-	meth_c = func(robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
-		types.FuObject, []error) {
-		if len(args) != 1 {
+	meth_c = func(args types.ArgSource) (types.FuObject, []error) {
+		if len(args.Args()) != 1 {
 			panic("c() called with wrong number of args")
 		}
 		calls = append(calls, "c")
+		robj := args.Receiver()
 		return nil, []error{
 			fmt.Errorf("c failed: receiver: %s %v, arg: %s %v",
-				robj.Typename(), robj, args[0].Typename(), args[0])}
+				robj.Typename(), robj, args.Arg(0).Typename(), args.Arg(0))}
 	}
 	bobj.ValueMap = types.NewValueMap()
 	bobj.Assign("c", types.NewFixedFunction("c", 1, meth_c))

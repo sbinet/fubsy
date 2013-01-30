@@ -30,10 +30,8 @@ func defineBuiltins(ns types.Namespace) {
 	}
 }
 
-func fn_println(
-	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
-	types.FuObject, []error) {
-	for i, val := range args {
+func fn_println(args types.ArgSource) (types.FuObject, []error) {
+	for i, val := range args.Args() {
 		if i > 0 {
 			os.Stdout.WriteString(" ")
 		}
@@ -47,11 +45,9 @@ func fn_println(
 	return nil, nil
 }
 
-func fn_mkdir(
-	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
-	types.FuObject, []error) {
+func fn_mkdir(args types.ArgSource) (types.FuObject, []error) {
 	errs := make([]error, 0)
-	for _, name := range args {
+	for _, name := range args.Args() {
 		err := os.MkdirAll(name.String(), 0755)
 		if err != nil {
 			errs = append(errs, err)
@@ -60,11 +56,9 @@ func fn_mkdir(
 	return nil, errs
 }
 
-func fn_remove(
-	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
-	types.FuObject, []error) {
+func fn_remove(args types.ArgSource) (types.FuObject, []error) {
 	errs := make([]error, 0)
-	for _, name := range args {
+	for _, name := range args.Args() {
 		err := os.RemoveAll(name.String())
 		if err != nil {
 			errs = append(errs, err)
@@ -73,15 +67,11 @@ func fn_remove(
 	return nil, errs
 }
 
-func fn_FileNode(
-	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
-	types.FuObject, []error) {
-	return dag.NewFileNode(args[0].String()), nil
+func fn_FileNode(args types.ArgSource) (types.FuObject, []error) {
+	return dag.NewFileNode(args.Arg(0).String()), nil
 }
 
-func fn_ActionNode(
-	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
-	types.FuObject, []error) {
-	basename := args[0].String()
+func fn_ActionNode(args types.ArgSource) (types.FuObject, []error) {
+	basename := args.Arg(0).String()
 	return dag.NewActionNode(basename + ":action"), nil
 }

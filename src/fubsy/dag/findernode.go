@@ -217,13 +217,10 @@ func (self *FinderNode) Prune(dir string) {
 	self.prune[dir] = true
 }
 
-func meth_FinderNode_prune(
-	robj types.FuObject,
-	args []types.FuObject,
-	kwargs map[string]types.FuObject) (
-	types.FuObject, []error) {
-	for _, arg := range args {
-		robj.(*FinderNode).Prune(arg.String())
+func meth_FinderNode_prune(args types.ArgSource) (types.FuObject, []error) {
+	robj := args.Receiver().(*FinderNode)
+	for _, arg := range args.Args() {
+		robj.Prune(arg.String())
 	}
 	return nil, nil
 }
