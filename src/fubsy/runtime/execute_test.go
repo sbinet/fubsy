@@ -93,7 +93,7 @@ func Test_evaluateCall(t *testing.T) {
 	// bar() takes exactly one arg and always fails
 	calls := make([]string, 0) // list of function names
 
-	fn_foo := func(args []types.FuObject, kwargs map[string]types.FuObject) (
+	fn_foo := func(robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
 		types.FuObject, []error) {
 		if len(args) != 0 {
 			panic("foo() called with wrong number of args")
@@ -101,7 +101,7 @@ func Test_evaluateCall(t *testing.T) {
 		calls = append(calls, "foo")
 		return types.FuString("foo!"), nil
 	}
-	fn_bar := func(args []types.FuObject, kwargs map[string]types.FuObject) (
+	fn_bar := func(robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
 		types.FuObject, []error) {
 		if len(args) != 1 {
 			panic("bar() called with wrong number of args")
@@ -200,6 +200,63 @@ func Test_evaluateCall(t *testing.T) {
 		"not a function or method: 'src'", errors[0].Error())
 
 	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
+}
+
+func Test_evaluateCall_method(t *testing.T) {
+	// construct AST for "a.b.c(x)"
+	args := []dsl.ASTExpression{dsl.NewASTName("x")}
+	ast := dsl.NewASTFunctionCall(
+		dsl.NewASTSelection(
+			dsl.NewASTSelection(dsl.NewASTName("a"), "b"), "c"),
+		args)
+
+	// make sure a is an object with attributes, and b is one of them
+	// (N.B. having FileNodes be attributes of one another is weird
+	// and would never happen in a real Fubsy script, but it's a
+	// convenient way to setup this method call)
+	aobj := dag.NewFileNode("a.txt")
+	bobj := dag.NewFileNode("b.txt")
+	aobj.ValueMap = types.NewValueMap()
+	aobj.Assign("b", bobj)
+
+	// make sure a.b.c is a method
+	calls := make([]string, 0) // list of function names
+	var meth_c types.FuCode
+	meth_c = func(robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
+		types.FuObject, []error) {
+		if len(args) != 1 {
+			panic("c() called with wrong number of args")
+		}
+		calls = append(calls, "c")
+		return nil, []error{
+			fmt.Errorf("c failed: receiver: %s %v, arg: %s %v",
+				robj.Typename(), robj, args[0].Typename(), args[0])}
+	}
+	bobj.ValueMap = types.NewValueMap()
+	bobj.Assign("c", types.NewFixedFunction("c", 1, meth_c))
+
+	// need a namespace to lookup variables "a" and "x"
+	ns := types.NewValueMap()
+	ns.Assign("a", aobj)
+	ns.Assign("x", types.FuString("hello"))
+
+	// what the hell, let's test the precall feature too
+	var precalledExpr dsl.ASTExpression
+	var precalledArgs types.FuObject
+	precall := func(expr *dsl.ASTFunctionCall, args types.FuList) {
+		precalledExpr = expr
+		precalledArgs = args
+	}
+
+	result, errs := evaluateCall(ns, ast, precall)
+	assert.Equal(t, precalledExpr, ast)
+	assert.Equal(t, precalledArgs, types.MakeFuList("hello"))
+	assert.Nil(t, result)
+	if len(errs) == 1 {
+		assert.Equal(t, "c failed: receiver: FileNode b.txt, arg: string hello", errs[0].Error())
+	} else {
+		t.Errorf("expected exactly 1 error, but got: %v", errs)
+	}
 }
 
 func Test_LocationError(t *testing.T) {

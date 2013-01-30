@@ -30,7 +30,7 @@ func defineBuiltins(ns types.Namespace) {
 }
 
 func fn_println(
-	args []types.FuObject, kwargs map[string]types.FuObject) (
+	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
 	types.FuObject, []error) {
 	for i, val := range args {
 		if i > 0 {
@@ -47,7 +47,7 @@ func fn_println(
 }
 
 func fn_mkdir(
-	args []types.FuObject, kwargs map[string]types.FuObject) (
+	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
 	types.FuObject, []error) {
 	errs := make([]error, 0)
 	for _, name := range args {
@@ -60,7 +60,7 @@ func fn_mkdir(
 }
 
 func fn_remove(
-	args []types.FuObject, kwargs map[string]types.FuObject) (
+	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
 	types.FuObject, []error) {
 	errs := make([]error, 0)
 	for _, name := range args {
@@ -73,7 +73,7 @@ func fn_remove(
 }
 
 func fn_ActionNode(
-	args []types.FuObject, kwargs map[string]types.FuObject) (
+	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
 	types.FuObject, []error) {
 	return dag.NewActionNode(args[0].String()), nil
 }

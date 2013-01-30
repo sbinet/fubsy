@@ -130,6 +130,11 @@ func Test_FinderNode_Lookup(t *testing.T) {
 	val, ok := node.Lookup("foo")
 	assert.Nil(t, val)
 	assert.False(t, ok)
+
+	val, ok = node.Lookup("prune")
+	code := val.(*types.FuFunction).Code()
+	assert.True(t, code != nil) // argh: cannot compare function pointers!
+	assert.True(t, ok)
 }
 
 func Test_FinderNode_Expand_empty(t *testing.T) {

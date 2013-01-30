@@ -515,6 +515,14 @@ func (self *ASTSelection) String() string {
 	return fmt.Sprintf("%s.%s", self.container, self.member)
 }
 
+func (self *ASTSelection) Container() ASTExpression {
+	return self.container
+}
+
+func (self *ASTSelection) Name() string {
+	return self.member
+}
+
 func NewASTName(name string, location ...Locatable) *ASTName {
 	return &ASTName{
 		astbase: astLocation(location),

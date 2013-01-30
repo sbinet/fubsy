@@ -68,7 +68,7 @@ func Test_println(t *testing.T) {
 	args := types.MakeFuList()
 	kwargs := make(map[string]types.FuObject)
 
-	result, errs := fn_println(args, kwargs)
+	result, errs := fn_println(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 	data, err := ioutil.ReadFile("stdout")
@@ -78,7 +78,7 @@ func Test_println(t *testing.T) {
 	rfile.Seek(0, 0)
 
 	args = types.MakeFuList("hello", "world")
-	fn_println(args, kwargs)
+	fn_println(nil, args, kwargs)
 	data, err = ioutil.ReadFile("stdout")
 	assert.Nil(t, err)
 	assert.Equal(t, "hello world\n", string(data))
@@ -95,14 +95,14 @@ func Test_mkdir(t *testing.T) {
 	// just happens to be empty
 	args := []types.FuObject{}
 	kwargs := make(map[string]types.FuObject)
-	result, errs := fn_mkdir(args, kwargs)
+	result, errs := fn_mkdir(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, []string{}, dirContents("."))
 
 	// easiest case: create a single dir
 	args = types.MakeFuList("foo")
-	result, errs = fn_mkdir(args, kwargs)
+	result, errs = fn_mkdir(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, []string{"foo"}, dirContents("."))
@@ -110,7 +110,7 @@ func Test_mkdir(t *testing.T) {
 
 	// create multiple dirs, including "foo" which already exists
 	args = types.MakeFuList("meep/meep/meep", "foo", "meep/beep")
-	result, errs = fn_mkdir(args, kwargs)
+	result, errs = fn_mkdir(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, []string{"foo", "meep"}, dirContents("."))
@@ -123,7 +123,7 @@ func Test_mkdir(t *testing.T) {
 	// create the other requested dirs!)
 	testutils.TouchFiles("meep/zap")
 	args = types.MakeFuList("meep/bap", "meep/zap/zip", "foo/bar")
-	result, errs = fn_mkdir(args, kwargs)
+	result, errs = fn_mkdir(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errs))
 	assert.Equal(t, "mkdir meep/zap: not a directory", errs[0].Error())
@@ -132,7 +132,7 @@ func Test_mkdir(t *testing.T) {
 
 	// finally, with multiple errors
 	args = append(args, types.FuString("meep/zap/blop"))
-	result, errs = fn_mkdir(args, kwargs)
+	result, errs = fn_mkdir(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 2, len(errs))
 	assert.Equal(t, "mkdir meep/zap: not a directory", errs[0].Error())
@@ -147,20 +147,20 @@ func Test_remove(t *testing.T) {
 	kwargs := make(map[string]types.FuObject)
 
 	// remove() doesn't care about empty arg list (same reason as mkdir())
-	result, errs := fn_remove(args, kwargs)
+	result, errs := fn_remove(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 
 	// remove() ignores non-existent files
 	args = types.MakeFuList("foo", "bar/bleep/meep", "qux")
-	result, errs = fn_remove(args, kwargs)
+	result, errs = fn_remove(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 
 	// remove() removes regular files
 	testutils.TouchFiles("foo", "bar/bleep/meep", "bar/bleep/feep", "qux")
 	args = types.MakeFuList("foo", "bar/bleep/meep", "bogus")
-	result, errs = fn_remove(args, kwargs)
+	result, errs = fn_remove(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, []string{"bar", "qux"}, dirContents("."))
@@ -170,7 +170,7 @@ func Test_remove(t *testing.T) {
 	// remove() removes files and directories too
 	testutils.TouchFiles("foo", "bar/bleep/meep", "qux")
 	args = types.MakeFuList("bogus", "bar", "morebogus", "qux")
-	result, errs = fn_remove(args, kwargs)
+	result, errs = fn_remove(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, []string{"foo"}, dirContents("."))
@@ -181,7 +181,7 @@ func Test_remove(t *testing.T) {
 	defer testutils.ChmodOwnerAll("bar")
 
 	args = types.MakeFuList("bar", "qux")
-	result, errs = fn_remove(args, kwargs)
+	result, errs = fn_remove(nil, args, kwargs)
 	assert.Nil(t, result)
 	assert.Equal(t, "remove bar/bong: permission denied", errs[0].Error())
 }

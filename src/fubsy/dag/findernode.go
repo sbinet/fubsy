@@ -19,6 +19,14 @@ import (
 
 type dirset map[string]bool
 
+var methodsFinderNode types.ValueMap
+
+func init() {
+	methodsFinderNode = make(types.ValueMap)
+	methodsFinderNode["prune"] = types.NewVariadicFunction(
+		"prune", 0, -1, meth_FinderNode_prune)
+}
+
 // Node type that represents filefinders. Code like
 //    a = <**/*.c>
 // results in one FinderNode being created and assigned to variable
@@ -54,6 +62,7 @@ func NewFinderNode(includes ...string) *FinderNode {
 		nodebase: makenodebase(name),
 		includes: includes,
 	}
+	node.ValueMap = methodsFinderNode
 	return node
 }
 
@@ -206,6 +215,17 @@ func (self *FinderNode) Prune(dir string) {
 		self.prune = make(dirset)
 	}
 	self.prune[dir] = true
+}
+
+func meth_FinderNode_prune(
+	robj types.FuObject,
+	args []types.FuObject,
+	kwargs map[string]types.FuObject) (
+	types.FuObject, []error) {
+	for _, arg := range args {
+		robj.(*FinderNode).Prune(arg.String())
+	}
+	return nil, nil
 }
 
 func (self *FinderNode) FindFiles() ([]string, error) {

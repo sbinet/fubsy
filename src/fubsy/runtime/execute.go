@@ -43,6 +43,8 @@ func evaluate(
 		result, errs = evaluateAdd(ns, expr)
 	case *dsl.ASTFunctionCall:
 		result, errs = evaluateCall(ns, expr, nil)
+	case *dsl.ASTSelection:
+		_, result, errs = evaluateLookup(ns, expr)
 	default:
 		return nil, []error{unsupportedAST(expr_)}
 	}
@@ -86,12 +88,28 @@ func evaluateCall(
 	expr *dsl.ASTFunctionCall,
 	precall func(*dsl.ASTFunctionCall, types.FuList)) (
 	types.FuObject, []error) {
-	value, errs := evaluate(ns, expr.Function())
+
+	var robj, value types.FuObject
+	var errs []error
+
+	// two cases to worry about here:
+	//    1. fn(...)
+	//    2. robj.meth(...)
+	astfunc := expr.Function()
+	if astselect, ok := astfunc.(*dsl.ASTSelection); ok {
+		// case 2: it's a method call; we need to keep track of the
+		// receiver object
+		robj, value, errs = evaluateLookup(ns, astselect)
+	} else {
+		// case 1: it's a normal function call, so robj stays nil
+		value, errs = evaluate(ns, expr.Function())
+	}
 	if len(errs) > 0 {
 		return nil, errs
 	}
+
 	var err error
-	function, ok := value.(types.FuCallable)
+	callable, ok := value.(types.FuCallable)
 	if !ok {
 		err = fmt.Errorf("not a function or method: '%s'", expr.Function())
 		return nil, []error{err}
@@ -119,11 +137,30 @@ func evaluateCall(
 		precall(expr, arglist)
 	}
 
-	err = function.CheckArgs(arglist)
+	err = callable.CheckArgs(arglist)
 	if err != nil {
 		return nil, []error{err}
 	}
-	return function.Code()(arglist, nil)
+	return callable.Code()(robj, arglist, nil)
+}
+
+func evaluateLookup(
+	ns types.Namespace, expr *dsl.ASTSelection) (
+	container, value types.FuObject, errs []error) {
+
+	container, errs = evaluate(ns, expr.Container())
+	if len(errs) > 0 {
+		return
+	}
+	var ok bool
+	value, ok = container.Lookup(expr.Name())
+	if !ok {
+		errs = append(errs,
+			fmt.Errorf("%s %s has no attribute '%s'",
+				container.Typename(), container, expr.Name()))
+		return
+	}
+	return
 }
 
 type LocationError struct {
