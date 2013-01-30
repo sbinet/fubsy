@@ -209,6 +209,26 @@ func isDir(name string) bool {
 	return st.IsDir()
 }
 
+func Test_FileNode(t *testing.T) {
+	args := []types.FuObject{types.FuString("a.txt")}
+	node0, errs := fn_FileNode(nil, args, nil)
+	assert.Equal(t, 0, len(errs))
+	node1, errs := fn_FileNode(nil, args, nil)
+	assert.Equal(t, 0, len(errs))
+
+	// panic on unexpected type
+	_ = node0.(*dag.FileNode)
+	_ = node1.(*dag.FileNode)
+
+	assert.Equal(t, "a.txt", node0.(dag.Node).Name())
+	assert.True(t, node0.Equal(node1))
+
+	// arguably this is a bug: we should use MakeFileNode() and have
+	// access to the DAG to ensure that user scripts can only create
+	// one node per file (more generally, one node per named resource)
+	assert.False(t, &node0 == &node1)
+}
+
 func Test_ActionNode(t *testing.T) {
 	args := []types.FuObject{types.FuString("test/x")}
 	node, errs := fn_ActionNode(nil, args, nil)

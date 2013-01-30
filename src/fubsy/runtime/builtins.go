@@ -21,6 +21,7 @@ func defineBuiltins(ns types.Namespace) {
 		types.NewVariadicFunction("remove", 0, -1, fn_remove),
 
 		// node constructors
+		types.NewFixedFunction("FileNode", 1, fn_FileNode),
 		types.NewFixedFunction("ActionNode", 1, fn_ActionNode),
 	}
 
@@ -70,6 +71,12 @@ func fn_remove(
 		}
 	}
 	return nil, errs
+}
+
+func fn_FileNode(
+	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
+	types.FuObject, []error) {
+	return dag.NewFileNode(args[0].String()), nil
 }
 
 func fn_ActionNode(
