@@ -64,33 +64,33 @@ main {
     # packages dynamically and loop over them. That'll have to wait
     # until we have plugins.
 
-    ActionNode("test/fubsy/build:action"): <$src/build/*.go> {
+    ActionNode("test/fubsy/build"): <$src/build/*.go> {
         "go test $tagflag fubsy/build"
     }
-    ActionNode("test/fubsy/dag:action"): <$src/dag/*.go> {
+    ActionNode("test/fubsy/dag"): <$src/dag/*.go> {
         "go test $tagflag fubsy/dag"
     }
-    ActionNode("test/fubsy/db:action"): <$src/db/*.go> {
+    ActionNode("test/fubsy/db"): <$src/db/*.go> {
         "go test $tagflag fubsy/db"
     }
-    ActionNode("test/fubsy/dsl:action"): <$src/dsl/*.go> {
+    ActionNode("test/fubsy/dsl"): <$src/dsl/*.go> {
         "go test $tagflag fubsy/dsl"
     }
-    ActionNode("test/fubsy/log:action"): <$src/log/*.go> {
+    ActionNode("test/fubsy/log"): <$src/log/*.go> {
         "go test $tagflag fubsy/log"
     }
-    ActionNode("test/fubsy/runtime:action"): <$src/runtime/*.go> {
+    ActionNode("test/fubsy/runtime"): <$src/runtime/*.go> {
         "go test $tagflag fubsy/runtime"
     }
-    ActionNode("test/fubsy/types:action"): <$src/types/*.go> {
+    ActionNode("test/fubsy/types"): <$src/types/*.go> {
         "go test $tagflag fubsy/types"
     }
 
-    ActionNode("check/vet:action"): localsrc {
+    ActionNode("check/vet"): localsrc {
         "go vet fubsy/..."
     }
     # XXX can't do this yet: no backslash escapes, no multiline strings
-    #ActionNode("check/fmt:action"): localsrc {
+    #ActionNode("check/fmt"): localsrc {
     #    "needfmt=`gofmt -l $src` ; if [ \"$needfmt\" ]; then exit 1; fi"
     #}
 }

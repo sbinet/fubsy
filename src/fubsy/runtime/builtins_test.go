@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchrcom/testify/assert"
 
+	"fubsy/dag"
 	"fubsy/testutils"
 	"fubsy/types"
 )
@@ -206,4 +207,14 @@ func isDir(name string) bool {
 		panic(err)
 	}
 	return st.IsDir()
+}
+
+func Test_ActionNode(t *testing.T) {
+	args := []types.FuObject{types.FuString("test/x")}
+	node, errs := fn_ActionNode(nil, args, nil)
+	assert.Equal(t, 0, len(errs))
+
+	_ = node.(*dag.ActionNode)
+	assert.Equal(t, "test/x:action", node.String())
+	assert.Equal(t, "test/x:action", node.(dag.Node).Name())
 }

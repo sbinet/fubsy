@@ -75,5 +75,6 @@ func fn_remove(
 func fn_ActionNode(
 	robj types.FuObject, args []types.FuObject, kwargs map[string]types.FuObject) (
 	types.FuObject, []error) {
-	return dag.NewActionNode(args[0].String()), nil
+	basename := args[0].String()
+	return dag.NewActionNode(basename + ":action"), nil
 }
