@@ -35,7 +35,7 @@ func (self *BuildRule) Execute() ([]dag.Node, []error) {
 	self.setLocals(locals)
 	log.Debug(log.BUILD, "value stack:")
 	log.DebugDump(log.BUILD, stack)
-	err := self.action.Execute(stack)
+	err := self.action.Execute(self.runtime)
 	return self.targets, err
 }
 

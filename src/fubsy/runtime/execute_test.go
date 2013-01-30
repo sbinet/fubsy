@@ -19,18 +19,18 @@ import (
 func Test_assign(t *testing.T) {
 	// AST for a = "foo"
 	node := dsl.NewASTAssignment("a", stringnode("foo"))
-	ns := types.NewValueMap()
+	rt := minimalRuntime()
 
-	errs := assign(ns, node)
+	errs := assign(rt, node)
 	assert.Equal(t, 0, len(errs))
 	expect := types.FuString("foo")
-	assertIn(t, ns, "a", expect)
+	assertIn(t, rt.Namespace(), "a", expect)
 
 	// AST for a = foo (another variable, to provoke an error)
 	node = dsl.NewASTAssignment("b", dsl.NewASTName("foo"))
-	errs = assign(ns, node)
+	errs = assign(rt, node)
 	assert.Equal(t, "name not defined: 'foo'", errs[0].Error())
-	_, ok := ns.Lookup("b")
+	_, ok := rt.Lookup("b")
 	assert.False(t, ok)
 }
 
@@ -39,27 +39,28 @@ func Test_evaluate_simple(t *testing.T) {
 	// the expression "meep" evaluates to the string "meep"
 	var expect types.FuObject
 	snode := stringnode("meep")
-	ns := types.NewValueMap()
+	rt := minimalRuntime()
+	ns := rt.Namespace()
 	expect = types.FuString("meep")
-	assertEvaluateOK(t, ns, expect, snode)
+	assertEvaluateOK(t, rt, expect, snode)
 
 	// the expression foo evaluates to the string "meep" if foo is set
 	// to that string
 	ns.Assign("foo", expect)
 	nnode := dsl.NewASTName("foo")
-	assertEvaluateOK(t, ns, expect, nnode)
+	assertEvaluateOK(t, rt, expect, nnode)
 
 	// ... and to an error if the variable is not defined
 	location := dsl.NewStubLocation("hello, sailor")
 	nnode = dsl.NewASTName("boo", location)
-	assertEvaluateFail(t, ns, "hello, sailor: name not defined: 'boo'", nnode)
+	assertEvaluateFail(t, rt, "hello, sailor: name not defined: 'boo'", nnode)
 
 	// expression <*.c blah> evaluates to a FinderNode with two
 	// include patterns
 	patterns := []string{"*.c", "blah"}
 	fnode := dsl.NewASTFileFinder(patterns)
 	expect = dag.NewFinderNode("*.c", "blah")
-	assertEvaluateOK(t, ns, expect, fnode)
+	assertEvaluateOK(t, rt, expect, fnode)
 }
 
 // evaluate more complex expressions
@@ -71,21 +72,22 @@ func Test_evaluate_complex(t *testing.T) {
 		dsl.NewASTName("b", dsl.NewStubLocation("loc2")))
 
 	// case 1: two strings just get concatenated
-	ns := types.NewValueMap()
+	rt := minimalRuntime()
+	ns := rt.Namespace()
 	ns.Assign("a", types.FuString("foo"))
 	ns.Assign("b", types.FuString("bar"))
 	expect := types.FuString("foobar")
-	assertEvaluateOK(t, ns, expect, addnode)
+	assertEvaluateOK(t, rt, expect, addnode)
 
 	// case 2: adding a function to a string fails
 	ns.Assign("b", types.NewFixedFunction("b", 0, nil))
-	assertEvaluateFail(t, ns,
+	assertEvaluateFail(t, rt,
 		"loc1loc2: unsupported operation: cannot add function to string",
 		addnode)
 
 	// case 3: undefined name
-	delete(ns, "b")
-	assertEvaluateFail(t, ns, "loc2: name not defined: 'b'", addnode)
+	delete((*ns.(*types.ValueStack))[0].(types.ValueMap), "b")
+	assertEvaluateFail(t, rt, "loc2: name not defined: 'b'", addnode)
 }
 
 func Test_evaluateCall(t *testing.T) {
@@ -109,7 +111,8 @@ func Test_evaluateCall(t *testing.T) {
 			fmt.Errorf("bar failed (%s)", args.Arg(0))}
 	}
 
-	ns := types.NewValueMap()
+	rt := minimalRuntime()
+	ns := rt.Namespace()
 	ns.Assign("foo", types.NewFixedFunction("foo", 0, fn_foo))
 	ns.Assign("bar", types.NewFixedFunction("bar", 1, fn_bar))
 	ns.Assign("src", types.FuString("main.c"))
@@ -125,14 +128,14 @@ func Test_evaluateCall(t *testing.T) {
 
 	// call foo() correctly (no args)
 	ast := dsl.NewASTFunctionCall(fooname, noargs)
-	result, errors = evaluateCall(ns, ast, nil)
+	result, errors = evaluateCall(rt, ast, nil)
 	assert.Equal(t, "foo!", result.String())
 	assert.Equal(t, 0, len(errors))
 	assert.Equal(t, []string{"foo"}, calls)
 
 	// call foo() incorrectly (1 arg)
 	ast = dsl.NewASTFunctionCall(fooname, onearg)
-	result, errors = evaluateCall(ns, ast, nil)
+	result, errors = evaluateCall(rt, ast, nil)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
 		"function foo() takes no arguments (got 1)", errors[0].Error())
@@ -140,7 +143,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// call bar() correctly (1 arg)
 	ast = dsl.NewASTFunctionCall(barname, onearg)
-	result, errors = evaluateCall(ns, ast, nil)
+	result, errors = evaluateCall(rt, ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t, "bar failed (meep)", errors[0].Error())
@@ -148,7 +151,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// call bar() with an arg that needs to be expanded
 	ast = dsl.NewASTFunctionCall(barname, exparg)
-	result, errors = evaluateCall(ns, ast, nil)
+	result, errors = evaluateCall(rt, ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t, "bar failed (>main.c<)", errors[0].Error())
@@ -157,7 +160,7 @@ func Test_evaluateCall(t *testing.T) {
 	// again, but this time expansion fails (undefined name)
 	exparg = []dsl.ASTExpression{dsl.NewASTString("\"a $bogus value\"")}
 	ast = dsl.NewASTFunctionCall(barname, exparg)
-	result, errors = evaluateCall(ns, ast, nil)
+	result, errors = evaluateCall(rt, ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t, "undefined variable 'bogus' in string", errors[0].Error())
@@ -165,7 +168,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// call bar() incorrectly (no args)
 	ast = dsl.NewASTFunctionCall(barname, noargs)
-	result, errors = evaluateCall(ns, ast, nil)
+	result, errors = evaluateCall(rt, ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
@@ -175,7 +178,7 @@ func Test_evaluateCall(t *testing.T) {
 	// call bar() incorrectly (1 arg, but it's an undefined name)
 	ast = dsl.NewASTFunctionCall(
 		barname, []dsl.ASTExpression{dsl.NewASTName("bogus")})
-	result, errors = evaluateCall(ns, ast, nil)
+	result, errors = evaluateCall(rt, ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
@@ -183,7 +186,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// attempt to call non-existent function
 	ast = dsl.NewASTFunctionCall(dsl.NewASTName("bogus"), onearg)
-	result, errors = evaluateCall(ns, ast, nil)
+	result, errors = evaluateCall(rt, ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
@@ -191,7 +194,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// attempt to call something that is not a function
 	ast = dsl.NewASTFunctionCall(dsl.NewASTName("src"), onearg)
-	result, errors = evaluateCall(ns, ast, nil)
+	result, errors = evaluateCall(rt, ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
@@ -233,8 +236,8 @@ func Test_evaluateCall_method(t *testing.T) {
 	bobj.ValueMap = types.NewValueMap()
 	bobj.Assign("c", types.NewFixedFunction("c", 1, meth_c))
 
-	// need a namespace to lookup variables "a" and "x"
-	ns := types.NewValueMap()
+	rt := minimalRuntime()
+	ns := rt.Namespace()
 	ns.Assign("a", aobj)
 	ns.Assign("x", types.FuString("hello"))
 
@@ -246,7 +249,7 @@ func Test_evaluateCall_method(t *testing.T) {
 		precalledArgs = args
 	}
 
-	result, errs := evaluateCall(ns, ast, precall)
+	result, errs := evaluateCall(rt, ast, precall)
 	assert.Equal(t, precalledExpr, ast)
 	assert.Equal(t, precalledArgs, types.MakeFuList("hello"))
 	assert.Nil(t, result)
@@ -284,8 +287,8 @@ func stringnode(value string) *dsl.ASTString {
 }
 
 func assertIn(
-	t *testing.T, ns types.ValueMap, name string, expect types.FuObject) {
-	if actual, ok := ns[name]; ok {
+	t *testing.T, ns types.Namespace, name string, expect types.FuObject) {
+	if actual, ok := ns.Lookup(name); ok {
 		if actual != expect {
 			t.Errorf("expected %#v, but got %#v", expect, actual)
 		}
@@ -296,11 +299,11 @@ func assertIn(
 
 func assertEvaluateOK(
 	t *testing.T,
-	ns types.Namespace,
+	rt *Runtime,
 	expect types.FuObject,
 	input dsl.ASTExpression) {
 
-	obj, err := evaluate(ns, input)
+	obj, err := evaluate(rt, input)
 	assert.Nil(t, err)
 
 	if !expect.Equal(obj) {
@@ -310,11 +313,11 @@ func assertEvaluateOK(
 
 func assertEvaluateFail(
 	t *testing.T,
-	ns types.Namespace,
+	rt *Runtime,
 	expecterr string,
 	input dsl.ASTExpression) {
 
-	obj, errs := evaluate(ns, input)
+	obj, errs := evaluate(rt, input)
 	assert.Equal(t, expecterr, errs[0].Error())
 	assert.Nil(t, obj)
 }

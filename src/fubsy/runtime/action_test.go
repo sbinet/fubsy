@@ -10,16 +10,15 @@ import (
 	"github.com/stretchrcom/testify/assert"
 
 	"fubsy/dsl"
-	"fubsy/types"
 )
 
 func Test_SequenceAction_create(t *testing.T) {
-	ns := types.NewValueMap()
+	rt := &Runtime{}
 	action := NewSequenceAction()
 	assert.Equal(t, 0, len(action.subactions))
 
 	// Execute() on an empty SequenceAction does nothing, silently
-	assert.Nil(t, action.Execute(ns))
+	assert.Nil(t, action.Execute(rt))
 
 	// action 1 is a bare string: "ls -lR foo/bar"
 	cmd := dsl.NewASTString("\"ls -lR foo/bar\"")

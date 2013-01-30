@@ -61,6 +61,17 @@ func NewRuntime(
 	}
 }
 
+// return a barebones Runtime with almost nothing in it -- variable
+// assignment and lookup works, but not much else
+func minimalRuntime() *Runtime {
+	stack := types.NewValueStack()
+	locals := types.NewValueMap()
+	stack.Push(locals)
+	return &Runtime{
+		stack: &stack,
+	}
+}
+
 func (self *Runtime) RunScript() []error {
 	var errors []error
 	for _, plugin := range self.ast.ListPlugins() {
@@ -93,7 +104,7 @@ func (self *Runtime) runMainPhase() []error {
 	for _, node_ := range main.Children() {
 		switch node := node_.(type) {
 		case *dsl.ASTAssignment:
-			errs = assign(self.stack, node)
+			errs = assign(self, node)
 		case *dsl.ASTBuildRule:
 			var rule *BuildRule
 			rule, errs = self.makeRule(node)
@@ -101,7 +112,7 @@ func (self *Runtime) runMainPhase() []error {
 				self.addRule(rule)
 			}
 		case dsl.ASTExpression:
-			_, errs = evaluate(self.stack, node)
+			_, errs = evaluate(self, node)
 		default:
 			errs = append(errs, unsupportedAST(node))
 		}
@@ -142,11 +153,11 @@ func (self *Runtime) makeRuleNodes(astrule *dsl.ASTBuildRule) (
 	// each. It might be a string, a list of strings, a FinderNode...
 	// anything, really.
 	var targetobj, sourceobj types.FuObject
-	targetobj, errs = evaluate(self.stack, astrule.Targets())
+	targetobj, errs = evaluate(self, astrule.Targets())
 	if len(errs) > 0 {
 		return
 	}
-	sourceobj, errs = evaluate(self.stack, astrule.Sources())
+	sourceobj, errs = evaluate(self, astrule.Sources())
 	if len(errs) > 0 {
 		return
 	}
@@ -228,6 +239,14 @@ func (self *Runtime) runBuildPhase() []error {
 		errs = append(errs, err)
 	}
 	return errs
+}
+
+func (self *Runtime) Namespace() types.Namespace {
+	return self.stack
+}
+
+func (self *Runtime) Lookup(name string) (types.FuObject, bool) {
+	return self.stack.Lookup(name)
 }
 
 func openBuildDB() (build.BuildDB, error) {

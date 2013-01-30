@@ -23,7 +23,7 @@ type Action interface {
 	// first error; they do not continue executing. (The global
 	// "--keep-going" option is irrelevant at this level; the caller
 	// of Execute() is responsible for respecting that option.)
-	Execute(ns types.Namespace) []error
+	Execute(rt *Runtime) []error
 }
 
 type actionbase struct {
@@ -79,9 +79,9 @@ func (self *SequenceAction) String() string {
 	return strings.Join(result, " && ") + tail
 }
 
-func (self *SequenceAction) Execute(ns types.Namespace) []error {
+func (self *SequenceAction) Execute(rt *Runtime) []error {
 	for _, sub := range self.subactions {
-		errs := sub.Execute(ns)
+		errs := sub.Execute(rt)
 		if len(errs) > 0 {
 			return errs
 		}
@@ -110,11 +110,11 @@ func (self *CommandAction) String() string {
 	return self.raw.String()
 }
 
-func (self *CommandAction) Execute(ns types.Namespace) []error {
+func (self *CommandAction) Execute(rt *Runtime) []error {
 	//fmt.Println(self.raw)
 
 	var err error
-	self.expanded, err = self.raw.ActionExpand(ns, nil)
+	self.expanded, err = self.raw.ActionExpand(rt.Namespace(), nil)
 	if err != nil {
 		return []error{err}
 	}
@@ -150,16 +150,16 @@ func (self *AssignmentAction) String() string {
 	//return self.assignment.String()
 }
 
-func (self *AssignmentAction) Execute(ns types.Namespace) []error {
-	return assign(ns, self.assignment)
+func (self *AssignmentAction) Execute(rt *Runtime) []error {
+	return assign(rt, self.assignment)
 }
 
 func (self *FunctionCallAction) String() string {
 	return self.fcall.String()
 }
 
-func (self *FunctionCallAction) Execute(ns types.Namespace) []error {
-	_, errs := evaluateCall(ns, self.fcall, logFunctionCall)
+func (self *FunctionCallAction) Execute(rt *Runtime) []error {
+	_, errs := evaluateCall(rt, self.fcall, logFunctionCall)
 	return errs
 }
 
