@@ -96,7 +96,7 @@ func (self *FinderNode) Add(other_ types.FuObject) (types.FuObject, error) {
 			switch obj := obj.(type) {
 			case types.FuString:
 				// <*.c> + ["extra/stuff.c"] should just work
-				members[i+1] = newFileNode(string(obj))
+				members[i+1] = NewFileNode(string(obj))
 			case Node:
 				members[i+1] = obj
 			default:
@@ -110,7 +110,7 @@ func (self *FinderNode) Add(other_ types.FuObject) (types.FuObject, error) {
 		result = newListNode(members...)
 	case types.FuString:
 		// <pat> + "foo" = [<pat>, FileNode("foo")]
-		result = newListNode(self, newFileNode(string(other)))
+		result = newListNode(self, NewFileNode(string(other)))
 	case Node:
 		result = newListNode(self, other)
 	default:

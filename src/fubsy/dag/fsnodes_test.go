@@ -109,8 +109,8 @@ func Test_FileNode_buildrule(t *testing.T) {
 }
 
 func Test_FileNode_Add(t *testing.T) {
-	node0 := newFileNode("foo/bar")
-	node1 := newFileNode("foo/baz")
+	node0 := NewFileNode("foo/bar")
+	node1 := NewFileNode("foo/baz")
 	obj0 := types.FuString(".c")
 	obj1 := types.MakeFuList("a", "b")
 
@@ -125,7 +125,7 @@ func Test_FileNode_Add(t *testing.T) {
 	assert.True(t, expect.Equal(actual))
 
 	// node + string = new node
-	expect = newFileNode("foo/bar.c")
+	expect = NewFileNode("foo/bar.c")
 	actual, err = node0.Add(obj0)
 	assert.Nil(t, err)
 	assert.True(t, expect.Equal(actual))
@@ -140,7 +140,7 @@ func Test_FileNode_Add(t *testing.T) {
 
 func Test_FileNode_Expand(t *testing.T) {
 	ns := types.NewValueMap()
-	node := newFileNode("foobar")
+	node := NewFileNode("foobar")
 	xnode, err := node.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, node, xnode)
@@ -150,7 +150,7 @@ func Test_FileNode_Expand(t *testing.T) {
 	assert.Equal(t, "foobar", node.Name())
 
 	// test that ActionExpand() follows variable references
-	node = newFileNode("$foo$bar")
+	node = NewFileNode("$foo$bar")
 	xnode, err = node.ActionExpand(ns, nil)
 	assert.Equal(t, "undefined variable 'foo' in string", err.Error())
 
@@ -209,9 +209,9 @@ func Test_FileNode_Signature(t *testing.T) {
 	testutils.Mkfile("d1", "empty", "")
 	testutils.Mkfile("d2", "stuff", "foo\n")
 
-	node1 := newFileNode("d1/empty")
-	node2 := newFileNode("d2/stuff")
-	node3 := newFileNode("nonexistent")
+	node1 := NewFileNode("d1/empty")
+	node2 := NewFileNode("d2/stuff")
+	node3 := NewFileNode("nonexistent")
 
 	expect := []byte{}
 	hash := fnv.New64a()
@@ -257,19 +257,19 @@ func Test_FileNode_Changed(t *testing.T) {
 	defer cleanup()
 
 	testutils.Mkfile(".", "stuff.txt", "blah blah blah\n")
-	node := newFileNode("stuff.txt")
+	node := NewFileNode("stuff.txt")
 	osig, err := node.Signature()
 	assert.Nil(t, err)
 
 	// construct a new FileNode so the cache is lost
-	node = newFileNode("stuff.txt")
+	node = NewFileNode("stuff.txt")
 	nsig, err := node.Signature()
 	assert.Nil(t, err)
 	assert.False(t, node.Changed(osig, nsig))
 
 	// modify the file and repeat
 	testutils.Mkfile(".", "stuff.txt", "blah blah blah\nblah")
-	node = newFileNode("stuff.txt")
+	node = NewFileNode("stuff.txt")
 	nsig, err = node.Signature()
 	assert.Nil(t, err)
 	assert.True(t, node.Changed(osig, nsig))

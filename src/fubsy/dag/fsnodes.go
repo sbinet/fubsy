@@ -29,11 +29,11 @@ type FileNode struct {
 // create a new FileNode, add it to dag, and return it. If it does
 // exist but isn't a FileNode, panic.
 func MakeFileNode(dag *DAG, name string) *FileNode {
-	_, node := dag.addNode(newFileNode(name))
+	_, node := dag.addNode(NewFileNode(name))
 	return node.(*FileNode)
 }
 
-func newFileNode(name string) *FileNode {
+func NewFileNode(name string) *FileNode {
 	return &FileNode{nodebase: makenodebase(name)}
 }
 
@@ -57,7 +57,7 @@ func (self *FileNode) Add(other_ types.FuObject) (types.FuObject, error) {
 	switch other := other_.(type) {
 	case types.FuString:
 		// caller must add it to the appropriate DAG!
-		result = newFileNode(self.name + string(other))
+		result = NewFileNode(self.name + string(other))
 	default:
 		result, err = defaultNodeAdd(self, other)
 	}
