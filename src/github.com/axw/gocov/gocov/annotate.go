@@ -28,6 +28,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -35,6 +36,13 @@ import (
 const (
 	hitPrefix  = "    "
 	missPrefix = "MISS"
+)
+
+var (
+	annotateFlags       = flag.NewFlagSet("annotate", flag.ExitOnError)
+	annotateCeilingFlag = annotateFlags.Float64(
+		"ceiling", 101,
+		"Annotate only functions whose coverage is less than the specified percentage")
 )
 
 type packageList []*gocov.Package
@@ -69,18 +77,29 @@ type annotator struct {
 	files map[string]*token.File
 }
 
+func percentReached(fn *gocov.Function) float64 {
+	if len(fn.Statements) == 0 {
+		return 0
+	}
+	var reached int
+	for _, stmt := range fn.Statements {
+		if stmt.Reached > 0 {
+			reached++
+		}
+	}
+	return float64(reached) / float64(len(fn.Statements)) * 100
+}
+
 func annotateSource() (rc int) {
-	if flag.NArg() == 1 {
-		fmt.Fprintf(os.Stderr, "missing coverage file and functions\n")
-		return 1
-	} else if flag.NArg() < 3 {
-		fmt.Fprintf(os.Stderr, "missing functions\n")
+	annotateFlags.Parse(os.Args[2:])
+	if annotateFlags.NArg() == 0 {
+		fmt.Fprintf(os.Stderr, "missing coverage file\n")
 		return 1
 	}
 
 	var data []byte
 	var err error
-	if filename := flag.Arg(1); filename == "-" {
+	if filename := annotateFlags.Arg(0); filename == "-" {
 		data, err = ioutil.ReadAll(os.Stdin)
 	} else {
 		data, err = ioutil.ReadFile(filename)
@@ -106,45 +125,34 @@ func annotateSource() (rc int) {
 	a := &annotator{}
 	a.fset = token.NewFileSet()
 	a.files = make(map[string]*token.File)
-	for i := 2; i < flag.NArg(); i++ {
-		funcName := flag.Arg(i)
-		dotIndex := strings.Index(funcName, ".")
-		if dotIndex == -1 {
-			// TODO maybe check if there's just one matching package?
-			fmt.Fprintf(os.Stderr, "warning: unqualified function '%s', skipping\n", funcName)
-			continue
-		}
 
-		pkgName := funcName[:dotIndex]
-		funcName = funcName[dotIndex+1:]
-		i := sort.Search(len(packages), func(i int) bool {
-			return packages[i].Name >= pkgName
-		})
-		if i < len(packages) && packages[i].Name == pkgName {
-			pkg := packages[i]
-			i := sort.Search(len(pkg.Functions), func(i int) bool {
-				return pkg.Functions[i].Name >= funcName
-			})
-			if i < len(pkg.Functions) && pkg.Functions[i].Name == funcName {
-				fn := pkg.Functions[i]
-				err := a.printFunctionSource(fn)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "warning: failed to annotate function '%s.%s'\n",
-						pkgName, funcName)
-				}
-			} else {
-				fmt.Fprintf(os.Stderr,
-					"warning: no coverage data for function '%s.%s', skipping\n",
-					pkgName, funcName)
-			}
-		} else {
-			fmt.Fprintf(os.Stderr,
-				"warning: no coverage data for package '%s', skipping\n", pkgName)
-		}
-
+	var regexps []*regexp.Regexp
+	for _, arg := range annotateFlags.Args()[1:] {
+		re, err := regexp.Compile(arg)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "annotation failed for '%s': %s\n", funcName, err)
-			return 1
+			fmt.Fprintf(os.Stderr, "warning: failed to compile %q as a regular expression, ignoring\n", arg)
+		} else {
+			regexps = append(regexps, re)
+		}
+	}
+	if len(regexps) == 0 {
+		regexps = append(regexps, regexp.MustCompile("."))
+	}
+	for _, pkg := range packages {
+		for _, fn := range pkg.Functions {
+			if percentReached(fn) >= *annotateCeilingFlag {
+				continue
+			}
+			name := pkg.Name + "/" + fn.Name
+			for _, regexp := range regexps {
+				if regexp.FindStringIndex(name) != nil {
+					err := a.printFunctionSource(fn)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "warning: failed to annotate function %q\n", name)
+					}
+					break
+				}
+			}
 		}
 	}
 	return
@@ -190,14 +198,17 @@ func (a *annotator) printFunctionSource(fn *gocov.Function) error {
 		hit := false
 		for j := 0; j < len(statements); j++ {
 			start := file.Line(file.Pos(statements[j].Start))
+			// FIXME instrumentation no longer records statements
+			// in line order, as function literals are processed
+			// after the body of a function. If/when that's changed,
+			// we can go back to checking just the first statement
+			// in each loop.
 			if start == lineno {
 				statementFound = true
 				if !hit && statements[j].Reached > 0 {
 					hit = true
 				}
-				statements = statements[1:]
-			} else {
-				break
+				statements = append(statements[:j], statements[j+1:]...)
 			}
 		}
 		hitmiss := hitPrefix

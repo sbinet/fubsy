@@ -1,15 +1,15 @@
 // Copyright (c) 2012 The Gocov Authors.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
 // deal in the Software without restriction, including without limitation the
 // rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
 // sell copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -18,14 +18,16 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-package gocov
+package parser
 
 import (
 	"fmt"
+	"github.com/axw/gocov"
 	"go/scanner"
 	"go/token"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -54,9 +56,9 @@ type parser struct {
 	pos token.Pos
 	lit string
 
-	context  *Context
-	objects  map[int]Object
-	packages []*Package
+	context  *gocov.Context
+	objects  map[int]gocov.Object
+	packages []*gocov.Package
 }
 
 func (p *parser) next() token.Token {
@@ -92,7 +94,7 @@ func (p *parser) parseRegisterPackage() {
 	p.packages = append(p.packages, pkg)
 }
 
-func (p *parser) parseRegisterFunction(pkg *Package) {
+func (p *parser) parseRegisterFunction(pkg *gocov.Package) {
 	p.expectNext(token.LPAREN)
 	p.expectNext(token.STRING)
 	name, _ := strconv.Unquote(p.lit)
@@ -116,7 +118,7 @@ func (p *parser) parseRegisterFunction(pkg *Package) {
 	p.objects[uid] = fn
 }
 
-func (p *parser) parseRegisterStatement(fn *Function) {
+func (p *parser) parseRegisterStatement(fn *gocov.Function) {
 	p.expectNext(token.LPAREN)
 	p.expectNext(token.INT)
 	startOffset, _ := strconv.Atoi(p.lit)
@@ -134,7 +136,7 @@ func (p *parser) parseRegisterStatement(fn *Function) {
 	p.objects[uid] = stmt
 }
 
-func (p *parser) parseEnterLeave(fn *Function, entered bool) {
+func (p *parser) parseEnterLeave(fn *gocov.Function, entered bool) {
 	p.expectNext(token.LPAREN)
 	p.expectNext(token.RPAREN)
 	if entered {
@@ -144,7 +146,7 @@ func (p *parser) parseEnterLeave(fn *Function, entered bool) {
 	}
 }
 
-func (p *parser) parseAt(stmt *Statement) {
+func (p *parser) parseAt(stmt *gocov.Statement) {
 	p.expectNext(token.LPAREN)
 	p.expectNext(token.RPAREN)
 	stmt.At()
@@ -165,13 +167,13 @@ func (p *parser) parse() {
 			p.expectNext(token.IDENT)
 			switch p.lit {
 			case "RegisterFunction":
-				p.parseRegisterFunction(obj.(*Package))
+				p.parseRegisterFunction(obj.(*gocov.Package))
 			case "RegisterStatement":
-				p.parseRegisterStatement(obj.(*Function))
+				p.parseRegisterStatement(obj.(*gocov.Function))
 			case "Enter", "Leave":
-				p.parseEnterLeave(obj.(*Function), p.lit == "Enter")
+				p.parseEnterLeave(obj.(*gocov.Function), p.lit == "Enter")
 			case "At":
-				p.parseAt(obj.(*Statement))
+				p.parseAt(obj.(*gocov.Statement))
 			}
 		}
 		p.next()
@@ -179,7 +181,7 @@ func (p *parser) parse() {
 	}
 }
 
-func ParseTrace(path string) (pkgs []*Package, err error) {
+func ParseTrace(path string) (pkgs []*gocov.Package, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			if e, ok := e.(error); ok {
@@ -208,10 +210,25 @@ func ParseTrace(path string) (pkgs []*Package, err error) {
 		FileSet: fset,
 		Scanner: s,
 		tok:     token.Token(-1),
-		objects: make(map[int]Object),
-		context: &Context{},
+		objects: make(map[int]gocov.Object),
+		context: &gocov.Context{},
 	}
 	p.parse()
-	pkgs = p.packages
+
+	// Merge packages with the same path. This is to cater for "." imports,
+	// which can result in two copies of the same package existing
+	// simultaneously within a program.
+	for _, p := range p.packages {
+		i := sort.Search(len(pkgs), func(i int) bool {
+			return pkgs[i].Name >= p.Name
+		})
+		if i < len(pkgs) && pkgs[i].Name == p.Name {
+			pkgs[i].Accumulate(p)
+		} else {
+			head := pkgs[:i]
+			tail := append([]*gocov.Package{p}, pkgs[i:]...)
+			pkgs = append(head, tail...)
+		}
+	}
 	return
 }

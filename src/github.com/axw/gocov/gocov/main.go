@@ -1,15 +1,15 @@
 // Copyright (c) 2012 The Gocov Authors.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
 // deal in the Software without restriction, including without limitation the
 // rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
 // sell copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,9 +25,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/axw/gocov"
+	"github.com/axw/gocov/parser"
 	"go/ast"
 	"go/build"
-	"go/parser"
+	goparser "go/parser"
 	"go/printer"
 	"go/token"
 	"io"
@@ -35,12 +36,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 )
 
 const gocovPackagePath = "github.com/axw/gocov"
-const instrumentedPathPrefix = gocovPackagePath + "/instrumented"
+const instrumentedGocovPackagePath = "github.com/axw/gocov/instrumented"
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n\n\tgocov command [arguments]\n\n")
@@ -54,17 +56,24 @@ func usage() {
 }
 
 var (
-	testFlags       = flag.NewFlagSet("test", flag.ExitOnError)
+	testFlags    = flag.NewFlagSet("test", flag.ExitOnError)
+	testDepsFlag = testFlags.Bool(
+		"deps", false,
+		"Instrument all package dependencies, including transitive")
 	testExcludeFlag = testFlags.String(
 		"exclude", "",
 		"packages to exclude, separated by comma")
 	testExcludeGorootFlag = testFlags.Bool(
-		"exclude-goroot", true,
+		"exclude-goroot", false,
 		"exclude packages in GOROOT from instrumentation")
 	testWorkFlag = testFlags.Bool(
 		"work", false,
 		"print the name of the temporary work directory "+
 			"and do not delete it when exiting")
+	testRunFlag = testFlags.String(
+		"run", "",
+		"Run only those tests and examples matching the regular "+
+			"expression.")
 	verbose bool
 )
 
@@ -112,8 +121,8 @@ func (in *instrumenter) parsePackage(path string, fset *token.FileSet) (*build.P
 		i := sort.SearchStrings(goFiles, name)
 		return i < len(goFiles) && goFiles[i] == name
 	}
-	mode := parser.DeclarationErrors | parser.ParseComments
-	pkgs, err := parser.ParseDir(fset, p.Dir, filter, mode)
+	mode := goparser.DeclarationErrors | goparser.ParseComments
+	pkgs, err := goparser.ParseDir(fset, p.Dir, filter, mode)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,7 +145,33 @@ func symlinkHierarchy(src, dst string) error {
 			return nil
 		}
 
-		if info.IsDir() {
+		// Walk directory symlinks. Check for target
+		// existence above and os.MkdirAll below guards
+		// against infinite recursion.
+		mode := info.Mode()
+		if mode&os.ModeSymlink == os.ModeSymlink {
+			realpath, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+			if !filepath.IsAbs(realpath) {
+				dir := filepath.Dir(path)
+				realpath = filepath.Join(dir, realpath)
+			}
+			info, err := os.Stat(realpath)
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				err = os.MkdirAll(target, 0700)
+				if err != nil {
+					return err
+				}
+				return symlinkHierarchy(realpath, target)
+			}
+		}
+
+		if mode.IsDir() {
 			return os.MkdirAll(target, 0700)
 		} else {
 			err = os.Symlink(path, target)
@@ -161,35 +196,12 @@ func symlinkHierarchy(src, dst string) error {
 	return filepath.Walk(src, fn)
 }
 
-// FIXME(axw)
-//
-// As we change the name of the package to avoid being obscured by GOROOT, we
-// can't instrument packages that have Go functions implemented in C, such as
-// those below.
-//
-// It may be preferable to have a faked GOROOT, but we'll need to come up with
-// a way to avoid the import loop introduced by importing gocov into the
-// instrumented pakcage.
-//
+// The only packages that can't be instrumented are those that the core gocov
+// package depends upon (and fake packages like C, unsafe).
 func instrumentable(path string) bool {
 	switch path {
-	case "C":
-		fallthrough
-	case "reflect":
-		fallthrough
-	case "runtime":
-		fallthrough
-	case "os":
-		fallthrough
-	case "sync":
-		fallthrough
-	case "syscall":
-		fallthrough
-	case "time":
-		fallthrough
-	case "testing":
-		fallthrough
-	case "unsafe":
+	case "C", "runtime", "sync", "sync/atomic", "syscall", "unsafe":
+		// Can't instrument the packages that gocov depends on.
 		return false
 	}
 	return true
@@ -205,6 +217,16 @@ func (in *instrumenter) abspkgpath(pkgpath string) (error, string) {
 		return err, ""
 	}
 	return nil, p.ImportPath
+}
+
+func instrumentedPackagePath(pkgpath string) string {
+	// All instrumented packages import gocov. If we want to
+	// instrumented gocov itself, we must change its name so
+	// it can import (the uninstrumented version of) itself.
+	if pkgpath == gocovPackagePath {
+		return instrumentedGocovPackagePath
+	}
+	return pkgpath
 }
 
 func (in *instrumenter) instrumentPackage(pkgpath string, testPackage bool) error {
@@ -236,7 +258,7 @@ func (in *instrumenter) instrumentPackage(pkgpath string, testPackage bool) erro
 	if err != nil {
 		return err
 	}
-	if buildpkg.Goroot && *testExcludeGorootFlag {
+	if !testPackage && (buildpkg.Goroot && *testExcludeGorootFlag) {
 		verbosef("skipping GOROOT package %q\n", pkgpath)
 		return nil
 	}
@@ -254,20 +276,22 @@ func (in *instrumenter) instrumentPackage(pkgpath string, testPackage bool) erro
 	}(in.workingdir)
 	in.workingdir = buildpkg.Dir
 
-	imports := buildpkg.Imports[:]
-	if testPackage {
-		imports = append(imports, buildpkg.TestImports...)
-		imports = append(imports, buildpkg.XTestImports...)
-	}
-	for _, subpkgpath := range imports {
-		err, subpkgpath = in.abspkgpath(subpkgpath)
-		if err != nil {
-			return err
+	if *testDepsFlag {
+		imports := buildpkg.Imports[:]
+		if testPackage {
+			imports = append(imports, buildpkg.TestImports...)
+			imports = append(imports, buildpkg.XTestImports...)
 		}
-		if _, done := in.instrumented[subpkgpath]; !done {
-			err = in.instrumentPackage(subpkgpath, false)
+		for _, subpkgpath := range imports {
+			err, subpkgpath = in.abspkgpath(subpkgpath)
 			if err != nil {
 				return err
+			}
+			if _, done := in.instrumented[subpkgpath]; !done {
+				err = in.instrumentPackage(subpkgpath, false)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -279,8 +303,8 @@ func (in *instrumenter) instrumentPackage(pkgpath string, testPackage bool) erro
 		testGoFiles = append(testGoFiles, buildpkg.XTestGoFiles...)
 		for _, filename := range testGoFiles {
 			path := filepath.Join(buildpkg.Dir, filename)
-			mode := parser.DeclarationErrors | parser.ParseComments
-			file, err := parser.ParseFile(fset, path, nil, mode)
+			mode := goparser.DeclarationErrors | goparser.ParseComments
+			file, err := goparser.ParseFile(fset, path, nil, mode)
 			if err != nil {
 				return err
 			}
@@ -292,7 +316,8 @@ func (in *instrumenter) instrumentPackage(pkgpath string, testPackage bool) erro
 	// Clone the directory structure, symlinking files (if possible),
 	// otherwise copying the files. Instrumented files will replace
 	// the symlinks with new files.
-	cloneDir := filepath.Join(in.gopath, "src", instrumentedPathPrefix, pkgpath)
+	ipkgpath := instrumentedPackagePath(pkgpath)
+	cloneDir := filepath.Join(in.gopath, "src", "pkg", ipkgpath)
 	err = symlinkHierarchy(buildpkg.Dir, cloneDir)
 	if err != nil {
 		return err
@@ -349,7 +374,7 @@ func instrumentAndTest() (rc int) {
 
 	tempDir, err := ioutil.TempDir("", "gocov")
 	if err != nil {
-		errorf("failed to create temporary GOPATH: %s\n", err)
+		errorf("failed to create temporary GOROOT: %s\n", err)
 		return 1
 	}
 	if *testWorkFlag {
@@ -359,21 +384,25 @@ func instrumentAndTest() (rc int) {
 			err := os.RemoveAll(tempDir)
 			if err != nil {
 				fmt.Fprintf(os.Stderr,
-					"warning: failed to delete temporary GOPATH (%s)\n", tempDir)
+					"warning: failed to delete temporary GOROOT (%s)\n", tempDir)
 			}
 		}()
 	}
 
-	err = os.Mkdir(filepath.Join(tempDir, "src"), 0700)
-	if err != nil {
-		errorf("failed to create temporary src directory: %s\n", err)
-		return 1
+	goroot := runtime.GOROOT()
+	for _, name := range [...]string{"src", "pkg"} {
+		dir := filepath.Join(goroot, name)
+		err = symlinkHierarchy(dir, filepath.Join(tempDir, name))
+		if err != nil {
+			errorf("failed to create $GOROOT/%s: %s\n", name, err)
+			return 1
+		}
 	}
 
-	// Copy gocov into the temporary GOPATH, since otherwise it'll
+	// Copy gocov into the temporary GOROOT, since otherwise it'll
 	// be eclipsed by the instrumented packages root.
 	if p, err := build.Import(gocovPackagePath, "", build.FindOnly); err == nil {
-		err = symlinkHierarchy(p.Dir, filepath.Join(tempDir, "src", gocovPackagePath))
+		err = symlinkHierarchy(p.Dir, filepath.Join(tempDir, "src", "pkg", gocovPackagePath))
 		if err != nil {
 			errorf("failed to symlink gocov: %s\n", err)
 			return 1
@@ -427,17 +456,17 @@ func instrumentAndTest() (rc int) {
 	outfilePath := filepath.Join(tempDir, "gocov.out")
 	env := os.Environ()
 	env = putenv(env, "GOCOVOUT", outfilePath)
-	if gopath := os.Getenv("GOPATH"); gopath != "" {
-		gopath = fmt.Sprintf("%s%c%s", tempDir, os.PathListSeparator, gopath)
-		env = putenv(env, "GOPATH", gopath)
-	} else {
-		env = putenv(env, "GOPATH", tempDir)
-	}
+	env = putenv(env, "GOROOT", tempDir)
+
 	args := []string{"test"}
 	if verbose {
 		args = append(args, "-v")
 	}
-	args = append(args, instrumentedPathPrefix+"/"+packageName)
+	if *testRunFlag != "" {
+		args = append(args, "-run", *testRunFlag)
+	}
+	instrumentedPackageName := instrumentedPackagePath(packageName)
+	args = append(args, instrumentedPackageName)
 	cmd := exec.Command("go", args...)
 	cmd.Env = env
 	cmd.Stdout = os.Stderr
@@ -449,7 +478,7 @@ func instrumentAndTest() (rc int) {
 		rc = 1
 	}
 
-	packages, err := gocov.ParseTrace(outfilePath)
+	packages, err := parser.ParseTrace(outfilePath)
 	if err != nil {
 		errorf("failed to parse gocov output: %s\n", err)
 		rc = 1

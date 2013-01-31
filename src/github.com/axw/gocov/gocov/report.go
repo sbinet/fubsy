@@ -1,15 +1,15 @@
 // Copyright (c) 2012 The Gocov Authors.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
 // deal in the Software without restriction, including without limitation the
 // rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
 // sell copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -29,6 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"text/tabwriter"
 )
 
@@ -83,10 +84,10 @@ func newReport() (r *report) {
 // AddPackage adds a package's coverage information to the report.
 func (r *report) addPackage(p *gocov.Package) {
 	i := sort.Search(len(r.packages), func(i int) bool {
-		return r.packages[i].Name >= r.packages[i].Name
+		return r.packages[i].Name >= p.Name
 	})
 	if i < len(r.packages) && r.packages[i].Name == p.Name {
-		panic("package already exists: result merging not implemented yet")
+		r.packages[i].Accumulate(p)
 	} else {
 		head := r.packages[:i]
 		tail := append([]*gocov.Package{p}, r.packages[i:]...)
@@ -123,27 +124,45 @@ func printPackage(w io.Writer, pkg *gocov.Package) {
 	}
 	sort.Sort(reverse{functions})
 
+	var longestFunctionName int
+	var totalStatements, totalReached int
 	for _, fn := range functions {
 		reached := fn.statementsReached
+		totalStatements += len(fn.Statements)
+		totalReached += reached
 		var stmtPercent float64 = 0
 		if len(fn.Statements) > 0 {
 			stmtPercent = float64(reached) / float64(len(fn.Statements)) * 100
+		}
+		if len(fn.Name) > longestFunctionName {
+			longestFunctionName = len(fn.Name)
 		}
 		fmt.Fprintf(w, "%s/%s\t %s\t %.2f%% (%d/%d)\n",
 			pkg.Name, filepath.Base(fn.File), fn.Name, stmtPercent,
 			reached, len(fn.Statements))
 	}
+
+	var funcPercent float64
+	if totalStatements > 0 {
+		funcPercent = float64(totalReached) / float64(totalStatements) * 100
+	}
+	summaryLine := strings.Repeat("-", longestFunctionName)
+	fmt.Fprintf(w, "%s\t %s\t %.2f%% (%d/%d)\n",
+		pkg.Name, summaryLine, funcPercent,
+		totalReached, totalStatements)
 }
 
 func reportCoverage() (rc int) {
 	files := make([]*os.File, 0, 1)
 	if flag.NArg() > 1 {
-		name := flag.Arg(1)
-		file, err := os.Open(name)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to open file (%s): %s\n", name, err)
+		for _, name := range flag.Args()[1:] {
+			file, err := os.Open(name)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "failed to open file (%s): %s\n", name, err)
+			} else {
+				files = append(files, file)
+			}
 		}
-		files = append(files, file)
 	} else {
 		files = append(files, os.Stdin)
 	}
