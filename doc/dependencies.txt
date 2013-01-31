@@ -74,11 +74,15 @@ Make sure Fubsy still builds and passes its tests::
 If any code changes are required, make them now. Commit everything
 together:
 
-    rm -rf `find src/$BASE -name .hg -o -name .git -o -name .bzr`
-    hg commit -m"update to latest version of $BASE" src/$BASE
+    cd src/$BASE
+    if git:
+        rev=`git log -n1 --pretty=oneline | awk '{print $1}'`
+    else if hg:
+        rev=`hg parents --template '{node|short}'`
 
-Bonus points for including the upstream commit ID/changeset
-ID/revision number in the commit message.
+    rm -rf `find . -name .hg -o -name .git -o -name .bzr`
+    hg addremove -s 75 .
+    hg commit -m"update to latest version of $BASE (upstream rev $rev)" .
 
 Dependencies that come in a closely related cluster -- like golex and
 friends -- should be added/updated en masse.
