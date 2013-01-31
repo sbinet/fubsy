@@ -20,7 +20,7 @@ func defineBuiltins(ns types.Namespace) {
 		types.NewVariadicFunction("mkdir", 0, -1, fn_mkdir),
 		types.NewVariadicFunction("remove", 0, -1, fn_remove),
 
-		// node constructors
+		// node factories
 		types.NewFixedFunction("FileNode", 1, fn_FileNode),
 		types.NewFixedFunction("ActionNode", 1, fn_ActionNode),
 	}
@@ -68,10 +68,13 @@ func fn_remove(args types.ArgSource) (types.FuObject, []error) {
 }
 
 func fn_FileNode(args types.ArgSource) (types.FuObject, []error) {
-	return dag.NewFileNode(args.Arg(0).String()), nil
+	name := args.Arg(0).String()
+	graph := args.(FunctionArgs).Graph()
+	return dag.MakeFileNode(graph, name), nil
 }
 
 func fn_ActionNode(args types.ArgSource) (types.FuObject, []error) {
 	basename := args.Arg(0).String()
-	return dag.NewActionNode(basename + ":action"), nil
+	graph := args.(FunctionArgs).Graph()
+	return dag.MakeActionNode(graph, basename+":action"), nil
 }

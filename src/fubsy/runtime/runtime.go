@@ -69,6 +69,7 @@ func minimalRuntime() *Runtime {
 	stack.Push(locals)
 	return &Runtime{
 		stack: &stack,
+		dag:   dag.NewDAG(),
 	}
 }
 

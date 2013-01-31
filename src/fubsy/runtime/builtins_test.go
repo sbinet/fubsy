@@ -216,7 +216,10 @@ func isDir(name string) bool {
 }
 
 func Test_FileNode(t *testing.T) {
-	args := FunctionArgs{args: []types.FuObject{types.FuString("a.txt")}}
+	args := FunctionArgs{
+		runtime: minimalRuntime(),
+		args:    []types.FuObject{types.FuString("a.txt")},
+	}
 	node0, errs := fn_FileNode(args)
 	assert.Equal(t, 0, len(errs))
 	node1, errs := fn_FileNode(args)
@@ -229,18 +232,23 @@ func Test_FileNode(t *testing.T) {
 	assert.Equal(t, "a.txt", node0.(dag.Node).Name())
 	assert.True(t, node0.Equal(node1))
 
-	// arguably this is a bug: we should use MakeFileNode() and have
-	// access to the DAG to ensure that user scripts can only create
-	// one node per file (more generally, one node per named resource)
-	assert.False(t, &node0 == &node1)
+	// FileNode is a factory: it will return existing node objects
+	// rather than create new ones
+	assert.True(t, node0 == node1)
 }
 
 func Test_ActionNode(t *testing.T) {
-	args := FunctionArgs{args: []types.FuObject{types.FuString("test/x")}}
-	node, errs := fn_ActionNode(args)
+	args := FunctionArgs{
+		runtime: minimalRuntime(),
+		args:    []types.FuObject{types.FuString("test/x")},
+	}
+	node0, errs := fn_ActionNode(args)
 	assert.Equal(t, 0, len(errs))
 
-	_ = node.(*dag.ActionNode)
-	assert.Equal(t, "test/x:action", node.String())
-	assert.Equal(t, "test/x:action", node.(dag.Node).Name())
+	_ = node0.(*dag.ActionNode)
+	assert.Equal(t, "test/x:action", node0.String())
+	assert.Equal(t, "test/x:action", node0.(dag.Node).Name())
+
+	node1, errs := fn_ActionNode(args)
+	assert.True(t, node0 == node1)
 }

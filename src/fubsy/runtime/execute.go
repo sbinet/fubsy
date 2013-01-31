@@ -139,8 +139,9 @@ func (self *Runtime) evaluateCall(
 		return nil, []error{err}
 	}
 	args := FunctionArgs{
-		robj: robj,
-		args: arglist,
+		runtime: self,
+		robj:    robj,
+		args:    arglist,
 	}
 	return callable.Code()(args)
 }
