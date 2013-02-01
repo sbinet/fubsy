@@ -185,13 +185,8 @@ func (self *DAG) AddManyParents(targets, sources []Node) {
 func (self *DAG) Dump(writer io.Writer, indent string) {
 	for id, node := range self.nodes {
 		rule := node.BuildRule()
-		desc := node.Name()
-		detail := node.String()
-		if detail != desc {
-			desc += " (" + detail + ")"
-		}
-		fmt.Fprintf(writer, indent+"%04d: %s (%s, state %v)\n",
-			id, desc, node.Typename(), node.State())
+		fmt.Fprintf(writer, indent+"%04d: %s %s (state %v)\n",
+			id, node.Typename(), node, node.State())
 		if rule != nil {
 			fmt.Fprintf(writer, indent+"  action: %s\n", rule.ActionString())
 		}

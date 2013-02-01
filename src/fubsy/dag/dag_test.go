@@ -300,22 +300,23 @@ func Test_DAG_AddManyParents(t *testing.T) {
 	dag.AddManyParents([]Node{node1, node2}, []Node{node3})
 	buf := &bytes.Buffer{}
 	dag.Dump(buf, "")
-	expect := `0000: 0 (StubNode, state UNKNOWN)
+	expect := `0000: StubNode 0 (state UNKNOWN)
   parents:
     0001: 1
     0002: 2
     0003: 3
-0001: 1 (StubNode, state UNKNOWN)
+0001: StubNode 1 (state UNKNOWN)
   parents:
     0003: 3
-0002: 2 (StubNode, state UNKNOWN)
+0002: StubNode 2 (state UNKNOWN)
   parents:
     0003: 3
-0003: 3 (StubNode, state UNKNOWN)
+0003: StubNode 3 (state UNKNOWN)
 `
 	actual := string(buf.Bytes())
-	assert.Equal(t, expect, actual,
-		"expected:\n%s\nbut got:\n%s", expect, actual)
+	if expect != actual {
+		t.Errorf("expected:\n%s\nbut got:\n%s", expect, actual)
+	}
 }
 
 func Test_DAG_MarkSources(t *testing.T) {

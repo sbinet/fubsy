@@ -50,11 +50,11 @@ func Test_Runtime_runMainPhase_valid(t *testing.T) {
 	// this seems *awfully* detailed and brittle, but DAG doesn't
 	// provide a good way to query what's in it (yet...)
 	expect := "" +
-		"0000: foo (FileNode, state UNKNOWN)\n" +
+		"0000: FileNode foo (state UNKNOWN)\n" +
 		"  action: cc -o $TARGET $src\n" +
 		"  parents:\n" +
 		"    0001: foo.c\n" +
-		"0001: foo.c (FileNode, state UNKNOWN)\n"
+		"0001: FileNode foo.c (state UNKNOWN)\n"
 	var buf bytes.Buffer
 	rt.dag.Dump(&buf, "")
 	assert.Equal(t, expect, buf.String())
