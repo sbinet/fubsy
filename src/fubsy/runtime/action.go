@@ -151,7 +151,7 @@ func (self *AssignmentAction) String() string {
 }
 
 func (self *AssignmentAction) Execute(rt *Runtime) []error {
-	return assign(rt, self.assignment)
+	return rt.assign(self.assignment)
 }
 
 func (self *FunctionCallAction) String() string {
@@ -159,7 +159,7 @@ func (self *FunctionCallAction) String() string {
 }
 
 func (self *FunctionCallAction) Execute(rt *Runtime) []error {
-	_, errs := evaluateCall(rt, self.fcall, logFunctionCall)
+	_, errs := rt.evaluateCall(self.fcall, logFunctionCall)
 	return errs
 }
 

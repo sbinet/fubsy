@@ -19,32 +19,32 @@ import (
 // actions in the build phase.
 
 // node represents code like "NAME = EXPR": evaluate EXPR and store
-// the result in rt's namespace
-func assign(rt *Runtime, node *dsl.ASTAssignment) []error {
-	value, err := evaluate(rt, node.Expression())
+// the result in self's namespace
+func (self *Runtime) assign(node *dsl.ASTAssignment) []error {
+	value, err := self.evaluate(node.Expression())
 	if err != nil {
 		return err
 	}
-	rt.Namespace().Assign(node.Target(), value)
+	self.stack.Assign(node.Target(), value)
 	return nil
 }
 
-func evaluate(
-	rt *Runtime, expr_ dsl.ASTExpression) (
+func (self *Runtime) evaluate(
+	expr_ dsl.ASTExpression) (
 	result types.FuObject, errs []error) {
 	switch expr := expr_.(type) {
 	case *dsl.ASTString:
 		result = types.FuString(expr.Value())
 	case *dsl.ASTName:
-		result, errs = evaluateName(rt, expr)
+		result, errs = self.evaluateName(expr)
 	case *dsl.ASTFileFinder:
 		result = dag.NewFinderNode(expr.Patterns()...)
 	case *dsl.ASTAdd:
-		result, errs = evaluateAdd(rt, expr)
+		result, errs = self.evaluateAdd(expr)
 	case *dsl.ASTFunctionCall:
-		result, errs = evaluateCall(rt, expr, nil)
+		result, errs = self.evaluateCall(expr, nil)
 	case *dsl.ASTSelection:
-		_, result, errs = evaluateLookup(rt, expr)
+		_, result, errs = self.evaluateLookup(expr)
 	default:
 		return nil, []error{unsupportedAST(expr_)}
 	}
@@ -54,10 +54,9 @@ func evaluate(
 	return
 }
 
-func evaluateName(
-	rt *Runtime, expr *dsl.ASTName) (types.FuObject, []error) {
+func (self *Runtime) evaluateName(expr *dsl.ASTName) (types.FuObject, []error) {
 	name := expr.Name()
-	value, ok := rt.Lookup(name)
+	value, ok := self.Lookup(name)
 	if !ok {
 		err := fmt.Errorf("name not defined: '%s'", name)
 		return nil, []error{err}
@@ -65,14 +64,13 @@ func evaluateName(
 	return value, nil
 }
 
-func evaluateAdd(
-	rt *Runtime, expr *dsl.ASTAdd) (types.FuObject, []error) {
+func (self *Runtime) evaluateAdd(expr *dsl.ASTAdd) (types.FuObject, []error) {
 	op1, op2 := expr.Operands()
-	obj1, errs := evaluate(rt, op1)
+	obj1, errs := self.evaluate(op1)
 	if len(errs) > 0 {
 		return nil, errs
 	}
-	obj2, errs := evaluate(rt, op2)
+	obj2, errs := self.evaluate(op2)
 	if len(errs) > 0 {
 		return nil, errs
 	}
@@ -83,8 +81,7 @@ func evaluateAdd(
 	return result, nil
 }
 
-func evaluateCall(
-	rt *Runtime,
+func (self *Runtime) evaluateCall(
 	expr *dsl.ASTFunctionCall,
 	precall func(*dsl.ASTFunctionCall, types.FuList)) (
 	types.FuObject, []error) {
@@ -99,10 +96,10 @@ func evaluateCall(
 	if astselect, ok := astfunc.(*dsl.ASTSelection); ok {
 		// case 2: it's a method call; we need to keep track of the
 		// receiver object
-		robj, value, errs = evaluateLookup(rt, astselect)
+		robj, value, errs = self.evaluateLookup(astselect)
 	} else {
 		// case 1: it's a normal function call, so robj stays nil
-		value, errs = evaluate(rt, expr.Function())
+		value, errs = self.evaluate(expr.Function())
 	}
 	if len(errs) > 0 {
 		return nil, errs
@@ -121,13 +118,13 @@ func evaluateCall(
 	astargs = expr.Args()
 	arglist = make(types.FuList, len(astargs))
 	for i, astarg := range astargs {
-		arglist[i], errs = evaluate(rt, astarg)
+		arglist[i], errs = self.evaluate(astarg)
 		if len(errs) > 0 {
 			return nil, errs
 		}
 	}
 
-	argobj, err = arglist.ActionExpand(rt.Namespace(), nil)
+	argobj, err = arglist.ActionExpand(self.stack, nil)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -148,11 +145,10 @@ func evaluateCall(
 	return callable.Code()(args)
 }
 
-func evaluateLookup(
-	rt *Runtime, expr *dsl.ASTSelection) (
+func (self *Runtime) evaluateLookup(expr *dsl.ASTSelection) (
 	container, value types.FuObject, errs []error) {
 
-	container, errs = evaluate(rt, expr.Container())
+	container, errs = self.evaluate(expr.Container())
 	if len(errs) > 0 {
 		return
 	}

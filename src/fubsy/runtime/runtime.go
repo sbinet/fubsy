@@ -104,7 +104,7 @@ func (self *Runtime) runMainPhase() []error {
 	for _, node_ := range main.Children() {
 		switch node := node_.(type) {
 		case *dsl.ASTAssignment:
-			errs = assign(self, node)
+			errs = self.assign(node)
 		case *dsl.ASTBuildRule:
 			var rule *BuildRule
 			rule, errs = self.makeRule(node)
@@ -112,7 +112,7 @@ func (self *Runtime) runMainPhase() []error {
 				self.addRule(rule)
 			}
 		case dsl.ASTExpression:
-			_, errs = evaluate(self, node)
+			_, errs = self.evaluate(node)
 		default:
 			errs = append(errs, unsupportedAST(node))
 		}
@@ -153,11 +153,11 @@ func (self *Runtime) makeRuleNodes(astrule *dsl.ASTBuildRule) (
 	// each. It might be a string, a list of strings, a FinderNode...
 	// anything, really.
 	var targetobj, sourceobj types.FuObject
-	targetobj, errs = evaluate(self, astrule.Targets())
+	targetobj, errs = self.evaluate(astrule.Targets())
 	if len(errs) > 0 {
 		return
 	}
-	sourceobj, errs = evaluate(self, astrule.Sources())
+	sourceobj, errs = self.evaluate(astrule.Sources())
 	if len(errs) > 0 {
 		return
 	}

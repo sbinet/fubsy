@@ -21,14 +21,14 @@ func Test_assign(t *testing.T) {
 	node := dsl.NewASTAssignment("a", stringnode("foo"))
 	rt := minimalRuntime()
 
-	errs := assign(rt, node)
+	errs := rt.assign(node)
 	assert.Equal(t, 0, len(errs))
 	expect := types.FuString("foo")
 	assertIn(t, rt.Namespace(), "a", expect)
 
 	// AST for a = foo (another variable, to provoke an error)
 	node = dsl.NewASTAssignment("b", dsl.NewASTName("foo"))
-	errs = assign(rt, node)
+	errs = rt.assign(node)
 	assert.Equal(t, "name not defined: 'foo'", errs[0].Error())
 	_, ok := rt.Lookup("b")
 	assert.False(t, ok)
@@ -128,14 +128,14 @@ func Test_evaluateCall(t *testing.T) {
 
 	// call foo() correctly (no args)
 	ast := dsl.NewASTFunctionCall(fooname, noargs)
-	result, errors = evaluateCall(rt, ast, nil)
+	result, errors = rt.evaluateCall(ast, nil)
 	assert.Equal(t, "foo!", result.String())
 	assert.Equal(t, 0, len(errors))
 	assert.Equal(t, []string{"foo"}, calls)
 
 	// call foo() incorrectly (1 arg)
 	ast = dsl.NewASTFunctionCall(fooname, onearg)
-	result, errors = evaluateCall(rt, ast, nil)
+	result, errors = rt.evaluateCall(ast, nil)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
 		"function foo() takes no arguments (got 1)", errors[0].Error())
@@ -143,7 +143,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// call bar() correctly (1 arg)
 	ast = dsl.NewASTFunctionCall(barname, onearg)
-	result, errors = evaluateCall(rt, ast, nil)
+	result, errors = rt.evaluateCall(ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t, "bar failed (meep)", errors[0].Error())
@@ -151,7 +151,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// call bar() with an arg that needs to be expanded
 	ast = dsl.NewASTFunctionCall(barname, exparg)
-	result, errors = evaluateCall(rt, ast, nil)
+	result, errors = rt.evaluateCall(ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t, "bar failed (>main.c<)", errors[0].Error())
@@ -160,7 +160,7 @@ func Test_evaluateCall(t *testing.T) {
 	// again, but this time expansion fails (undefined name)
 	exparg = []dsl.ASTExpression{dsl.NewASTString("\"a $bogus value\"")}
 	ast = dsl.NewASTFunctionCall(barname, exparg)
-	result, errors = evaluateCall(rt, ast, nil)
+	result, errors = rt.evaluateCall(ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t, "undefined variable 'bogus' in string", errors[0].Error())
@@ -168,7 +168,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// call bar() incorrectly (no args)
 	ast = dsl.NewASTFunctionCall(barname, noargs)
-	result, errors = evaluateCall(rt, ast, nil)
+	result, errors = rt.evaluateCall(ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
@@ -178,7 +178,7 @@ func Test_evaluateCall(t *testing.T) {
 	// call bar() incorrectly (1 arg, but it's an undefined name)
 	ast = dsl.NewASTFunctionCall(
 		barname, []dsl.ASTExpression{dsl.NewASTName("bogus")})
-	result, errors = evaluateCall(rt, ast, nil)
+	result, errors = rt.evaluateCall(ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
@@ -186,7 +186,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// attempt to call non-existent function
 	ast = dsl.NewASTFunctionCall(dsl.NewASTName("bogus"), onearg)
-	result, errors = evaluateCall(rt, ast, nil)
+	result, errors = rt.evaluateCall(ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
@@ -194,7 +194,7 @@ func Test_evaluateCall(t *testing.T) {
 
 	// attempt to call something that is not a function
 	ast = dsl.NewASTFunctionCall(dsl.NewASTName("src"), onearg)
-	result, errors = evaluateCall(rt, ast, nil)
+	result, errors = rt.evaluateCall(ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
@@ -249,7 +249,7 @@ func Test_evaluateCall_method(t *testing.T) {
 		precalledArgs = args
 	}
 
-	result, errs := evaluateCall(rt, ast, precall)
+	result, errs := rt.evaluateCall(ast, precall)
 	assert.Equal(t, precalledExpr, ast)
 	assert.Equal(t, precalledArgs, types.MakeFuList("hello"))
 	assert.Nil(t, result)
@@ -303,7 +303,7 @@ func assertEvaluateOK(
 	expect types.FuObject,
 	input dsl.ASTExpression) {
 
-	obj, err := evaluate(rt, input)
+	obj, err := rt.evaluate(input)
 	assert.Nil(t, err)
 
 	if !expect.Equal(obj) {
@@ -317,7 +317,7 @@ func assertEvaluateFail(
 	expecterr string,
 	input dsl.ASTExpression) {
 
-	obj, errs := evaluate(rt, input)
+	obj, errs := rt.evaluate(input)
 	assert.Equal(t, expecterr, errs[0].Error())
 	assert.Nil(t, obj)
 }
