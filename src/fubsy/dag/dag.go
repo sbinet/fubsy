@@ -499,5 +499,6 @@ func (self *TestDAG) Finish() *DAG {
 			dag.AddParent(node, pnode)
 		}
 	}
+	dag.verify()
 	return dag
 }

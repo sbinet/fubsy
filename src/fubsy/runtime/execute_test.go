@@ -254,7 +254,9 @@ func Test_evaluateCall_method(t *testing.T) {
 	assert.Equal(t, precalledArgs, types.MakeFuList("hello"))
 	assert.Nil(t, result)
 	if len(errs) == 1 {
-		assert.Equal(t, "c failed: receiver: FileNode b.txt, arg: string \"hello\"", errs[0].Error())
+		assert.Equal(t,
+			"c failed: receiver: FileNode \"b.txt\", arg: string \"hello\"",
+			errs[0].Error())
 	} else {
 		t.Errorf("expected exactly 1 error, but got: %v", errs)
 	}

@@ -30,6 +30,7 @@ func Test_DAG_add_lookup(t *testing.T) {
 	assert.True(t, outnode.(*StubNode) == innode)
 
 	assert.Nil(t, dag.Lookup("bar"))
+	dag.verify()
 }
 
 func Test_DAG_ExpandNodes(t *testing.T) {
@@ -300,18 +301,18 @@ func Test_DAG_AddManyParents(t *testing.T) {
 	dag.AddManyParents([]Node{node1, node2}, []Node{node3})
 	buf := &bytes.Buffer{}
 	dag.Dump(buf, "")
-	expect := `0000: StubNode 0 (state UNKNOWN)
+	expect := `0000: StubNode "0" (state UNKNOWN)
   parents:
     0001: 1
     0002: 2
     0003: 3
-0001: StubNode 1 (state UNKNOWN)
+0001: StubNode "1" (state UNKNOWN)
   parents:
     0003: 3
-0002: StubNode 2 (state UNKNOWN)
+0002: StubNode "2" (state UNKNOWN)
   parents:
     0003: 3
-0003: StubNode 3 (state UNKNOWN)
+0003: StubNode "3" (state UNKNOWN)
 `
 	actual := string(buf.Bytes())
 	if expect != actual {

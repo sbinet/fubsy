@@ -19,7 +19,8 @@ func Test_ListNode_basics(t *testing.T) {
 	list1 := newListNode(node0, node1, node2)
 	assert.Equal(t, "ListNode", list1.Typename())
 	assert.Equal(t, "foo,bar baz,qux", list1.Name())
-	assert.Equal(t, "foo,bar baz,qux", list1.String())
+	assert.Equal(t, `["foo", "bar baz", "qux"]`, list1.String())
+	assert.Equal(t, "foo,bar baz,qux", list1.ValueString())
 	assert.Equal(t, "foo 'bar baz' qux", list1.CommandString())
 
 	list2 := newListNode(node0, node1, node2)

@@ -49,11 +49,11 @@ func Test_Runtime_runMainPhase_valid(t *testing.T) {
 
 	// this seems *awfully* detailed and brittle, but DAG doesn't
 	// provide a good way to query what's in it (yet...)
-	expect := `0000: FileNode foo (state UNKNOWN)
+	expect := `0000: FileNode "foo" (state UNKNOWN)
   action: "cc -o $TARGET $src"
   parents:
     0001: foo.c
-0001: FileNode foo.c (state UNKNOWN)
+0001: FileNode "foo.c" (state UNKNOWN)
 `
 	var buf bytes.Buffer
 	rt.dag.Dump(&buf, "")
@@ -95,12 +95,12 @@ func Test_nodify(t *testing.T) {
 	rt := NewRuntime(build.BuildOptions{}, "", nil)
 	nodes := rt.nodify(sval1)
 	assert.Equal(t, 1, len(nodes))
-	assert.Equal(t, "hello.txt", nodes[0].(*dag.FileNode).String())
+	assert.Equal(t, "hello.txt", nodes[0].(*dag.FileNode).Name())
 
 	nodes = rt.nodify(lval1)
 	assert.Equal(t, 2, len(nodes))
-	assert.Equal(t, "hello.txt", nodes[0].(*dag.FileNode).String())
-	assert.Equal(t, "foo.c", nodes[1].(*dag.FileNode).String())
+	assert.Equal(t, "hello.txt", nodes[0].(*dag.FileNode).Name())
+	assert.Equal(t, "foo.c", nodes[1].(*dag.FileNode).Name())
 
 	nodes = rt.nodify(finder1)
 	assert.Equal(t, 1, len(nodes))

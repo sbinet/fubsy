@@ -209,11 +209,11 @@ func (self *nodebase) State() NodeState {
 // some methods to implement FuObject
 
 func (self *nodebase) String() string {
-	return self.name
+	return "\"" + self.name + "\""
 }
 
 func (self *nodebase) ValueString() string {
-	return self.String()
+	return self.name
 }
 
 func (self *nodebase) CommandString() string {
@@ -326,7 +326,7 @@ func (self *StubRule) SetFail(fail bool) {
 }
 
 func (self *StubRule) Execute() ([]Node, []error) {
-	self.callback(self.targets[0].String())
+	self.callback(self.targets[0].Name())
 	errs := []error{}
 	if self.fail {
 		errs = append(errs, errors.New("action failed"))

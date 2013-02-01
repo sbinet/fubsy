@@ -303,7 +303,7 @@ func (self *BuildState) recordNode(node dag.Node) error {
 	sig, err := node.Signature()
 	log.Debug(log.BUILD, "sig=%v, err=%v", sig, err)
 	if err != nil {
-		return fmt.Errorf("could not compute signature of target '%s': %s",
+		return fmt.Errorf("could not compute signature of target %s: %s",
 			node, err)
 	}
 

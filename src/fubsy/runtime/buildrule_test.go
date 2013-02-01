@@ -32,21 +32,21 @@ func Test_BuildRule_setLocals(t *testing.T) {
 
 	val, ok = ns.Lookup("TARGET")
 	assert.True(t, ok)
-	assert.Equal(t, "foo", val.String())
+	assert.Equal(t, "foo", val.ValueString())
 	assert.Equal(t, "foo", val.(*dag.StubNode).Name())
 
 	val, ok = ns.Lookup("SOURCE")
 	assert.True(t, ok)
-	assert.Equal(t, "bar", val.String())
+	assert.Equal(t, "bar", val.ValueString())
 	assert.Equal(t, "bar", val.(*dag.StubNode).Name())
 
 	val, ok = ns.Lookup("TARGETS")
 	assert.True(t, ok)
 	assert.Equal(t, 1, len(val.List()))
-	assert.Equal(t, "[foo]", val.String())
+	assert.Equal(t, `["foo"]`, val.String())
 
 	val, ok = ns.Lookup("SOURCES")
 	assert.True(t, ok)
 	assert.Equal(t, 2, len(val.List()))
-	assert.Equal(t, "[bar, qux]", val.String())
+	assert.Equal(t, `["bar", "qux"]`, val.String())
 }

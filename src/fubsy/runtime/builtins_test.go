@@ -246,7 +246,7 @@ func Test_ActionNode(t *testing.T) {
 	assert.Equal(t, 0, len(errs))
 
 	_ = node0.(*dag.ActionNode)
-	assert.Equal(t, "test/x:action", node0.String())
+	assert.Equal(t, "test/x:action", node0.ValueString())
 	assert.Equal(t, "test/x:action", node0.(dag.Node).Name())
 
 	node1, errs := fn_ActionNode(args)

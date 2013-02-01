@@ -35,7 +35,8 @@ func Test_MakeFileNode(t *testing.T) {
 func Test_FileNode_string(t *testing.T) {
 	node := &FileNode{nodebase: nodebase{name: "foo/bar/baz"}}
 	assert.Equal(t, "foo/bar/baz", node.Name())
-	assert.Equal(t, "foo/bar/baz", node.String())
+	assert.Equal(t, "\"foo/bar/baz\"", node.String())
+	assert.Equal(t, "foo/bar/baz", node.ValueString())
 }
 
 func Test_FileNode_parents(t *testing.T) {

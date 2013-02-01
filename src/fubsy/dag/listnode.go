@@ -32,10 +32,11 @@ type ListNode struct {
 func newListNode(members ...types.FuObject) *ListNode {
 	names := make([]string, len(members))
 	for i, obj := range members {
-		if _, ok := obj.(Node); !ok {
+		if node, ok := obj.(Node); ok {
+			names[i] = node.Name()
+		} else {
 			panic(fmt.Sprintf("not a Node: %#v (type %T)", obj, obj))
 		}
-		names[i] = obj.String()
 	}
 	name := strings.Join(names, ",")
 	node := &ListNode{
@@ -52,7 +53,7 @@ func MakeListNode(dag *DAG, member ...types.FuObject) *ListNode {
 }
 
 func (self *ListNode) String() string {
-	return self.nodebase.String()
+	return self.FuList.String()
 }
 
 func (self *ListNode) ValueString() string {
