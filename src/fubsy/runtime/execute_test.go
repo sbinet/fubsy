@@ -124,7 +124,6 @@ func Test_evaluateCall(t *testing.T) {
 	barname := dsl.NewASTName("bar")
 	noargs := []dsl.ASTExpression{}
 	onearg := []dsl.ASTExpression{dsl.NewASTString("\"meep\"")}
-	exparg := []dsl.ASTExpression{dsl.NewASTString("\">$src<\"")}
 
 	// call foo() correctly (no args)
 	ast := dsl.NewASTFunctionCall(fooname, noargs)
@@ -149,23 +148,6 @@ func Test_evaluateCall(t *testing.T) {
 	assert.Equal(t, "bar failed (\"meep\")", errors[0].Error())
 	assert.Equal(t, []string{"foo", "bar"}, calls)
 
-	// call bar() with an arg that needs to be expanded
-	ast = dsl.NewASTFunctionCall(barname, exparg)
-	result, errors = rt.evaluateCall(ast, nil)
-	assert.Nil(t, result)
-	assert.Equal(t, 1, len(errors))
-	assert.Equal(t, "bar failed (\">main.c<\")", errors[0].Error())
-	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
-
-	// again, but this time expansion fails (undefined name)
-	exparg = []dsl.ASTExpression{dsl.NewASTString("\"a $bogus value\"")}
-	ast = dsl.NewASTFunctionCall(barname, exparg)
-	result, errors = rt.evaluateCall(ast, nil)
-	assert.Nil(t, result)
-	assert.Equal(t, 1, len(errors))
-	assert.Equal(t, "undefined variable 'bogus' in string", errors[0].Error())
-	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
-
 	// call bar() incorrectly (no args)
 	ast = dsl.NewASTFunctionCall(barname, noargs)
 	result, errors = rt.evaluateCall(ast, nil)
@@ -173,7 +155,7 @@ func Test_evaluateCall(t *testing.T) {
 	assert.Equal(t, 1, len(errors))
 	assert.Equal(t,
 		"function bar() takes exactly 1 arguments (got 0)", errors[0].Error())
-	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
+	assert.Equal(t, []string{"foo", "bar"}, calls)
 
 	// call bar() incorrectly (1 arg, but it's an undefined name)
 	ast = dsl.NewASTFunctionCall(
@@ -200,7 +182,53 @@ func Test_evaluateCall(t *testing.T) {
 	assert.Equal(t,
 		"not a function or method: 'src'", errors[0].Error())
 
-	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
+	assert.Equal(t, []string{"foo", "bar"}, calls)
+}
+
+func Test_evaluateCall_no_expand(t *testing.T) {
+	calls := 0
+	fn_foo := func(args types.ArgSource) (types.FuObject, []error) {
+		calls++
+		return types.FuString("arg: " + args.Arg(0).String()), nil
+	}
+	rt := minimalRuntime()
+	ns := rt.Namespace()
+	ns.Assign("foo", types.NewFixedFunction("foo", 1, fn_foo))
+	fooname := dsl.NewASTName("foo")
+
+	var ast *dsl.ASTFunctionCall
+	var args []dsl.ASTExpression
+
+	// call bar() with an arg that needs to be expanded to test that
+	// expansion does *not* happen -- evaluateCall() doesn't know
+	// which phase it's in, so it has to rely on someone else to
+	// ActionExpand() each value in the build phase
+	args = []dsl.ASTExpression{dsl.NewASTString("\">$src<\"")}
+	ast = dsl.NewASTFunctionCall(fooname, args)
+	result, errs := rt.evaluateCall(ast, nil)
+	assert.Equal(t, 1, calls)
+	assert.Equal(t, types.FuString("arg: \">$src<\""), result)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors, but got: %v", errs)
+	}
+
+	// now make a value that expands to three values
+	expansion := types.MakeFuList("a", "b", "c")
+	var val types.FuObject = types.NewStubObject("val", expansion)
+	valexp, _ := val.ActionExpand(nil, nil)
+	assert.Equal(t, expansion, valexp) // this actually tests StubObject
+	ns.Assign("val", val)
+
+	// call foo() with that expandable value, and make sure it is
+	// really called with the unexpanded value
+	args = []dsl.ASTExpression{dsl.NewASTName("val")}
+	ast = dsl.NewASTFunctionCall(fooname, args)
+	result, errs = rt.evaluateCall(ast, nil)
+	assert.Equal(t, 2, calls)
+	assert.Equal(t, types.FuString("arg: \"val\""), result)
+	if len(errs) != 0 {
+		t.Errorf("expected no errors, but got: %v", errs)
+	}
 }
 
 func Test_evaluateCall_method(t *testing.T) {

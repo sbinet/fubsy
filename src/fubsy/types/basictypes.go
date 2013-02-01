@@ -216,6 +216,57 @@ func (self FuList) Typename() string {
 	return "list"
 }
 
+// stub implementation of FuObject (for use in tests)
+type StubObject struct {
+	name string
+
+	// value returned by ActionExpand() (if nil, return self)
+	expansion FuObject
+
+	// so attribute Lookup() works
+	ValueMap
+}
+
+func NewStubObject(name string, expansion FuObject) StubObject {
+	return StubObject{name: name, expansion: expansion}
+}
+
+func (self StubObject) String() string {
+	return "\"" + self.name + "\""
+}
+
+func (self StubObject) ValueString() string {
+	return self.name
+}
+
+func (self StubObject) CommandString() string {
+	return ShellQuote(self.name)
+}
+
+func (self StubObject) Equal(other_ FuObject) bool {
+	other, ok := other_.(StubObject)
+	return ok && other.name == self.name
+}
+
+func (self StubObject) Add(other FuObject) (FuObject, error) {
+	panic("not implemented")
+}
+
+func (self StubObject) List() []FuObject {
+	return []FuObject{self}
+}
+
+func (self StubObject) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, error) {
+	if self.expansion == nil {
+		return self, nil
+	}
+	return self.expansion, nil
+}
+
+func (self StubObject) Typename() string {
+	return "stub"
+}
+
 func unsupportedOperation(self FuObject, other FuObject, detail string) error {
 	return fmt.Errorf("unsupported operation: "+detail,
 		other.Typename(), self.Typename())

@@ -114,7 +114,6 @@ func (self *Runtime) evaluateCall(
 
 	var astargs []dsl.ASTExpression
 	var arglist types.FuList
-	var argobj types.FuObject
 	astargs = expr.Args()
 	arglist = make(types.FuList, len(astargs))
 	for i, astarg := range astargs {
@@ -123,12 +122,6 @@ func (self *Runtime) evaluateCall(
 			return nil, errs
 		}
 	}
-
-	argobj, err = arglist.ActionExpand(self.stack, nil)
-	if err != nil {
-		return nil, []error{err}
-	}
-	arglist = argobj.List()
 
 	if precall != nil {
 		precall(expr, arglist)
