@@ -400,7 +400,7 @@ func assertExpand(
 	// convert FuList of FileNode to slice of string
 	actualstr := make([]string, len(actualobj.List()))
 	for i, obj := range actualobj.List() {
-		actualstr[i] = obj.String()
+		actualstr[i] = obj.ValueString()
 	}
 	assert.Equal(t, expect, actualstr)
 }

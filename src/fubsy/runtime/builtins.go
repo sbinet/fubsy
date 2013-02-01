@@ -35,7 +35,7 @@ func fn_println(args types.ArgSource) (types.FuObject, []error) {
 		if i > 0 {
 			os.Stdout.WriteString(" ")
 		}
-		_, err := os.Stdout.WriteString(val.String())
+		_, err := os.Stdout.WriteString(val.ValueString())
 		if err != nil {
 			// this shouldn't happen, so bail immediately
 			return nil, []error{err}
@@ -48,7 +48,7 @@ func fn_println(args types.ArgSource) (types.FuObject, []error) {
 func fn_mkdir(args types.ArgSource) (types.FuObject, []error) {
 	errs := make([]error, 0)
 	for _, name := range args.Args() {
-		err := os.MkdirAll(name.String(), 0755)
+		err := os.MkdirAll(name.ValueString(), 0755)
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -59,7 +59,7 @@ func fn_mkdir(args types.ArgSource) (types.FuObject, []error) {
 func fn_remove(args types.ArgSource) (types.FuObject, []error) {
 	errs := make([]error, 0)
 	for _, name := range args.Args() {
-		err := os.RemoveAll(name.String())
+		err := os.RemoveAll(name.ValueString())
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -68,13 +68,13 @@ func fn_remove(args types.ArgSource) (types.FuObject, []error) {
 }
 
 func fn_FileNode(args types.ArgSource) (types.FuObject, []error) {
-	name := args.Arg(0).String()
+	name := args.Arg(0).ValueString()
 	graph := args.(FunctionArgs).Graph()
 	return dag.MakeFileNode(graph, name), nil
 }
 
 func fn_ActionNode(args types.ArgSource) (types.FuObject, []error) {
-	basename := args.Arg(0).String()
+	basename := args.Arg(0).ValueString()
 	graph := args.(FunctionArgs).Graph()
 	return dag.MakeActionNode(graph, basename+":action"), nil
 }

@@ -55,6 +55,10 @@ func (self *ListNode) String() string {
 	return self.nodebase.String()
 }
 
+func (self *ListNode) ValueString() string {
+	return self.nodebase.ValueString()
+}
+
 func (self *ListNode) CommandString() string {
 	return self.FuList.CommandString()
 }

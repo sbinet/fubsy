@@ -69,6 +69,10 @@ func (self *FuFunction) String() string {
 	return self.name + "()"
 }
 
+func (self *FuFunction) ValueString() string {
+	return self.String()
+}
+
 func (self *FuFunction) CommandString() string {
 	// hmmm: perhaps CommandString needs an error return...
 	panic("functions should not be interpolated into command strings!")

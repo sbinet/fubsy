@@ -48,5 +48,5 @@ func Test_BuildRule_setLocals(t *testing.T) {
 	val, ok = ns.Lookup("SOURCES")
 	assert.True(t, ok)
 	assert.Equal(t, 2, len(val.List()))
-	assert.Equal(t, "[bar,qux]", val.String())
+	assert.Equal(t, "[bar, qux]", val.String())
 }

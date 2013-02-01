@@ -20,7 +20,7 @@ func Test_ValueMap_basics(t *testing.T) {
 	ns.Assign("foo", FuString("blurp"))
 	val, ok = ns.Lookup("foo")
 	assert.True(t, ok)
-	assert.Equal(t, "blurp", val.String())
+	assert.Equal(t, "blurp", val.ValueString())
 	val, ok = ns.Lookup("bar")
 	assert.False(t, ok)
 }

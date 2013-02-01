@@ -11,13 +11,22 @@ import (
 	"github.com/stretchrcom/testify/assert"
 )
 
-func Test_FuString_String(t *testing.T) {
-	s := FuString("bip bop")
-	assert.Equal(t, "bip bop", s.String())
-}
+func Test_FuString_stringify(t *testing.T) {
+	var s FuObject
 
-func Test_FuString_CommandString(t *testing.T) {
-	s := FuString("don't start")
+	s = FuString("hello")
+	assert.Equal(t, "\"hello\"", s.String())
+	assert.Equal(t, "hello", s.ValueString())
+	assert.Equal(t, "hello", s.CommandString())
+
+	s = FuString("bip bop")
+	assert.Equal(t, "\"bip bop\"", s.String())
+	assert.Equal(t, "bip bop", s.ValueString())
+	assert.Equal(t, "'bip bop'", s.CommandString())
+
+	s = FuString("don't start")
+	assert.Equal(t, "\"don't start\"", s.String())
+	assert.Equal(t, "don't start", s.ValueString())
 	assert.Equal(t, "\"don't start\"", s.CommandString())
 }
 
@@ -82,7 +91,7 @@ func Test_FuString_Add_list(t *testing.T) {
 	args := MakeFuList("-l", "-a", "foo")
 	result, err := cmd.Add(args)
 	assert.Nil(t, err)
-	assert.Equal(t, "[ls,-l,-a,foo]", result.String())
+	assert.Equal(t, `["ls", "-l", "-a", "foo"]`, result.String())
 }
 
 func Test_FuString_Lookup(t *testing.T) {
@@ -125,17 +134,17 @@ func Test_FuString_ActionExpand(t *testing.T) {
 	input = FuString("meep $foo blah")
 	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, "meep hello blah", output.String())
+	assert.Equal(t, "meep hello blah", output.ValueString())
 
 	input = FuString("hello ${foo} $meep")
 	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, "hello hello blorf", output.String())
+	assert.Equal(t, "hello hello blorf", output.ValueString())
 
 	ns.Assign("foo", nil)
 	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, "hello  blorf", output.String())
+	assert.Equal(t, "hello  blorf", output.ValueString())
 
 	ns.Assign("foo", FuString("ping$pong"))
 	output, err = input.ActionExpand(ns, nil)
@@ -152,13 +161,13 @@ func Test_FuString_ActionExpand_recursive(t *testing.T) {
 	input := FuString("$CC -c $sources")
 	output, err := input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, expect, output.String())
+	assert.Equal(t, expect, output.ValueString())
 
 	// same thing, but now files is a list
 	ns.Assign("files", FuList([]FuObject{FuString("f1.c")}))
 	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, expect, output.String())
+	assert.Equal(t, expect, output.ValueString())
 }
 
 func Test_FuString_ActionExpand_cycle(t *testing.T) {
@@ -169,17 +178,23 @@ func Test_FuString_ActionExpand_cycle(t *testing.T) {
 	assert.Equal(t, "cyclic variable reference: a -> a", err.Error())
 }
 
-func Test_FuList_String(t *testing.T) {
-	l := MakeFuList("beep", "meep")
-	assert.Equal(t, "[beep,meep]", l.String())
+func Test_FuList_stringify(t *testing.T) {
+	var l FuObject
+
+	l = MakeFuList("beep", "meep")
+	assert.Equal(t, `["beep", "meep"]`, l.String())
+	assert.Equal(t, `beep meep`, l.ValueString())
+	assert.Equal(t, `beep meep`, l.CommandString())
 
 	l = MakeFuList("beep", "", "meep")
-	assert.Equal(t, "[beep,,meep]", l.String())
-}
+	assert.Equal(t, `["beep", "", "meep"]`, l.String())
+	assert.Equal(t, `beep  meep`, l.ValueString())
+	assert.Equal(t, `beep '' meep`, l.CommandString())
 
-func Test_FuList_CommandString(t *testing.T) {
-	l := MakeFuList("foo", "*.c", "ding dong", "")
-	assert.Equal(t, "foo '*.c' 'ding dong' ''", l.CommandString())
+	l = MakeFuList("foo", "*.c", "ding dong", "")
+	assert.Equal(t, `["foo", "*.c", "ding dong", ""]`, l.String())
+	assert.Equal(t, `foo *.c ding dong `, l.ValueString())
+	assert.Equal(t, `foo '*.c' 'ding dong' ''`, l.CommandString())
 }
 
 func Test_FuList_Add_list(t *testing.T) {

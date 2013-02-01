@@ -118,7 +118,7 @@ func (self *CommandAction) Execute(rt *Runtime) []error {
 	if err != nil {
 		return []error{err}
 	}
-	log.Info("%s", self.expanded)
+	log.Info("%s", self.expanded.ValueString())
 
 	// Run commands with the shell because people expect redirection,
 	// pipes, etc. to work from their build scripts. (And besides, all
@@ -135,7 +135,7 @@ func (self *CommandAction) Execute(rt *Runtime) []error {
 	// XXX the error message doesn't say which command failed (and if
 	// it did, it would probably say "/bin/sh", which is useless): can
 	// we do better?
-	cmd := exec.Command("/bin/sh", "-c", self.expanded.String())
+	cmd := exec.Command("/bin/sh", "-c", self.expanded.ValueString())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()

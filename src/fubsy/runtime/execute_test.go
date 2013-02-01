@@ -129,7 +129,7 @@ func Test_evaluateCall(t *testing.T) {
 	// call foo() correctly (no args)
 	ast := dsl.NewASTFunctionCall(fooname, noargs)
 	result, errors = rt.evaluateCall(ast, nil)
-	assert.Equal(t, "foo!", result.String())
+	assert.Equal(t, types.FuString("foo!"), result)
 	assert.Equal(t, 0, len(errors))
 	assert.Equal(t, []string{"foo"}, calls)
 
@@ -146,7 +146,7 @@ func Test_evaluateCall(t *testing.T) {
 	result, errors = rt.evaluateCall(ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
-	assert.Equal(t, "bar failed (meep)", errors[0].Error())
+	assert.Equal(t, "bar failed (\"meep\")", errors[0].Error())
 	assert.Equal(t, []string{"foo", "bar"}, calls)
 
 	// call bar() with an arg that needs to be expanded
@@ -154,7 +154,7 @@ func Test_evaluateCall(t *testing.T) {
 	result, errors = rt.evaluateCall(ast, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errors))
-	assert.Equal(t, "bar failed (>main.c<)", errors[0].Error())
+	assert.Equal(t, "bar failed (\">main.c<\")", errors[0].Error())
 	assert.Equal(t, []string{"foo", "bar", "bar"}, calls)
 
 	// again, but this time expansion fails (undefined name)
@@ -254,7 +254,7 @@ func Test_evaluateCall_method(t *testing.T) {
 	assert.Equal(t, precalledArgs, types.MakeFuList("hello"))
 	assert.Nil(t, result)
 	if len(errs) == 1 {
-		assert.Equal(t, "c failed: receiver: FileNode b.txt, arg: string hello", errs[0].Error())
+		assert.Equal(t, "c failed: receiver: FileNode b.txt, arg: string \"hello\"", errs[0].Error())
 	} else {
 		t.Errorf("expected exactly 1 error, but got: %v", errs)
 	}

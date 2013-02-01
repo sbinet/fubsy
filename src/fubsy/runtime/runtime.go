@@ -183,27 +183,27 @@ func (self *Runtime) addRule(rule *BuildRule) {
 
 // Convert a single FuObject (possibly a FuList) to a list of Nodes and
 // add them to the DAG.
-func (self *Runtime) nodify(targets_ types.FuObject) []dag.Node {
+func (self *Runtime) nodify(values types.FuObject) []dag.Node {
 	// Blecchh: specially handling every type here limits the
 	// extensibility of the type system. But I don't want each type to
 	// know how it becomes a node, because then the 'types' package
 	// depends on 'dag', which seems backwards to me. Hmmmm.
 	var result []dag.Node
-	switch targets := targets_.(type) {
+	switch values := values.(type) {
 	case types.FuString:
-		result = []dag.Node{dag.MakeFileNode(self.dag, targets.String())}
+		result = []dag.Node{dag.MakeFileNode(self.dag, values.ValueString())}
 	case types.FuList:
-		result = make([]dag.Node, 0, len(targets))
-		for _, val := range targets {
+		result = make([]dag.Node, 0, len(values))
+		for _, val := range values {
 			result = append(result, self.nodify(val)...)
 		}
 	case *dag.ListNode:
-		result = targets.Nodes()
+		result = values.Nodes()
 		for i, node := range result {
 			result[i] = self.dag.AddNode(node)
 		}
 	case dag.Node:
-		result = []dag.Node{self.dag.AddNode(targets)}
+		result = []dag.Node{self.dag.AddNode(values)}
 	}
 	return result
 }

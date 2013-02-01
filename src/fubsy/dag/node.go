@@ -212,6 +212,10 @@ func (self *nodebase) String() string {
 	return self.name
 }
 
+func (self *nodebase) ValueString() string {
+	return self.String()
+}
+
 func (self *nodebase) CommandString() string {
 	return types.ShellQuote(self.name)
 }

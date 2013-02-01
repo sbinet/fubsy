@@ -15,7 +15,17 @@ import (
 )
 
 type FuObject interface {
+	// Return a string representation of this object for
+	// debugging/diagnosis. When feasible, it should return the Fubsy
+	// syntax that would reproduce this value, i.e. with
+	// quotes/delimiters/escaping that would be accepted by the
+	// fubsy/dsl package.
 	String() string
+
+	// Return a string representation of this object to use when
+	// directly interacting with the OS: e.g. a filename for open() or
+	// a command for system().
+	ValueString() string
 
 	// Return a string representation of this object that is suitable
 	// for use in a shell command. Scalar values should supply quotes
@@ -76,6 +86,11 @@ type FuString string
 type FuList []FuObject
 
 func (self FuString) String() string {
+	// need to worry about escaping when the DSL supports it!
+	return "\"" + string(self) + "\""
+}
+
+func (self FuString) ValueString() string {
 	return string(self)
 }
 
@@ -139,7 +154,18 @@ func (self FuList) String() string {
 	for i, obj := range self {
 		result[i] = obj.String()
 	}
-	return "[" + strings.Join(result, ",") + "]"
+	return "[" + strings.Join(result, ", ") + "]"
+}
+
+func (self FuList) ValueString() string {
+	// ValueString() doesn't make a lot of sense for FuList, since it
+	// doesn't contain a single filename to open or command to run ...
+	// but we have to provide *something*!
+	result := make([]string, len(self))
+	for i, obj := range self {
+		result[i] = obj.ValueString()
+	}
+	return strings.Join(result, " ")
 }
 
 func (self FuList) CommandString() string {
