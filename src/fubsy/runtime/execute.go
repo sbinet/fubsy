@@ -42,7 +42,12 @@ func (self *Runtime) evaluate(
 	case *dsl.ASTAdd:
 		result, errs = self.evaluateAdd(expr)
 	case *dsl.ASTFunctionCall:
-		result, errs = self.evaluateCall(expr, nil)
+		var callable types.FuCallable
+		var args FunctionArgs
+		callable, args, errs = self.prepareCall(expr)
+		if len(errs) == 0 {
+			result, errs = self.evaluateCall(callable, args, nil)
+		}
 	case *dsl.ASTSelection:
 		_, result, errs = self.evaluateLookup(expr)
 	default:
@@ -81,35 +86,36 @@ func (self *Runtime) evaluateAdd(expr *dsl.ASTAdd) (types.FuObject, []error) {
 	return result, nil
 }
 
-func (self *Runtime) evaluateCall(
-	expr *dsl.ASTFunctionCall,
-	precall func(*dsl.ASTFunctionCall, types.FuList)) (
-	types.FuObject, []error) {
+func (self *Runtime) prepareCall(expr *dsl.ASTFunctionCall) (
+	callable types.FuCallable, args FunctionArgs, errs []error) {
 
+	// robj is the receiver object for a method call (foo in foo.x())
+	// value is the callable object (function or method) as a FuObject
 	var robj, value types.FuObject
-	var errs []error
+	args.runtime = self
 
 	// two cases to worry about here:
 	//    1. fn(...)
 	//    2. robj.meth(...)
 	astfunc := expr.Function()
 	if astselect, ok := astfunc.(*dsl.ASTSelection); ok {
-		// case 2: it's a method call; we need to keep track of the
-		// receiver object
+		// case 2: looks like a method call; we need to keep track of
+		// the receiver object
 		robj, value, errs = self.evaluateLookup(astselect)
 	} else {
 		// case 1: it's a normal function call, so robj stays nil
 		value, errs = self.evaluate(expr.Function())
 	}
 	if len(errs) > 0 {
-		return nil, errs
+		return
 	}
+	args.robj = robj
 
-	var err error
 	callable, ok := value.(types.FuCallable)
 	if !ok {
-		err = fmt.Errorf("not a function or method: '%s'", expr.Function())
-		return nil, []error{err}
+		errs = []error{
+			fmt.Errorf("not a function or method: '%s'", expr.Function())}
+		return
 	}
 
 	var astargs []dsl.ASTExpression
@@ -119,22 +125,43 @@ func (self *Runtime) evaluateCall(
 	for i, astarg := range astargs {
 		arglist[i], errs = self.evaluate(astarg)
 		if len(errs) > 0 {
-			return nil, errs
+			return
 		}
 	}
+	args.args = arglist
+	errs = nil
+	return
+}
+
+func (self *Runtime) expandArgs(args FunctionArgs) (FunctionArgs, []error) {
+	xargs := FunctionArgs{
+		runtime: args.runtime,
+		robj:    args.robj,
+	}
+	var errs []error
+	xargs.args = make([]types.FuObject, len(args.args))
+	var err error
+	for i, arg := range args.args {
+		xargs.args[i], err = arg.ActionExpand(self.stack, nil)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return xargs, errs
+}
+
+func (self *Runtime) evaluateCall(
+	callable types.FuCallable,
+	args FunctionArgs,
+	precall func(types.FuCallable, types.ArgSource)) (
+	types.FuObject, []error) {
 
 	if precall != nil {
-		precall(expr, arglist)
+		precall(callable, args)
 	}
-
-	err = callable.CheckArgs(arglist)
+	err := callable.CheckArgs(args)
 	if err != nil {
 		return nil, []error{err}
-	}
-	args := FunctionArgs{
-		runtime: self,
-		robj:    robj,
-		args:    arglist,
 	}
 	return callable.Code()(args)
 }

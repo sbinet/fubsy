@@ -46,7 +46,7 @@ type FuCallable interface {
 
 	// check that the arguments being passed are valid for this function,
 	// returning a user-targeted error object if not
-	CheckArgs(args []FuObject) error
+	CheckArgs(args ArgSource) error
 }
 
 type FuFunction struct {
@@ -119,8 +119,8 @@ func (self *FuFunction) Code() FuCode {
 	return self.code
 }
 
-func (self *FuFunction) CheckArgs(args []FuObject) error {
-	nargs := len(args)
+func (self *FuFunction) CheckArgs(args ArgSource) error {
+	nargs := len(args.Args())
 	if self.minargs == 0 && self.maxargs == 0 && nargs > 0 {
 		return fmt.Errorf("function %s takes no arguments (got %d)",
 			self, nargs)

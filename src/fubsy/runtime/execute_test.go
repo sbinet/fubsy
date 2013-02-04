@@ -90,6 +90,64 @@ func Test_evaluate_complex(t *testing.T) {
 	assertEvaluateFail(t, rt, "loc2: name not defined: 'b'", addnode)
 }
 
+func Test_prepareCall(t *testing.T) {
+	// this is never going to be called, so it's OK that it's nil
+	var fn_dummy func(args types.ArgSource) (types.FuObject, []error)
+	var dummy1, dummy2 types.FuCallable
+	dummy1 = types.NewFixedFunction("dummy1", 0, fn_dummy)
+	dummy2 = types.NewFixedFunction("dummy1", 1, fn_dummy)
+
+	rt := minimalRuntime()
+	ns := rt.Namespace()
+	ns.Assign("dummy1", dummy1)
+	ns.Assign("dummy2", dummy2)
+	ns.Assign("x", types.FuString("whee!"))
+
+	noargs := []dsl.ASTExpression{}
+	onearg := []dsl.ASTExpression{dsl.NewASTString("\"meep\"")}
+
+	var astcall *dsl.ASTFunctionCall
+	var callable types.FuCallable
+	var args FunctionArgs
+	var errs []error
+
+	// correct (no args) call to dummy1()
+	astcall = dsl.NewASTFunctionCall(dsl.NewASTName("dummy1"), noargs)
+	callable, args, errs = rt.prepareCall(astcall)
+	assert.Equal(t, 0, len(errs))
+	assert.Equal(t, dummy1, callable)
+	assert.Equal(t, []types.FuObject{}, args.args)
+
+	// and to dummy2()
+	astcall = dsl.NewASTFunctionCall(dsl.NewASTName("dummy2"), onearg)
+	callable, args, errs = rt.prepareCall(astcall)
+	assert.Equal(t, 0, len(errs))
+	assert.Equal(t, dummy2, callable)
+	assert.Equal(t, []types.FuObject{types.FuString("meep")}, args.args)
+
+	// attempt to call dummy2() incorrectly (1 arg, but it's an undefined name)
+	astcall = dsl.NewASTFunctionCall(
+		dsl.NewASTName("dummy2"),
+		[]dsl.ASTExpression{dsl.NewASTName("bogus")})
+	callable, _, errs = rt.prepareCall(astcall)
+	assert.Equal(t, 1, len(errs))
+	assert.Equal(t, "name not defined: 'bogus'", errs[0].Error())
+
+	// attempt to call non-existent function
+	astcall = dsl.NewASTFunctionCall(dsl.NewASTName("bogus"), noargs)
+	callable, _, errs = rt.prepareCall(astcall)
+	assert.Nil(t, callable)
+	assert.Equal(t, 1, len(errs))
+	assert.Equal(t, "name not defined: 'bogus'", errs[0].Error())
+
+	// attempt to call something that is not a function
+	astcall = dsl.NewASTFunctionCall(dsl.NewASTName("x"), noargs)
+	callable, _, errs = rt.prepareCall(astcall)
+	assert.Nil(t, callable)
+	assert.Equal(t, 1, len(errs))
+	assert.Equal(t, "not a function or method: 'x'", errs[0].Error())
+}
+
 func Test_evaluateCall(t *testing.T) {
 	// foo() takes no args and always succeeds;
 	// bar() takes exactly one arg and always fails
@@ -110,78 +168,47 @@ func Test_evaluateCall(t *testing.T) {
 		return nil, []error{
 			fmt.Errorf("bar failed (%s)", args.Arg(0))}
 	}
+	var foo, bar types.FuCallable
+	foo = types.NewFixedFunction("foo", 0, fn_foo)
+	bar = types.NewFixedFunction("bar", 1, fn_bar)
 
 	rt := minimalRuntime()
-	ns := rt.Namespace()
-	ns.Assign("foo", types.NewFixedFunction("foo", 0, fn_foo))
-	ns.Assign("bar", types.NewFixedFunction("bar", 1, fn_bar))
-	ns.Assign("src", types.FuString("main.c"))
+	args := FunctionArgs{runtime: rt}
 
 	var result types.FuObject
-	var errors []error
-
-	fooname := dsl.NewASTName("foo")
-	barname := dsl.NewASTName("bar")
-	noargs := []dsl.ASTExpression{}
-	onearg := []dsl.ASTExpression{dsl.NewASTString("\"meep\"")}
+	var errs []error
 
 	// call foo() correctly (no args)
-	ast := dsl.NewASTFunctionCall(fooname, noargs)
-	result, errors = rt.evaluateCall(ast, nil)
+	args.args = []types.FuObject{}
+	result, errs = rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, types.FuString("foo!"), result)
-	assert.Equal(t, 0, len(errors))
+	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, []string{"foo"}, calls)
 
 	// call foo() incorrectly (1 arg)
-	ast = dsl.NewASTFunctionCall(fooname, onearg)
-	result, errors = rt.evaluateCall(ast, nil)
-	assert.Equal(t, 1, len(errors))
+	args.args = []types.FuObject{types.FuString("meep")}
+	result, errs = rt.evaluateCall(foo, args, nil)
+	assert.Equal(t, 1, len(errs))
 	assert.Equal(t,
-		"function foo() takes no arguments (got 1)", errors[0].Error())
+		"function foo() takes no arguments (got 1)", errs[0].Error())
 	assert.Equal(t, []string{"foo"}, calls)
 
 	// call bar() correctly (1 arg)
-	ast = dsl.NewASTFunctionCall(barname, onearg)
-	result, errors = rt.evaluateCall(ast, nil)
+	result, errs = rt.evaluateCall(bar, args, nil)
 	assert.Nil(t, result)
-	assert.Equal(t, 1, len(errors))
-	assert.Equal(t, "bar failed (\"meep\")", errors[0].Error())
+	assert.Equal(t, 1, len(errs))
+	assert.Equal(t, "bar failed (\"meep\")", errs[0].Error())
 	assert.Equal(t, []string{"foo", "bar"}, calls)
 
 	// call bar() incorrectly (no args)
-	ast = dsl.NewASTFunctionCall(barname, noargs)
-	result, errors = rt.evaluateCall(ast, nil)
+	args.args = nil
+	result, errs = rt.evaluateCall(bar, args, nil)
 	assert.Nil(t, result)
-	assert.Equal(t, 1, len(errors))
+	assert.Equal(t, 1, len(errs))
 	assert.Equal(t,
-		"function bar() takes exactly 1 arguments (got 0)", errors[0].Error())
-	assert.Equal(t, []string{"foo", "bar"}, calls)
+		"function bar() takes exactly 1 arguments (got 0)", errs[0].Error())
 
-	// call bar() incorrectly (1 arg, but it's an undefined name)
-	ast = dsl.NewASTFunctionCall(
-		barname, []dsl.ASTExpression{dsl.NewASTName("bogus")})
-	result, errors = rt.evaluateCall(ast, nil)
-	assert.Nil(t, result)
-	assert.Equal(t, 1, len(errors))
-	assert.Equal(t,
-		"name not defined: 'bogus'", errors[0].Error())
-
-	// attempt to call non-existent function
-	ast = dsl.NewASTFunctionCall(dsl.NewASTName("bogus"), onearg)
-	result, errors = rt.evaluateCall(ast, nil)
-	assert.Nil(t, result)
-	assert.Equal(t, 1, len(errors))
-	assert.Equal(t,
-		"name not defined: 'bogus'", errors[0].Error())
-
-	// attempt to call something that is not a function
-	ast = dsl.NewASTFunctionCall(dsl.NewASTName("src"), onearg)
-	result, errors = rt.evaluateCall(ast, nil)
-	assert.Nil(t, result)
-	assert.Equal(t, 1, len(errors))
-	assert.Equal(t,
-		"not a function or method: 'src'", errors[0].Error())
-
+	// check the sequence of calls
 	assert.Equal(t, []string{"foo", "bar"}, calls)
 }
 
@@ -189,25 +216,20 @@ func Test_evaluateCall_no_expand(t *testing.T) {
 	calls := 0
 	fn_foo := func(args types.ArgSource) (types.FuObject, []error) {
 		calls++
-		return types.FuString("arg: " + args.Arg(0).String()), nil
+		return types.FuString("arg: " + args.Arg(0).ValueString()), nil
 	}
+	foo := types.NewFixedFunction("foo", 1, fn_foo)
 	rt := minimalRuntime()
-	ns := rt.Namespace()
-	ns.Assign("foo", types.NewFixedFunction("foo", 1, fn_foo))
-	fooname := dsl.NewASTName("foo")
-
-	var ast *dsl.ASTFunctionCall
-	var args []dsl.ASTExpression
+	args := FunctionArgs{runtime: rt}
 
 	// call bar() with an arg that needs to be expanded to test that
 	// expansion does *not* happen -- evaluateCall() doesn't know
 	// which phase it's in, so it has to rely on someone else to
 	// ActionExpand() each value in the build phase
-	args = []dsl.ASTExpression{dsl.NewASTString("\">$src<\"")}
-	ast = dsl.NewASTFunctionCall(fooname, args)
-	result, errs := rt.evaluateCall(ast, nil)
+	args.args = []types.FuObject{types.FuString(">$src<")}
+	result, errs := rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, 1, calls)
-	assert.Equal(t, types.FuString("arg: \">$src<\""), result)
+	assert.Equal(t, types.FuString("arg: >$src<"), result)
 	if len(errs) != 0 {
 		t.Errorf("expected no errors, but got: %v", errs)
 	}
@@ -217,15 +239,13 @@ func Test_evaluateCall_no_expand(t *testing.T) {
 	var val types.FuObject = types.NewStubObject("val", expansion)
 	valexp, _ := val.ActionExpand(nil, nil)
 	assert.Equal(t, expansion, valexp) // this actually tests StubObject
-	ns.Assign("val", val)
 
 	// call foo() with that expandable value, and make sure it is
 	// really called with the unexpanded value
-	args = []dsl.ASTExpression{dsl.NewASTName("val")}
-	ast = dsl.NewASTFunctionCall(fooname, args)
-	result, errs = rt.evaluateCall(ast, nil)
+	args.args[0] = val
+	result, errs = rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, 2, calls)
-	assert.Equal(t, types.FuString("arg: \"val\""), result)
+	assert.Equal(t, types.FuString("arg: val"), result)
 	if len(errs) != 0 {
 		t.Errorf("expected no errors, but got: %v", errs)
 	}
@@ -233,11 +253,11 @@ func Test_evaluateCall_no_expand(t *testing.T) {
 
 func Test_evaluateCall_method(t *testing.T) {
 	// construct AST for "a.b.c(x)"
-	args := []dsl.ASTExpression{dsl.NewASTName("x")}
-	ast := dsl.NewASTFunctionCall(
+	astargs := []dsl.ASTExpression{dsl.NewASTName("x")}
+	astcall := dsl.NewASTFunctionCall(
 		dsl.NewASTSelection(
 			dsl.NewASTSelection(dsl.NewASTName("a"), "b"), "c"),
-		args)
+		astargs)
 
 	// make sure a is an object with attributes, and b is one of them
 	// (N.B. having FileNodes be attributes of one another is weird
@@ -270,16 +290,22 @@ func Test_evaluateCall_method(t *testing.T) {
 	ns.Assign("x", types.FuString("hello"))
 
 	// what the hell, let's test the precall feature too
-	var precalledExpr dsl.ASTExpression
-	var precalledArgs types.FuObject
-	precall := func(expr *dsl.ASTFunctionCall, args types.FuList) {
-		precalledExpr = expr
+	var precalledCallable types.FuCallable
+	var precalledArgs types.ArgSource
+	precall := func(callable types.FuCallable, args types.ArgSource) {
+		precalledCallable = callable
 		precalledArgs = args
 	}
 
-	result, errs := rt.evaluateCall(ast, precall)
-	assert.Equal(t, precalledExpr, ast)
-	assert.Equal(t, precalledArgs, types.MakeFuList("hello"))
+	callable, args, errs := rt.prepareCall(astcall)
+	assert.Equal(t, "c", callable.(*types.FuFunction).Name())
+	assert.True(t, args.robj == bobj)
+	assert.Equal(t, 0, len(errs))
+
+	result, errs := rt.evaluateCall(callable, args, precall)
+	assert.Equal(t, precalledCallable, callable)
+	assert.Equal(t,
+		(types.FuList)(precalledArgs.Args()), types.MakeFuList("hello"))
 	assert.Nil(t, result)
 	if len(errs) == 1 {
 		assert.Equal(t,

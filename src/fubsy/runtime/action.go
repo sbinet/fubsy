@@ -159,14 +159,19 @@ func (self *FunctionCallAction) String() string {
 }
 
 func (self *FunctionCallAction) Execute(rt *Runtime) []error {
-	_, errs := rt.evaluateCall(self.fcall, logFunctionCall)
+	callable, args, errs := rt.prepareCall(self.fcall)
+	if len(errs) > 0 {
+		return errs
+	}
+	args, errs = rt.expandArgs(args)
+	_, errs = rt.evaluateCall(callable, args, logFunctionCall)
 	return errs
 }
 
-func logFunctionCall(expr *dsl.ASTFunctionCall, arglist types.FuList) {
-	argstrings := make([]string, len(arglist))
-	for i, arg := range arglist {
+func logFunctionCall(callable types.FuCallable, args types.ArgSource) {
+	argstrings := make([]string, len(args.Args()))
+	for i, arg := range args.Args() {
 		argstrings[i] = arg.String()
 	}
-	log.Info("%s(%s)", expr.Function(), strings.Join(argstrings, ", "))
+	log.Info("%s(%s)", callable.Name(), strings.Join(argstrings, ", "))
 }

@@ -24,7 +24,7 @@ func Test_FuFunction_constructors(t *testing.T) {
 
 func Test_FuFunction_CheckArgs_fixed(t *testing.T) {
 	val := FuString("a")
-	args := []FuObject{}
+	args := StubArgSource([]FuObject{})
 	fn := NewFixedFunction("meep", 0, nil)
 
 	err := fn.CheckArgs(args)
@@ -59,7 +59,7 @@ func Test_FuFunction_CheckArgs_fixed(t *testing.T) {
 func Test_FuFunction_CheckArgs_minmax(t *testing.T) {
 	fn := NewVariadicFunction("bar", 2, 4, nil)
 	val := FuString("a")
-	args := []FuObject{val}
+	args := StubArgSource([]FuObject{val})
 	err := fn.CheckArgs(args)
 	assert.Equal(t,
 		"function bar() requires at least 2 arguments (got 1)", err.Error())
@@ -89,7 +89,7 @@ func Test_FuFunction_CheckArgs_minmax(t *testing.T) {
 func Test_FuFunction_CheckArgs_unlimited(t *testing.T) {
 	fn := NewVariadicFunction("println", 0, -1, nil)
 	val := FuString("a")
-	args := []FuObject{val}
+	args := StubArgSource([]FuObject{val})
 
 	err := fn.CheckArgs(args)
 	assert.Nil(t, err)
@@ -97,4 +97,26 @@ func Test_FuFunction_CheckArgs_unlimited(t *testing.T) {
 	args = append(args, val, val, val, val)
 	err = fn.CheckArgs(args)
 	assert.Nil(t, err)
+}
+
+type StubArgSource []FuObject
+
+func (self StubArgSource) Receiver() FuObject {
+	return nil
+}
+
+func (self StubArgSource) Args() []FuObject {
+	return self
+}
+
+func (self StubArgSource) Arg(i int) FuObject {
+	return self[i]
+}
+
+func (self StubArgSource) KeywordArgs() ValueMap {
+	panic("not implemented")
+}
+
+func (self StubArgSource) KeywordArg(name string) (FuObject, bool) {
+	panic("not implemented")
 }
