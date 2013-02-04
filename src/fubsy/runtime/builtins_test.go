@@ -67,8 +67,7 @@ func Test_println(t *testing.T) {
 	defer cleanup2()
 
 	args := FunctionArgs{
-		args:   types.MakeFuList(),
-		kwargs: make(map[string]types.FuObject),
+		args: types.MakeFuList(),
 	}
 
 	result, errs := fn_println(args)
@@ -97,8 +96,7 @@ func Test_mkdir(t *testing.T) {
 	// cases where a user-defined list becomes the arg list, and it
 	// just happens to be empty
 	args := FunctionArgs{
-		args:   []types.FuObject{},
-		kwargs: make(map[string]types.FuObject),
+		args: []types.FuObject{},
 	}
 	result, errs := fn_mkdir(args)
 	assert.Nil(t, result)
@@ -149,8 +147,7 @@ func Test_remove(t *testing.T) {
 	defer cleanup()
 
 	args := FunctionArgs{
-		args:   types.MakeFuList(),
-		kwargs: make(map[string]types.FuObject),
+		args: types.MakeFuList(),
 	}
 
 	// remove() doesn't care about empty arg list (same reason as mkdir())

@@ -234,12 +234,14 @@ func (self FunctionArgs) Arg(i int) types.FuObject {
 }
 
 func (self FunctionArgs) KeywordArgs() types.ValueMap {
-	return self.kwargs
+	panic("kwargs not supported yet")
+	//return self.kwargs
 }
 
 func (self FunctionArgs) KeywordArg(name string) (types.FuObject, bool) {
-	value, ok := self.kwargs[name]
-	return value, ok
+	panic("kwargs not supported yet")
+	//value, ok := self.kwargs[name]
+	//return value, ok
 }
 
 // other methods that might come in handy
