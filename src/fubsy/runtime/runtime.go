@@ -170,15 +170,17 @@ func (self *Runtime) makeRuleNodes(astrule *dsl.ASTBuildRule) (
 }
 
 func (self *Runtime) addRule(rule *BuildRule) {
+	targets := rule.targets.Nodes()
+	sources := rule.sources.Nodes()
 
 	// Attach the rule to each target node.
-	for _, tnode := range rule.targets {
+	for _, tnode := range targets {
 		tnode.SetBuildRule(rule)
 	}
 
 	// And connect the nodes to each other (every source is a parent
 	// of every target).
-	self.dag.AddManyParents(rule.targets, rule.sources)
+	self.dag.AddManyParents(targets, sources)
 }
 
 // Convert a single FuObject (possibly a FuList) to a list of Nodes and

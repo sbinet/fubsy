@@ -46,6 +46,22 @@ func newListNode(members ...types.FuObject) *ListNode {
 	return node
 }
 
+func ListNodeFromNodes(nodes []Node) *ListNode {
+	names := make([]string, len(nodes))
+	for i, node := range nodes {
+		names[i] = node.Name()
+	}
+	name := strings.Join(names, ",")
+	lnode := &ListNode{
+		nodebase:     makenodebase(name),
+		types.FuList: make(types.FuList, len(nodes)),
+	}
+	for i, node := range nodes {
+		lnode.FuList[i] = node
+	}
+	return lnode
+}
+
 func MakeListNode(dag *DAG, member ...types.FuObject) *ListNode {
 	node := newListNode(member...)
 	node = dag.AddNode(node).(*ListNode)

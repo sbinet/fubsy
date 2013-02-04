@@ -5,6 +5,8 @@
 package runtime
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	"fubsy/dag"
@@ -19,6 +21,8 @@ func defineBuiltins(ns types.Namespace) {
 		types.NewVariadicFunction("println", 0, -1, fn_println),
 		types.NewVariadicFunction("mkdir", 0, -1, fn_mkdir),
 		types.NewVariadicFunction("remove", 0, -1, fn_remove),
+
+		types.NewFixedFunction("build", 3, fn_build),
 
 		// node factories
 		types.NewFixedFunction("FileNode", 1, fn_FileNode),
@@ -35,7 +39,13 @@ func fn_println(args types.ArgSource) (types.FuObject, []error) {
 		if i > 0 {
 			os.Stdout.WriteString(" ")
 		}
-		_, err := os.Stdout.WriteString(val.ValueString())
+		var s string
+		if val == nil {
+			s = "(nil)"
+		} else {
+			s = val.ValueString()
+		}
+		_, err := os.Stdout.WriteString(s)
 		if err != nil {
 			// this shouldn't happen, so bail immediately
 			return nil, []error{err}
@@ -65,6 +75,33 @@ func fn_remove(args types.ArgSource) (types.FuObject, []error) {
 		}
 	}
 	return nil, errs
+}
+
+func fn_build(args types.ArgSource) (types.FuObject, []error) {
+	rt := args.(FunctionArgs).runtime
+	targets := rt.nodify(args.Arg(0))
+	sources := rt.nodify(args.Arg(1))
+	actionobj := args.Arg(2)
+
+	fmt.Printf(
+		"fn_build():\n"+
+			"  targets: %T %v\n"+
+			"  sources: %T %v\n"+
+			"  actions: %T %v\n",
+		targets, targets, sources, sources, actionobj, actionobj)
+
+	var errs []error
+	var action Action
+	if actionstr, ok := actionobj.(types.FuString); ok {
+		action = NewCommandAction(actionstr)
+	} else {
+		errs = append(errs, errors.New("build(): only command strings supported as actions right now, sorry"))
+	}
+
+	rule := NewBuildRule(rt, targets, sources)
+	rule.action = action
+
+	return rule, errs
 }
 
 func fn_FileNode(args types.ArgSource) (types.FuObject, []error) {

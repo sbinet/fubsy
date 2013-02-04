@@ -95,7 +95,7 @@ func (self *SequenceAction) AddAction(action Action) {
 
 func (self *SequenceAction) AddCommand(command *dsl.ASTString) {
 	raw := types.FuString(command.Value())
-	self.AddAction(&CommandAction{raw: raw})
+	self.AddAction(NewCommandAction(raw))
 }
 
 func (self *SequenceAction) AddAssignment(assignment *dsl.ASTAssignment) {
@@ -104,6 +104,10 @@ func (self *SequenceAction) AddAssignment(assignment *dsl.ASTAssignment) {
 
 func (self *SequenceAction) AddFunctionCall(fcall *dsl.ASTFunctionCall) {
 	self.AddAction(&FunctionCallAction{fcall: fcall})
+}
+
+func NewCommandAction(cmd types.FuObject) *CommandAction {
+	return &CommandAction{raw: cmd}
 }
 
 func (self *CommandAction) String() string {
