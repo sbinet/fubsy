@@ -206,11 +206,21 @@ func (self *ASTRoot) EOF() Locatable {
 	return self.eof
 }
 
-func (self *ASTRoot) ListPlugins() [][]string {
+func (self *ASTRoot) FindImports() [][]string {
 	result := make([][]string, 0)
 	for _, node_ := range self.children {
 		if node, ok := node_.(*ASTImport); ok {
 			result = append(result, node.plugin)
+		}
+	}
+	return result
+}
+
+func (self *ASTRoot) FindInlinePlugins() []*ASTInline {
+	var result []*ASTInline
+	for _, node := range self.children {
+		if node, ok := node.(*ASTInline); ok {
+			result = append(result, node)
 		}
 	}
 	return result
@@ -271,6 +281,14 @@ func (self *ASTInline) Equal(other_ ASTNode) bool {
 			self.content == other.content
 	}
 	return false
+}
+
+func (self *ASTInline) Language() string {
+	return self.lang
+}
+
+func (self *ASTInline) Content() string {
+	return self.content
 }
 
 func NewASTPhase(name string, block *ASTBlock, location ...Locatable) *ASTPhase {

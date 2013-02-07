@@ -21,6 +21,7 @@ import (
 	"fubsy/db"
 	"fubsy/dsl"
 	"fubsy/log"
+	"fubsy/plugins"
 	"fubsy/types"
 )
 
@@ -75,8 +76,13 @@ func minimalRuntime() *Runtime {
 
 func (self *Runtime) RunScript() []error {
 	var errors []error
-	for _, plugin := range self.ast.ListPlugins() {
+	for _, plugin := range self.ast.FindImports() {
 		log.Debug(log.PLUGINS, "loading plugin '%s'", strings.Join(plugin, "."))
+	}
+
+	errors = self.runInlinePlugins()
+	if len(errors) > 0 {
+		return errors
 	}
 
 	errors = self.runMainPhase()
@@ -86,6 +92,32 @@ func (self *Runtime) RunScript() []error {
 
 	errors = self.runBuildPhase()
 	return errors
+}
+
+func (self *Runtime) runInlinePlugins() []error {
+	var errs []error
+	var err error
+	var meta plugins.MetaPlugin
+
+	inlines := self.ast.FindInlinePlugins()
+	ns := self.stack.Inner()
+	for _, inline := range inlines {
+		meta, err = plugins.LoadMetaPlugin(inline.Language())
+		if err != nil {
+			errs = append(errs, MakeLocationError(inline, err))
+			continue
+		}
+		log.Debug(log.PLUGINS, "running %s inline plugin", inline.Language())
+		values, err := meta.Run(inline.Content())
+		if err != nil {
+			errs = append(errs, MakeLocationError(inline, err))
+		}
+		for name, val := range values {
+			// warn on shadowing?
+			ns.Assign(name, val)
+		}
+	}
+	return errs
 }
 
 // Run all the statements in the main phase of this build script.

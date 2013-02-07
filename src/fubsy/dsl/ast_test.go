@@ -50,7 +50,7 @@ func Test_ASTRoot_Equal(t *testing.T) {
 	}
 }
 
-func Test_ASTRoot_ListPlugins(t *testing.T) {
+func Test_ASTRoot_FindImports(t *testing.T) {
 	root := &ASTRoot{
 		children: []ASTNode{
 			&ASTPhase{},
@@ -60,7 +60,7 @@ func Test_ASTRoot_ListPlugins(t *testing.T) {
 			&ASTImport{plugin: []string{"meep", "beep"}},
 		}}
 	expect := [][]string{{"ding"}, {"meep", "beep"}}
-	actual := root.ListPlugins()
+	actual := root.FindImports()
 	assert.True(t, reflect.DeepEqual(expect, actual),
 		"expected\n%v\nbut got\n%v", expect, actual)
 }

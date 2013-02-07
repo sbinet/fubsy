@@ -17,7 +17,7 @@ main {
     #   tagflag = "-tags='${buildtags.join(\' \')}'"
     # but there's a bit more work to do before Fubsy supports
     # that syntax, so for now we have to put up with
-    tagflag = "-tags=kyotodb"
+    tagflag = "-tags=kyotodb python"
     # ...and you'll just have to edit it manually to modify tags
 
     # some tools needed to build/test
@@ -78,6 +78,9 @@ main {
     }
     ActionNode("test/fubsy/log"): <$src/log/*.go> {
         "go test $tagflag fubsy/log"
+    }
+    ActionNode("test/fubsy/plugins"): <$src/plugins/*.go> {
+        "go test $tagflag fubsy/plugins"
     }
     ActionNode("test/fubsy/runtime"): <$src/runtime/*.go> {
         "go test $tagflag fubsy/runtime"

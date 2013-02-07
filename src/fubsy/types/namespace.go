@@ -59,6 +59,12 @@ func NewValueStack(ns ...Namespace) ValueStack {
 	return ValueStack(ns)
 }
 
+// return the innermost namespace of this stack; panic if the stack is empty
+func (self *ValueStack) Inner() Namespace {
+	stack := ([]Namespace)(*self)
+	return stack[len(stack)-1]
+}
+
 func (self *ValueStack) Push(ns Namespace) {
 	*self = append(*self, ns)
 }
