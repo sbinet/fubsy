@@ -388,7 +388,7 @@ func Test_fuParse_valid_inline(t *testing.T) {
 		{PLUGIN, "plugin"},
 		{NAME, "whatever"},
 		{L3BRACE, "{{{"},
-		{INLINE, "beep!\"\nblam'"},
+		{INLINE, "\nbeep!\"\nblam'\n"},
 		{R3BRACE, "}}}"},
 		{EOL, "\n"},
 		{EOF, ""},
@@ -397,6 +397,80 @@ func Test_fuParse_valid_inline(t *testing.T) {
 		children: []ASTNode{
 			&ASTInline{lang: "whatever", content: "beep!\"\nblam'"}}}
 	assertParses(t, expect, tokens)
+
+	// a single newline is an empty plugin
+	tokens[3] = minitok{INLINE, "\n"}
+	expect.children[0].(*ASTInline).content = ""
+	assertParses(t, expect, tokens)
+}
+
+func Test_fuParse_invalid_inline(t *testing.T) {
+	tokens := []minitok{
+		{PLUGIN, "plugin"},
+		{NAME, "whatever"},
+		{L3BRACE, "{{{"},
+		{INLINE, ""},
+		{R3BRACE, "}}}"},
+		{EOL, "\n"},
+		{EOF, ""},
+	}
+
+	var parser *Parser
+
+	tests := []struct {
+		content string
+		error   string
+	}{
+		{"", "inline plugin must contain at least a newline (near }}})"},
+		{"foobar", "inline plugin must start with a newline (near }}})"},
+		{"\nfoobar", "inline plugin must end with a newline (near }}})"},
+		{"foo\nbar", "inline plugin must start with a newline (near }}})"},
+		{"\nfoo\nbar", "inline plugin must end with a newline (near }}})"},
+		{"\n  foo\n  bar\n\n  hello", "inline plugin must end with a newline (near }}})"},
+	}
+	for i, test := range tests {
+		tokens[3].text = test.content
+		parser = NewParser(toklist(tokens))
+		fuParse(parser)
+		err := parser.syntaxerror
+		if err == nil {
+			t.Errorf("%d: expected an error, but got none", i)
+		} else if test.error != err.Error() {
+			t.Errorf("%d: expected error:\n%s\nbut got\n%s",
+				i, test.error, err.Error())
+		}
+	}
+}
+
+func Test_cleanInlineContent(t *testing.T) {
+	// cleanInlineContent() trims leading and trailing newline from
+	// the whole string, and common leading space from each line
+	tests := []struct {
+		input  string
+		expect string
+	}{
+		{"\n", ""},
+		{"\n\n", ""},
+		{"\nfoo\n", "foo"},
+		{"\nfoo\n  bar\n", "foo\n  bar"},
+		{"\n  foo\n", "foo"},
+		{"\n  foo\n  bar\n    deeper\n  back\n", "foo\nbar\n  deeper\nback"},
+		{"\n    deep\n  less deep\n    deep again\n", "  deep\nless deep\n  deep again"},
+		{"\n    deep\n     deeper\nunindented\n", "    deep\n     deeper\nunindented"},
+		// blank lines don't need to have indentation
+		{"\n  foo\n  bar\n\n  hello\n", "foo\nbar\n\nhello"},
+		{"\n\n  foo\n    bar\n  foo\n", "\nfoo\n  bar\nfoo"},
+	}
+	var parser *Parser = NewParser(nil)
+	for i, test := range tests {
+		actual, err := cleanInlineContent(parser, test.input)
+		assert.Nil(t, err)
+		if test.expect != actual {
+			t.Errorf("cleanInlineContent %d: "+
+				"input %#v; expected\n%#v\nbut got\n%#v",
+				i, test.input, test.expect, actual)
+		}
+	}
 }
 
 func Test_fuParse_invalid(t *testing.T) {

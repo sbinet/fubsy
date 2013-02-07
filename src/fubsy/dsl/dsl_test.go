@@ -76,21 +76,22 @@ func TestParse_valid_sequence(t *testing.T) {
 main {
 "boo"
 }
-plugin foo {{{o'malley & friends
+plugin foo {{{
+o'malley & friends
 }}}
 blob {
  "meep"
  }`
 	fn := testutils.Mkfile(tmpdir, "valid_2.fubsy", script)
-	ast, err := Parse(fn)
-	assert.Equal(t, 0, len(err))
+	ast, errs := Parse(fn)
+	testutils.NoErrors(t, errs)
 
 	expect := &ASTRoot{children: []ASTNode{
 		&ASTPhase{
 			name:     "main",
 			children: []ASTNode{&ASTString{value: "boo"}}},
 		&ASTInline{
-			lang: "foo", content: "o'malley & friends\n"},
+			lang: "foo", content: "o'malley & friends"},
 		&ASTPhase{
 			name:     "blob",
 			children: []ASTNode{&ASTString{value: "meep"}}},

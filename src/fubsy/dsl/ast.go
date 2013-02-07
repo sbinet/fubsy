@@ -262,16 +262,13 @@ func NewASTInline(lang string, content string, location ...Locatable) *ASTInline
 func (self *ASTInline) Dump(writer io.Writer, indent string) {
 	fmt.Fprintf(writer, "%sASTInline[%s] {{{", indent, self.lang)
 	if len(self.content) > 0 {
-		replace := -1 // indent all lines by default
-		if strings.HasSuffix(self.content, "\n") {
-			// last line doesn't really exist, so don't indent it
-			replace = strings.Count(self.content, "\n") - 1
+		lines := strings.Split(self.content, "\n")
+		for _, line := range lines {
+			io.WriteString(writer, "\n"+indent+"  ")
+			io.WriteString(writer, line)
 		}
-		content := strings.Replace(
-			self.content, "\n", "\n"+indent+"  ", replace)
-		fmt.Fprintf(writer, content)
 	}
-	fmt.Fprintf(writer, "%s}}}\n", indent)
+	fmt.Fprintf(writer, "\n%s}}}\n", indent)
 }
 
 func (self *ASTInline) Equal(other_ ASTNode) bool {

@@ -149,30 +149,34 @@ func Test_ASTInline_Equal(t *testing.T) {
 }
 
 func Test_ASTInline_Dump(t *testing.T) {
+	tests := []struct {
+		input  string
+		indent string
+		expect string
+	}{
+		{"", "", "ASTInline[foo] {{{\n}}}\n"},
+		{"", " ", " ASTInline[foo] {{{\n }}}\n"},
+		{"foobar", "  ", "  ASTInline[foo] {{{\n    foobar\n  }}}\n"},
+		{"foobar\n", "", "ASTInline[foo] {{{\n  foobar\n  \n}}}\n"},
+		{"hello\nworld", "", "ASTInline[foo] {{{\n  hello\n  world\n}}}\n"},
+		{"\nhello\nworld", ".", ".ASTInline[foo] {{{\n.  \n.  hello\n.  world\n.}}}\n"},
+		{"\nhello\nworld\n", "", "ASTInline[foo] {{{\n  \n  hello\n  world\n  \n}}}\n"},
+		{"\nhello\nworld\n", "!", "!ASTInline[foo] {{{\n!  \n!  hello\n!  world\n!  \n!}}}\n"},
+		{"hello\n  world", "%%", "%%ASTInline[foo] {{{\n%%  hello\n%%    world\n%%}}}\n"},
+		{"hello\n  world\n", "", "ASTInline[foo] {{{\n  hello\n    world\n  \n}}}\n"},
+	}
+
 	node := &ASTInline{lang: "foo"}
-	assertASTDump(t, "ASTInline[foo] {{{}}}\n", node)
-
-	node.content = "foobar"
-	assertASTDump(t, "ASTInline[foo] {{{foobar}}}\n", node)
-
-	node.content = "foobar\n"
-	assertASTDump(t, "ASTInline[foo] {{{foobar\n}}}\n", node)
-
-	node.content = "hello\nworld"
-	assertASTDump(t, "ASTInline[foo] {{{hello\n  world}}}\n", node)
-
-	node.content = "\nhello\nworld"
-	assertASTDump(t, "ASTInline[foo] {{{\n  hello\n  world}}}\n", node)
-
-	node.content = "\nhello\nworld\n"
-	assertASTDump(t, "ASTInline[foo] {{{\n  hello\n  world\n}}}\n", node)
-
-	node.content = "hello\n  world"
-	assertASTDump(t, "ASTInline[foo] {{{hello\n    world}}}\n", node)
-
-	node.content = "hello\n  world\n"
-	assertASTDump(t, "ASTInline[foo] {{{hello\n    world\n}}}\n", node)
-
+	for i, test := range tests {
+		var buf bytes.Buffer
+		node.content = test.input
+		node.Dump(&buf, test.indent)
+		actual := buf.String()
+		if test.expect != actual {
+			t.Errorf("ASTInline.Dump() %d: expected\n%#v\nbut got\n%#v",
+				i, test.expect, actual)
+		}
+	}
 }
 
 func Test_ASTName_Equal_location(t *testing.T) {
@@ -230,11 +234,4 @@ func Test_ASTFunctionCall_Equal_location(t *testing.T) {
 	fcall2.location = FileLocation{fileinfo, 5, 41}
 	assert.True(t, fcall1.Equal(fcall2),
 		"equality fails when fcall2's location different from fcall1's")
-}
-
-func assertASTDump(t *testing.T, expect string, node ASTNode) {
-	var buf bytes.Buffer
-	node.Dump(&buf, "")
-	actual := buf.String()
-	assert.Equal(t, expect, actual, "AST dump")
 }

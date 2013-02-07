@@ -9,6 +9,7 @@ package dsl
 
 import (
 	"fmt"
+	"strings"
 )
 
 const BADTOKEN = -1
@@ -100,7 +101,13 @@ dottedname:
 inline:
 	PLUGIN NAME L3BRACE INLINE R3BRACE
 	{
-		$$ = NewASTInline($2.text, $4.text, $1, $5)
+		parser := fulex.(*Parser)
+		content, err := cleanInlineContent(parser, $4.text)
+		if err != nil {
+			parser.SetError(err)
+		} else {
+			$$ = NewASTInline($2.text, content, $1, $5)
+		}
 	}
 
 phase:
@@ -275,10 +282,19 @@ func (self *Parser) Lex(lval *fuSymType) int {
 	return token.id
 }
 
-func (self *Parser) Error(e string) {
-	self.syntaxerror = &SyntaxError{
+func (self *Parser) Error(message string) {
+	self.syntaxerror = self.NewSyntaxError(message)
+}
+
+func (self *Parser) SetError(err *SyntaxError) {
+	 self.syntaxerror = err
+}
+
+func (self *Parser) NewSyntaxError(message string) *SyntaxError {
+	 return &SyntaxError{
 		badtoken: &self.tokens[self.next-1],
-		message: e}
+		message: message,
+	}
 }
 
 func extractText(tokens []token) []string {
@@ -287,4 +303,60 @@ func extractText(tokens []token) []string {
 		text[i] = token.Text()
 	}
 	return text
+}
+
+func cleanInlineContent(parser *Parser, content string) (string, *SyntaxError) {
+	length := len(content)
+	if length == 0 {
+		return content, parser.NewSyntaxError("inline plugin must contain at least a newline")
+	}
+	if content == "\n" {
+		return "", nil
+	}
+
+	var err *SyntaxError
+	if content[0] != '\n' {
+		err = parser.NewSyntaxError("inline plugin must start with a newline")
+		return content, err
+	} else if content[length-1] != '\n' {
+		err = parser.NewSyntaxError("inline plugin must end with a newline")
+		return content, err
+	}
+
+	content = content[1 : length-1]
+
+	// trim common leading space from each line
+	lines := strings.Split(content, "\n")
+	minspace := -1
+	for _, line := range lines {
+		// safe to treat line as bytes when we're only looking for
+		// space (ASCII 32), because in UTF-8 bytes < 128 *only*
+		// represent the corresponding code point
+		for j, byte := range line {
+			if byte != ' ' {
+				if minspace < 0 || j < minspace {
+					minspace = j
+				}
+				break
+			}
+		}
+
+		if minspace == 0 {
+			// found an unindented line: give up now
+			break
+		}
+	}
+	if minspace > 0 {
+		for i, line := range lines {
+			if len(line) == 0 {
+				continue
+			} else if len(line) < minspace {
+				panic(fmt.Sprintf("line = %#v, but minspace = %d",
+					line, minspace))
+			}
+			lines[i] = line[minspace:]
+		}
+		content = strings.Join(lines, "\n")
+	}
+	return content, err
 }

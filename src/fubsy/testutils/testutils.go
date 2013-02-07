@@ -5,10 +5,34 @@
 package testutils
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
 )
+
+// Ensure that errs is empty. If not, fail the current test
+// (non-fatally) and return false. Otherwise return true.
+func NoErrors(t *testing.T, errs []error) bool {
+	if len(errs) == 0 {
+		return true
+	}
+	formatted := make([]string, len(errs))
+	for i, err := range errs {
+		formatted[i] = fmt.Sprintf("%T: %s", err, err.Error())
+	}
+	caller := ""
+	_, file, line, ok := runtime.Caller(1)
+	if ok {
+		caller = fmt.Sprintf("%s:%d: ", filepath.Base(file), line)
+	}
+	t.Errorf("%sexpected no errors, but got %d:\n%s",
+		caller, len(errs), strings.Join(formatted, "\n"))
+	return false
+}
 
 // Create a temporary directory. Return the name of the directory and
 // a function to clean it up when you're done with it. Panics on any
