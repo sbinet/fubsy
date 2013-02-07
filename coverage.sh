@@ -28,10 +28,11 @@ code.google.com/p/go-bit/bit,\
 github.com/ogier/pflag"
 
 echo "testing packages: $packages"
+build1=".build/1"
 set -e
 for pkg in $packages; do
     json=coverage-`basename $pkg`.json
     report=coverage-`basename $pkg`.txt
-    run "./bin/gocov test -exclude $exclude $pkg > $json"
-    run "./bin/gocov report $json > $report"
+    run "$build1/bin/gocov test -exclude $exclude $pkg > $json"
+    run "$build1/bin/gocov report $json > $report"
 done

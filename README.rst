@@ -15,9 +15,9 @@ Fubsy is written in Go, and uses the gc compiler to build. If you're
 on Unix, you already have Go installed, and you don't care about
 satisfying Fubsy's optional dependencies, just run ::
 
-    ./build.sh
+    ./configure.sh && ./build.sh
 
-Otherwise, see ``doc/build.txt``.
+For more information, see ``doc/build.txt``.
 
 Using
 -----

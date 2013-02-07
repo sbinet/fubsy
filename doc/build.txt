@@ -3,19 +3,22 @@ Building Fubsy from Source
 
 I'm not currently distributing Fubsy binaries -- so if you want to
 give it a try, you'll have to build it from source. The same procedure
-applies whether you are building in a Mercurial working dir or from a
-release tarball.
+applies whether you are building in a working dir checked out from
+source control (Mercurial) or from a release tarball.
 
 Requirements
 ------------
 
-Fubsy is written in Go and (optionally) uses Kyoto Cabinet for
-persistent storage [1]. Thus:
+Fubsy is written in Go and (optionally) uses various C/C++ packages.
+Thus:
 
   * you must have Go 1.0.x installed
 
   * you should have Kyoto Cabinet (including headers and development
-    library) installed
+    library) installed [1]
+
+  * you may want Python (including headers and development library)
+    installed
 
 Details follow.
 
@@ -50,7 +53,7 @@ If you are running any other Unix/Linux variant (including Mac OS X):
      `the Go project downloads page
      <http://code.google.com/p/go/downloads/list>`_
 
-  #. unpack it to a dedicated directory, e.g. ::
+  #. unpack it to a dedicated directory, e.g. (as root)::
 
        cd /usr/local
        rm -rf go
@@ -103,20 +106,55 @@ If your OS doesn't package Kyoto Cabinet, or you are using an OS
 without a package manager, the source is here:
 http://fallabs.com/kyotocabinet/pkg/ .
 
+Installing Python
+-----------------
+
+Remember: this is an optional dependency. If you can't get it to work,
+just skip it. You'll get a Fubsy binary that can't run Python plugins,
+but you should still be able to get a taste for how Fubsy works.
+
+Fubsy works with Python 2.6 or 2.7; 3.x is untested.
+
+On Debian/Ubuntu, try ::
+
+    sudo apt-get install python-dev
+
+On Fedora/Red Hat, try (untested!) ::
+
+    sudo yum install python-devel
+
+On Mac OS X with MacPorts, try (untested!) ::
+
+    sudo port install python27
+
+On Mac OS X with Homebrew, try (untested!) ::
+
+    brew install python
+
 Building
 --------
 
 To build Fubsy and run all unit tests (Unix only)::
 
-    ./build.sh
+    ./configure.sh && ./build.sh
 
 Obviously this won't work on Windows, and I haven't written an
 equivalent batch file yet. Patches are welcome!
+
+If you're hacking on Fubsy and need to build it repeatedly, just
+re-run ::
+
+    ./build.sh
+
+You don't need to re-run ``configure.sh``, since it consists of slow
+steps that don't need to be repeated very often, like probing the
+build system and downloading some dependencies.
 
 To prove that Fubsy can build itself using its own build script:
 
     ./bin/fubsy
 
-(If that fails because you don't have Kyoto Cabinet installed, you'll
-have to edit ``main.fubsy``. Fubsy doesn't have a auto-configuration
-feature yet, although it's in the plan.)
+Note that the self-hosting build script (``main.fubsy``) assumes all
+C/C++ dependencies are installed. If not, you'll have to edit it and
+change the ``tagflags`` variable. (Fubsy isn't smart enough to do this
+yet, although it's in the plan.)
