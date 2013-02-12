@@ -9,7 +9,7 @@ package plugins
 import (
 	"errors"
 
-	py "github.com/sbinet/go-python/pkg/python"
+	py "github.com/sbinet/go-python"
 
 	"fubsy/types"
 )

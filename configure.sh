@@ -62,10 +62,11 @@ getdeps() {
     # directory for the "stage 1" build, done with shell scripts
     # rather then with Fubsy itself
     build1=".build/1"
+    mkdir -p $build1
 
     export GOPATH="$top/$build1"
     if tagset python; then
-        run "go get -v -d github.com/sbinet/go-python/pkg/python"
+        run "go get -v -d github.com/sbinet/go-python"
     fi
 
     # we build separate from download mainly because of go-python,
@@ -88,7 +89,7 @@ getdeps() {
     run "mv bin/gocov $build1/bin/."
 
     if tagset python; then
-        run "make -C $build1/src/github.com/sbinet/go-python/pkg/python install"
+        run "make -C $build1/src/github.com/sbinet/go-python install"
     fi
 }
 
