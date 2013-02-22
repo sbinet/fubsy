@@ -34,8 +34,8 @@ func defineBuiltins(ns types.Namespace) {
 	}
 }
 
-func fn_println(args types.ArgSource) (types.FuObject, []error) {
-	for i, val := range args.Args() {
+func fn_println(argsource types.ArgSource) (types.FuObject, []error) {
+	for i, val := range argsource.Args() {
 		if i > 0 {
 			os.Stdout.WriteString(" ")
 		}
@@ -55,9 +55,9 @@ func fn_println(args types.ArgSource) (types.FuObject, []error) {
 	return nil, nil
 }
 
-func fn_mkdir(args types.ArgSource) (types.FuObject, []error) {
+func fn_mkdir(argsource types.ArgSource) (types.FuObject, []error) {
 	errs := make([]error, 0)
-	for _, name := range args.Args() {
+	for _, name := range argsource.Args() {
 		err := os.MkdirAll(name.ValueString(), 0755)
 		if err != nil {
 			errs = append(errs, err)
@@ -66,9 +66,9 @@ func fn_mkdir(args types.ArgSource) (types.FuObject, []error) {
 	return nil, errs
 }
 
-func fn_remove(args types.ArgSource) (types.FuObject, []error) {
+func fn_remove(argsource types.ArgSource) (types.FuObject, []error) {
 	errs := make([]error, 0)
-	for _, name := range args.Args() {
+	for _, name := range argsource.Args() {
 		err := os.RemoveAll(name.ValueString())
 		if err != nil {
 			errs = append(errs, err)
@@ -77,11 +77,12 @@ func fn_remove(args types.ArgSource) (types.FuObject, []error) {
 	return nil, errs
 }
 
-func fn_build(args types.ArgSource) (types.FuObject, []error) {
-	rt := args.(FunctionArgs).runtime
-	targets := rt.nodify(args.Arg(0))
-	sources := rt.nodify(args.Arg(1))
-	actionobj := args.Arg(2)
+func fn_build(argsource types.ArgSource) (types.FuObject, []error) {
+	rt := argsource.(FunctionArgs).runtime
+	args := argsource.Args()
+	targets := rt.nodify(args[0])
+	sources := rt.nodify(args[1])
+	actionobj := args[2]
 
 	fmt.Printf(
 		"fn_build():\n"+
@@ -104,14 +105,14 @@ func fn_build(args types.ArgSource) (types.FuObject, []error) {
 	return rule, errs
 }
 
-func fn_FileNode(args types.ArgSource) (types.FuObject, []error) {
-	name := args.Arg(0).ValueString()
-	graph := args.(FunctionArgs).Graph()
+func fn_FileNode(argsource types.ArgSource) (types.FuObject, []error) {
+	name := argsource.Args()[0].ValueString()
+	graph := argsource.(FunctionArgs).Graph()
 	return dag.MakeFileNode(graph, name), nil
 }
 
-func fn_ActionNode(args types.ArgSource) (types.FuObject, []error) {
-	basename := args.Arg(0).ValueString()
-	graph := args.(FunctionArgs).Graph()
+func fn_ActionNode(argsource types.ArgSource) (types.FuObject, []error) {
+	basename := argsource.Args()[0].ValueString()
+	graph := argsource.(FunctionArgs).Graph()
 	return dag.MakeActionNode(graph, basename+":action"), nil
 }

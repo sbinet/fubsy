@@ -92,7 +92,7 @@ func Test_evaluate_complex(t *testing.T) {
 
 func Test_prepareCall(t *testing.T) {
 	// this is never going to be called, so it's OK that it's nil
-	var fn_dummy func(args types.ArgSource) (types.FuObject, []error)
+	var fn_dummy func(argsource types.ArgSource) (types.FuObject, []error)
 	var dummy1, dummy2 types.FuCallable
 	dummy1 = types.NewFixedFunction("dummy1", 0, fn_dummy)
 	dummy2 = types.NewFixedFunction("dummy1", 1, fn_dummy)
@@ -153,20 +153,20 @@ func Test_evaluateCall(t *testing.T) {
 	// bar() takes exactly one arg and always fails
 	calls := make([]string, 0) // list of function names
 
-	fn_foo := func(args types.ArgSource) (types.FuObject, []error) {
-		if len(args.Args()) != 0 {
+	fn_foo := func(argsource types.ArgSource) (types.FuObject, []error) {
+		if len(argsource.Args()) != 0 {
 			panic("foo() called with wrong number of args")
 		}
 		calls = append(calls, "foo")
 		return types.FuString("foo!"), nil
 	}
-	fn_bar := func(args types.ArgSource) (types.FuObject, []error) {
-		if len(args.Args()) != 1 {
+	fn_bar := func(argsource types.ArgSource) (types.FuObject, []error) {
+		if len(argsource.Args()) != 1 {
 			panic("bar() called with wrong number of args")
 		}
 		calls = append(calls, "bar")
 		return nil, []error{
-			fmt.Errorf("bar failed (%s)", args.Arg(0))}
+			fmt.Errorf("bar failed (%s)", argsource.Args()[0])}
 	}
 	var foo, bar types.FuCallable
 	foo = types.NewFixedFunction("foo", 0, fn_foo)
@@ -214,9 +214,9 @@ func Test_evaluateCall(t *testing.T) {
 
 func Test_evaluateCall_no_expand(t *testing.T) {
 	calls := 0
-	fn_foo := func(args types.ArgSource) (types.FuObject, []error) {
+	fn_foo := func(argsource types.ArgSource) (types.FuObject, []error) {
 		calls++
-		return types.FuString("arg: " + args.Arg(0).ValueString()), nil
+		return types.FuString("arg: " + argsource.Args()[0].ValueString()), nil
 	}
 	foo := types.NewFixedFunction("foo", 1, fn_foo)
 	rt := minimalRuntime()
@@ -271,15 +271,16 @@ func Test_evaluateCall_method(t *testing.T) {
 	// make sure a.b.c is a method
 	calls := make([]string, 0) // list of function names
 	var meth_c types.FuCode
-	meth_c = func(args types.ArgSource) (types.FuObject, []error) {
-		if len(args.Args()) != 1 {
+	meth_c = func(argsource types.ArgSource) (types.FuObject, []error) {
+		args := argsource.Args()
+		if len(args) != 1 {
 			panic("c() called with wrong number of args")
 		}
 		calls = append(calls, "c")
-		robj := args.Receiver()
+		robj := argsource.Receiver()
 		return nil, []error{
 			fmt.Errorf("c failed: receiver: %s %v, arg: %s %v",
-				robj.Typename(), robj, args.Arg(0).Typename(), args.Arg(0))}
+				robj.Typename(), robj, args[0].Typename(), args[0])}
 	}
 	bobj.ValueMap = types.NewValueMap()
 	bobj.Assign("c", types.NewFixedFunction("c", 1, meth_c))
@@ -292,9 +293,9 @@ func Test_evaluateCall_method(t *testing.T) {
 	// what the hell, let's test the precall feature too
 	var precalledCallable types.FuCallable
 	var precalledArgs types.ArgSource
-	precall := func(callable types.FuCallable, args types.ArgSource) {
+	precall := func(callable types.FuCallable, argsource types.ArgSource) {
 		precalledCallable = callable
-		precalledArgs = args
+		precalledArgs = argsource
 	}
 
 	callable, args, errs := rt.prepareCall(astcall)

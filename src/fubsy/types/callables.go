@@ -11,11 +11,19 @@ import (
 // object passed to every Fubsy function or method that encapsulates
 // all the information required by it
 type ArgSource interface {
+	// Return the "receiver" object for this method call: e.g.
+	// in node.depends(...), node is the receiver.
 	Receiver() FuObject
+
+	// Return the positional arguments in this function call. Do not
+	// modify the returned slice; it might be shared with the
+	// implementation.
 	Args() []FuObject
-	Arg(i int) FuObject
+
+	// Return the keyword arguments in this function call. Do not
+	// modify the returned map; it might be shared with the
+	// implementation.
 	KeywordArgs() ValueMap
-	KeywordArg(name string) (FuObject, bool)
 }
 
 // the inner heart of a function or method, the code that is actually called
