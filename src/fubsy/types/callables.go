@@ -26,6 +26,12 @@ type ArgSource interface {
 	KeywordArgs() ValueMap
 }
 
+type BasicArgs struct {
+	robj   FuObject
+	args   []FuObject
+	kwargs ValueMap
+}
+
 // the inner heart of a function or method, the code that is actually called
 // XXX should we allow multiple return values ([]FuObject)?
 type FuCode func(args ArgSource) (FuObject, []error)
@@ -143,4 +149,39 @@ func (self *FuFunction) CheckArgs(args ArgSource) error {
 			self, self.maxargs, nargs)
 	}
 	return nil
+}
+
+func MakeBasicArgs(robj FuObject, args []FuObject, kwargs ValueMap) BasicArgs {
+	return BasicArgs{
+		robj:   robj,
+		args:   args,
+		kwargs: kwargs,
+	}
+}
+
+// BasicArgs implements ArgSource
+func (self BasicArgs) Receiver() FuObject {
+	return self.robj
+}
+
+func (self BasicArgs) Args() []FuObject {
+	return self.args
+}
+
+func (self BasicArgs) KeywordArgs() ValueMap {
+	return self.kwargs
+}
+
+// mutation methods for building arg objects -- not in the ArgSource
+// interface, since readers don't need these
+func (self *BasicArgs) SetReceiver(robj FuObject) {
+	self.robj = robj
+}
+
+func (self *BasicArgs) SetArgs(args []FuObject) {
+	self.args = args
+}
+
+func (self *BasicArgs) SetKeywordArgs(kwargs ValueMap) {
+	self.kwargs = kwargs
 }

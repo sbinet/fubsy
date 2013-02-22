@@ -108,7 +108,7 @@ func Test_prepareCall(t *testing.T) {
 
 	var astcall *dsl.ASTFunctionCall
 	var callable types.FuCallable
-	var args FunctionArgs
+	var args RuntimeArgs
 	var errs []error
 
 	// correct (no args) call to dummy1()
@@ -116,14 +116,14 @@ func Test_prepareCall(t *testing.T) {
 	callable, args, errs = rt.prepareCall(astcall)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, dummy1, callable)
-	assert.Equal(t, []types.FuObject{}, args.args)
+	assert.Equal(t, []types.FuObject{}, args.Args())
 
 	// and to dummy2()
 	astcall = dsl.NewASTFunctionCall(dsl.NewASTName("dummy2"), onearg)
 	callable, args, errs = rt.prepareCall(astcall)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, dummy2, callable)
-	assert.Equal(t, []types.FuObject{types.FuString("meep")}, args.args)
+	assert.Equal(t, []types.FuObject{types.FuString("meep")}, args.Args())
 
 	// attempt to call dummy2() incorrectly (1 arg, but it's an undefined name)
 	astcall = dsl.NewASTFunctionCall(
@@ -173,20 +173,20 @@ func Test_evaluateCall(t *testing.T) {
 	bar = types.NewFixedFunction("bar", 1, fn_bar)
 
 	rt := minimalRuntime()
-	args := FunctionArgs{runtime: rt}
+	args := RuntimeArgs{runtime: rt}
 
 	var result types.FuObject
 	var errs []error
 
 	// call foo() correctly (no args)
-	args.args = []types.FuObject{}
+	args.SetArgs([]types.FuObject{})
 	result, errs = rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, types.FuString("foo!"), result)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, []string{"foo"}, calls)
 
 	// call foo() incorrectly (1 arg)
-	args.args = []types.FuObject{types.FuString("meep")}
+	args.SetArgs([]types.FuObject{types.FuString("meep")})
 	result, errs = rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, 1, len(errs))
 	assert.Equal(t,
@@ -201,7 +201,7 @@ func Test_evaluateCall(t *testing.T) {
 	assert.Equal(t, []string{"foo", "bar"}, calls)
 
 	// call bar() incorrectly (no args)
-	args.args = nil
+	args.SetArgs(nil)
 	result, errs = rt.evaluateCall(bar, args, nil)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errs))
@@ -220,13 +220,13 @@ func Test_evaluateCall_no_expand(t *testing.T) {
 	}
 	foo := types.NewFixedFunction("foo", 1, fn_foo)
 	rt := minimalRuntime()
-	args := FunctionArgs{runtime: rt}
+	args := RuntimeArgs{runtime: rt}
 
 	// call bar() with an arg that needs to be expanded to test that
 	// expansion does *not* happen -- evaluateCall() doesn't know
 	// which phase it's in, so it has to rely on someone else to
 	// ActionExpand() each value in the build phase
-	args.args = []types.FuObject{types.FuString(">$src<")}
+	args.SetArgs([]types.FuObject{types.FuString(">$src<")})
 	result, errs := rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, 1, calls)
 	assert.Equal(t, types.FuString("arg: >$src<"), result)
@@ -242,7 +242,7 @@ func Test_evaluateCall_no_expand(t *testing.T) {
 
 	// call foo() with that expandable value, and make sure it is
 	// really called with the unexpanded value
-	args.args[0] = val
+	args.SetArgs([]types.FuObject{val})
 	result, errs = rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, 2, calls)
 	assert.Equal(t, types.FuString("arg: val"), result)
@@ -300,7 +300,7 @@ func Test_evaluateCall_method(t *testing.T) {
 
 	callable, args, errs := rt.prepareCall(astcall)
 	assert.Equal(t, "c", callable.(*types.FuFunction).Name())
-	assert.True(t, args.robj == bobj)
+	assert.True(t, args.Receiver() == bobj)
 	assert.Equal(t, 0, len(errs))
 
 	result, errs := rt.evaluateCall(callable, args, precall)

@@ -78,7 +78,7 @@ func fn_remove(argsource types.ArgSource) (types.FuObject, []error) {
 }
 
 func fn_build(argsource types.ArgSource) (types.FuObject, []error) {
-	rt := argsource.(FunctionArgs).runtime
+	rt := argsource.(RuntimeArgs).runtime
 	args := argsource.Args()
 	targets := rt.nodify(args[0])
 	sources := rt.nodify(args[1])
@@ -107,12 +107,12 @@ func fn_build(argsource types.ArgSource) (types.FuObject, []error) {
 
 func fn_FileNode(argsource types.ArgSource) (types.FuObject, []error) {
 	name := argsource.Args()[0].ValueString()
-	graph := argsource.(FunctionArgs).Graph()
+	graph := argsource.(RuntimeArgs).Graph()
 	return dag.MakeFileNode(graph, name), nil
 }
 
 func fn_ActionNode(argsource types.ArgSource) (types.FuObject, []error) {
 	basename := argsource.Args()[0].ValueString()
-	graph := argsource.(FunctionArgs).Graph()
+	graph := argsource.(RuntimeArgs).Graph()
 	return dag.MakeActionNode(graph, basename+":action"), nil
 }

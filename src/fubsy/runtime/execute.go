@@ -43,7 +43,7 @@ func (self *Runtime) evaluate(
 		result, errs = self.evaluateAdd(expr)
 	case *dsl.ASTFunctionCall:
 		var callable types.FuCallable
-		var args FunctionArgs
+		var args RuntimeArgs
 		callable, args, errs = self.prepareCall(expr)
 		if len(errs) == 0 {
 			result, errs = self.evaluateCall(callable, args, nil)
@@ -87,7 +87,7 @@ func (self *Runtime) evaluateAdd(expr *dsl.ASTAdd) (types.FuObject, []error) {
 }
 
 func (self *Runtime) prepareCall(expr *dsl.ASTFunctionCall) (
-	callable types.FuCallable, args FunctionArgs, errs []error) {
+	callable types.FuCallable, args RuntimeArgs, errs []error) {
 
 	// robj is the receiver object for a method call (foo in foo.x())
 	// value is the callable object (function or method) as a FuObject
@@ -109,7 +109,7 @@ func (self *Runtime) prepareCall(expr *dsl.ASTFunctionCall) (
 	if len(errs) > 0 {
 		return
 	}
-	args.robj = robj
+	args.SetReceiver(robj)
 
 	callable, ok := value.(types.FuCallable)
 	if !ok {
@@ -128,31 +128,35 @@ func (self *Runtime) prepareCall(expr *dsl.ASTFunctionCall) (
 			return
 		}
 	}
-	args.args = arglist
+	args.SetArgs(arglist)
 	errs = nil
 	return
 }
 
-func (self *Runtime) expandArgs(args FunctionArgs) (FunctionArgs, []error) {
-	xargs := FunctionArgs{
-		runtime: args.runtime,
-		robj:    args.robj,
-	}
+func (self *Runtime) expandArgs(argsource RuntimeArgs) (RuntimeArgs, []error) {
 	var errs []error
-	xargs.args = make([]types.FuObject, len(args.args))
 	var err error
-	for i, arg := range args.args {
-		xargs.args[i], err = arg.ActionExpand(self.stack, nil)
+
+	// XXX ignoring kwargs
+	args := argsource.Args()
+	xargs := make([]types.FuObject, len(args))
+	for i, arg := range args {
+		xargs[i], err = arg.ActionExpand(self.stack, nil)
 		if err != nil {
 			errs = append(errs, err)
 		}
 	}
-	return xargs, errs
+
+	result := RuntimeArgs{
+		BasicArgs: types.MakeBasicArgs(argsource.Receiver(), xargs, nil),
+		runtime:   argsource.runtime,
+	}
+	return result, errs
 }
 
 func (self *Runtime) evaluateCall(
 	callable types.FuCallable,
-	args FunctionArgs,
+	args RuntimeArgs,
 	precall func(types.FuCallable, types.ArgSource)) (
 	types.FuObject, []error) {
 
@@ -213,28 +217,12 @@ func (self LocationError) Error() string {
 	return self.location.ErrorPrefix() + self.err.Error()
 }
 
-type FunctionArgs struct {
+type RuntimeArgs struct {
+	types.BasicArgs
 	runtime *Runtime
-	robj    types.FuObject
-	args    []types.FuObject
-	kwargs  types.ValueMap
-}
-
-// implement types.ArgSource
-func (self FunctionArgs) Receiver() types.FuObject {
-	return self.robj
-}
-
-func (self FunctionArgs) Args() []types.FuObject {
-	return self.args
-}
-
-func (self FunctionArgs) KeywordArgs() types.ValueMap {
-	panic("kwargs not supported yet")
-	//return self.kwargs
 }
 
 // other methods that might come in handy
-func (self FunctionArgs) Graph() *dag.DAG {
+func (self RuntimeArgs) Graph() *dag.DAG {
 	return self.runtime.dag
 }

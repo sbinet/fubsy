@@ -66,8 +66,8 @@ func Test_println(t *testing.T) {
 	}
 	defer cleanup2()
 
-	args := FunctionArgs{
-		args: types.MakeFuList(),
+	args := RuntimeArgs{
+		BasicArgs: types.MakeBasicArgs(nil, types.MakeFuList(), nil),
 	}
 
 	result, errs := fn_println(args)
@@ -79,7 +79,7 @@ func Test_println(t *testing.T) {
 	rfile.Truncate(0)
 	rfile.Seek(0, 0)
 
-	args.args = types.MakeFuList("hello", "world")
+	args.SetArgs(types.MakeFuList("hello", "world"))
 	fn_println(args)
 	data, err = ioutil.ReadFile("stdout")
 	assert.Nil(t, err)
@@ -95,8 +95,9 @@ func Test_mkdir(t *testing.T) {
 	// mkdir() happily accepts an empty argument list, to allow for
 	// cases where a user-defined list becomes the arg list, and it
 	// just happens to be empty
-	args := FunctionArgs{
-		args: []types.FuObject{},
+	pargs := []types.FuObject{}
+	args := RuntimeArgs{
+		BasicArgs: types.MakeBasicArgs(nil, pargs, nil),
 	}
 	result, errs := fn_mkdir(args)
 	assert.Nil(t, result)
@@ -104,7 +105,8 @@ func Test_mkdir(t *testing.T) {
 	assert.Equal(t, []string{}, dirContents("."))
 
 	// easiest case: create a single dir
-	args.args = types.MakeFuList("foo")
+	pargs = types.MakeFuList("foo")
+	args.SetArgs(pargs)
 	result, errs = fn_mkdir(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
@@ -112,7 +114,8 @@ func Test_mkdir(t *testing.T) {
 	assert.True(t, isDir("foo"))
 
 	// create multiple dirs, including "foo" which already exists
-	args.args = types.MakeFuList("meep/meep/meep", "foo", "meep/beep")
+	pargs = types.MakeFuList("meep/meep/meep", "foo", "meep/beep")
+	args.SetArgs(pargs)
 	result, errs = fn_mkdir(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
@@ -125,7 +128,8 @@ func Test_mkdir(t *testing.T) {
 	// now with an error in the middle of the list (*but* we still
 	// create the other requested dirs!)
 	testutils.TouchFiles("meep/zap")
-	args.args = types.MakeFuList("meep/bap", "meep/zap/zip", "foo/bar")
+	pargs = types.MakeFuList("meep/bap", "meep/zap/zip", "foo/bar")
+	args.SetArgs(pargs)
 	result, errs = fn_mkdir(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 1, len(errs))
@@ -134,7 +138,8 @@ func Test_mkdir(t *testing.T) {
 	assert.True(t, isDir("foo/bar"))
 
 	// finally, with multiple errors
-	args.args = append(args.args, types.FuString("meep/zap/blop"))
+	pargs = append(pargs, types.FuString("meep/zap/blop"))
+	args.SetArgs(pargs)
 	result, errs = fn_mkdir(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 2, len(errs))
@@ -146,8 +151,8 @@ func Test_remove(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
-	args := FunctionArgs{
-		args: types.MakeFuList(),
+	args := RuntimeArgs{
+		BasicArgs: types.MakeBasicArgs(nil, []types.FuObject{}, nil),
 	}
 
 	// remove() doesn't care about empty arg list (same reason as mkdir())
@@ -156,14 +161,14 @@ func Test_remove(t *testing.T) {
 	assert.Equal(t, 0, len(errs))
 
 	// remove() ignores non-existent files
-	args.args = types.MakeFuList("foo", "bar/bleep/meep", "qux")
+	args.SetArgs(types.MakeFuList("foo", "bar/bleep/meep", "qux"))
 	result, errs = fn_remove(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 
 	// remove() removes regular files
 	testutils.TouchFiles("foo", "bar/bleep/meep", "bar/bleep/feep", "qux")
-	args.args = types.MakeFuList("foo", "bar/bleep/meep", "bogus")
+	args.SetArgs(types.MakeFuList("foo", "bar/bleep/meep", "bogus"))
 	result, errs = fn_remove(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
@@ -173,7 +178,7 @@ func Test_remove(t *testing.T) {
 
 	// remove() removes files and directories too
 	testutils.TouchFiles("foo", "bar/bleep/meep", "qux")
-	args.args = types.MakeFuList("bogus", "bar", "morebogus", "qux")
+	args.SetArgs(types.MakeFuList("bogus", "bar", "morebogus", "qux"))
 	result, errs = fn_remove(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
@@ -184,7 +189,7 @@ func Test_remove(t *testing.T) {
 	testutils.ChmodRO("bar")
 	defer testutils.ChmodOwnerAll("bar")
 
-	args.args = types.MakeFuList("bar", "qux")
+	args.SetArgs(types.MakeFuList("bar", "qux"))
 	result, errs = fn_remove(args)
 	assert.Nil(t, result)
 	assert.Equal(t, "remove bar/bong: permission denied", errs[0].Error())
@@ -213,9 +218,9 @@ func isDir(name string) bool {
 }
 
 func Test_FileNode(t *testing.T) {
-	args := FunctionArgs{
-		runtime: minimalRuntime(),
-		args:    []types.FuObject{types.FuString("a.txt")},
+	args := RuntimeArgs{
+		BasicArgs: types.MakeBasicArgs(nil, types.MakeFuList("a.txt"), nil),
+		runtime:   minimalRuntime(),
 	}
 	node0, errs := fn_FileNode(args)
 	assert.Equal(t, 0, len(errs))
@@ -235,9 +240,9 @@ func Test_FileNode(t *testing.T) {
 }
 
 func Test_ActionNode(t *testing.T) {
-	args := FunctionArgs{
-		runtime: minimalRuntime(),
-		args:    []types.FuObject{types.FuString("test/x")},
+	args := RuntimeArgs{
+		BasicArgs: types.MakeBasicArgs(nil, types.MakeFuList("test/x"), nil),
+		runtime:   minimalRuntime(),
 	}
 	node0, errs := fn_ActionNode(args)
 	assert.Equal(t, 0, len(errs))

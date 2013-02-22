@@ -24,33 +24,33 @@ func Test_FuFunction_constructors(t *testing.T) {
 
 func Test_FuFunction_CheckArgs_fixed(t *testing.T) {
 	val := FuString("a")
-	args := StubArgSource([]FuObject{})
+	args := MakeBasicArgs(nil, []FuObject{}, nil)
 	fn := NewFixedFunction("meep", 0, nil)
 
 	err := fn.CheckArgs(args)
 	assert.Nil(t, err)
 
-	args = append(args, val)
+	args.args = append(args.args, val)
 	err = fn.CheckArgs(args)
 	assert.Equal(t,
 		"function meep() takes no arguments (got 1)", err.Error())
 
 	fn = NewFixedFunction("foo", 2, nil)
-	args = args[:0]
+	args.args = args.args[:0]
 	err = fn.CheckArgs(args)
 	assert.Equal(t,
 		"function foo() takes exactly 2 arguments (got 0)", err.Error())
 
-	args = append(args, val)
+	args.args = append(args.args, val)
 	err = fn.CheckArgs(args)
 	assert.Equal(t,
 		"function foo() takes exactly 2 arguments (got 1)", err.Error())
 
-	args = append(args, val)
+	args.args = append(args.args, val)
 	err = fn.CheckArgs(args)
 	assert.Nil(t, err)
 
-	args = append(args, val)
+	args.args = append(args.args, val)
 	err = fn.CheckArgs(args)
 	assert.Equal(t,
 		"function foo() takes exactly 2 arguments (got 3)", err.Error())
@@ -59,28 +59,28 @@ func Test_FuFunction_CheckArgs_fixed(t *testing.T) {
 func Test_FuFunction_CheckArgs_minmax(t *testing.T) {
 	fn := NewVariadicFunction("bar", 2, 4, nil)
 	val := FuString("a")
-	args := StubArgSource([]FuObject{val})
+	args := MakeBasicArgs(nil, []FuObject{val}, nil)
 	err := fn.CheckArgs(args)
 	assert.Equal(t,
 		"function bar() requires at least 2 arguments (got 1)", err.Error())
 
 	// 2 args are good
-	args = append(args, val)
+	args.args = append(args.args, val)
 	err = fn.CheckArgs(args)
 	assert.Nil(t, err)
 
 	// 3 args are good
-	args = append(args, val)
+	args.args = append(args.args, val)
 	err = fn.CheckArgs(args)
 	assert.Nil(t, err)
 
 	// 4 args are good
-	args = append(args, val)
+	args.args = append(args.args, val)
 	err = fn.CheckArgs(args)
 	assert.Nil(t, err)
 
 	// but 5 args is *right out*
-	args = append(args, val)
+	args.args = append(args.args, val)
 	err = fn.CheckArgs(args)
 	assert.Equal(t,
 		"function bar() takes at most 4 arguments (got 5)", err.Error())
@@ -89,34 +89,21 @@ func Test_FuFunction_CheckArgs_minmax(t *testing.T) {
 func Test_FuFunction_CheckArgs_unlimited(t *testing.T) {
 	fn := NewVariadicFunction("println", 0, -1, nil)
 	val := FuString("a")
-	args := StubArgSource([]FuObject{val})
+	args := MakeBasicArgs(nil, []FuObject{val}, nil)
 
 	err := fn.CheckArgs(args)
 	assert.Nil(t, err)
 
-	args = append(args, val, val, val, val)
+	args.args = append(args.args, val, val, val, val)
 	err = fn.CheckArgs(args)
 	assert.Nil(t, err)
 }
 
-type StubArgSource []FuObject
+func Test_BasicArgs(t *testing.T) {
+	var args BasicArgs
+	var _ ArgSource = args
 
-func (self StubArgSource) Receiver() FuObject {
-	return nil
-}
-
-func (self StubArgSource) Args() []FuObject {
-	return self
-}
-
-func (self StubArgSource) Arg(i int) FuObject {
-	return self[i]
-}
-
-func (self StubArgSource) KeywordArgs() ValueMap {
-	panic("not implemented")
-}
-
-func (self StubArgSource) KeywordArg(name string) (FuObject, bool) {
-	panic("not implemented")
+	args.args = MakeFuList("foo", "bar")
+	assert.Nil(t, args.Receiver())
+	assert.Equal(t, args.args, args.Args())
 }
