@@ -15,8 +15,12 @@ import (
 // other languages.
 
 type MetaPlugin interface {
-	// Execute the code in content. Return a map of stuff defined by
-	// the code, e.g. functions the user can call from Fubsy code.
+	InstallBuiltins(builtins types.Namespace) error
+
+	// Execute the code in content, making the values in builtins
+	// available to it in a language-specific way. Return a map of
+	// stuff defined by the code, e.g. functions the user can call
+	// from Fubsy code.
 	Run(content string) (types.ValueMap, error)
 
 	// Release any resources held by this metaplugin
@@ -42,7 +46,7 @@ func init() {
 	metaCache = make(map[string]MetaPlugin)
 }
 
-func LoadMetaPlugin(language string) (MetaPlugin, error) {
+func LoadMetaPlugin(language string, builtins types.Namespace) (MetaPlugin, error) {
 	meta, ok := metaCache[language]
 	if ok && meta != nil {
 		return meta, nil
@@ -57,6 +61,11 @@ func LoadMetaPlugin(language string) (MetaPlugin, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = meta.InstallBuiltins(builtins)
+	if err != nil {
+		return nil, err
+	}
+
 	metaCache[language] = meta
 	return meta, nil
 }

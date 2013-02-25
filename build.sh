@@ -32,6 +32,17 @@ tagdir=".build/tags"
 checkexists -d $tagdir
 buildtags=`cd $tagdir && echo *`
 
+# likewise, set CGO_* based on configure.sh's output
+configdir=".build/config"
+checkexists -f $configdir/cgo-cflags
+CGO_CFLAGS=`cat $configdir/cgo-cflags | sed 's/ *$//' | tr -d '\n'`
+export CGO_CFLAGS
+echo "CGO_CFLAGS=\"$CGO_CFLAGS\""
+checkexists -f $configdir/cgo-ldflags
+CGO_LDFLAGS=`cat $configdir/cgo-ldflags | sed 's/ *$//' | tr -d '\n'`
+export CGO_LDFLAGS
+echo "CGO_LDFLAGS=\"$CGO_LDFLAGS\""
+
 set -e
 
 golex="$build1/bin/golex"

@@ -12,6 +12,13 @@ import (
 type Namespace interface {
 	Lookup(name string) (FuObject, bool)
 	Assign(name string, value FuObject)
+
+	// Iterate over all (name, value) pairs in the namespace, calling
+	// callback for each one. Order is undefined and arbitrary. If
+	// callback() returns an error, ForEach() immediately terminates
+	// and returns the same error.
+	ForEach(callback func(name string, value FuObject) error) error
+
 	Dump(writer io.Writer, indent string)
 }
 
@@ -39,6 +46,17 @@ func (self ValueMap) Lookup(name string) (value FuObject, ok bool) {
 // Associate name with value in this namespace.
 func (self ValueMap) Assign(name string, value FuObject) {
 	self[name] = value
+}
+
+func (self ValueMap) ForEach(callback func(name string, value FuObject) error) error {
+	var err error
+	for name, value := range self {
+		err = callback(name, value)
+		if err != nil {
+			return err
+		}
+	}
+	return err
 }
 
 func (self ValueMap) Dump(writer io.Writer, indent string) {
@@ -102,6 +120,17 @@ func (self ValueStack) Assign(name string, value FuObject) {
 
 	// did not find it: add it to the innermost namespace
 	self[len(self)-1].Assign(name, value)
+}
+
+func (self ValueStack) ForEach(callback func(name string, value FuObject) error) error {
+	var err error
+	for _, vmap := range self {
+		err = vmap.ForEach(callback)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (self ValueStack) Dump(writer io.Writer, indent string) {

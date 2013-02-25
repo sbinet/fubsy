@@ -39,20 +39,18 @@ setup() {
 
 probe() {
     echo "probing build system ..."
-    tagif kyotodb "pkg-config --cflags kyotocabinet"
+    pkgtag kyotodb kyotocabinet
 
     # Probe for "python" last because on Arch Linux, "python" is
     # Python 3. We want Python 2.6 or 2.7 (I suspect -- have not tried
     # older versions).
-    tagif python \
-        "pkg-config --cflags python2" \
-        "pkg-config --cflags python-2.6" \
-        "pkg-config --cflags python-2.7" \
-        "pkg-config --cflags python"
+    pkgtag python python2 python-2.6 python-2.7 python
 
     echo ""
     echo "build tags:"
     (cd $tagdir && echo *)
+
+    cgoflags $tagdir/*
 }
 
 getdeps() {
@@ -60,7 +58,7 @@ getdeps() {
     echo "downloading dependencies ..."
 
     # directory for the "stage 1" build, done with shell scripts
-    # rather then with Fubsy itself
+    # rather than with Fubsy itself
     build1=".build/1"
     mkdir -p $build1
 
@@ -96,10 +94,27 @@ getdeps() {
 # utility functions
 
 run() {
-    echo $1
-    echo '$' $1 >> $log
-    eval $1 >> $log 2>&1
+    cmd="$1"
+    echo $cmd
+    echo '$' $cmd >> $log
+    eval $cmd >> $log 2>&1
     status=$?
+    if [ $status -ne 0 ]; then
+        echo "error: command failed: see $log for details" >&2
+        exit $status
+    fi
+    echo >> $log
+}
+
+# run, redirecting command's output to a dedicated file (as well as $log)
+capture() {
+    cmd="$1"
+    rfile="$2"
+    echo $cmd
+    echo '$' $cmd >> $log
+    eval $cmd > $rfile 2>&1
+    status=$?
+    cat $rfile >> $log
     if [ $status -ne 0 ]; then
         echo "error: command failed: see $log for details" >&2
         exit $status
@@ -122,14 +137,22 @@ check() {
     return $status
 }
 
-tagif() {
-    tag=$1 ; shift
-    for cmd in "$@"; do
+pkgtag() {
+    tag="$1" ; shift
+    for pkg in "$@"; do
+        cmd="pkg-config $pkg"
         if check "$cmd"; then
-            touch $tagdir/$tag
+            echo $pkg > $tagdir/$tag
             return
         fi
     done
+}
+
+cgoflags() {
+    tagfiles="$@"
+    pkgnames=`cat $tagfiles`
+    capture "pkg-config --cflags $pkgnames" .build/config/cgo-cflags
+    capture "pkg-config --libs $pkgnames" .build/config/cgo-ldflags
 }
 
 tagset() {

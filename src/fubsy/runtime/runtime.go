@@ -30,21 +30,18 @@ type Runtime struct {
 	script  string // filename
 	ast     *dsl.ASTRoot
 
-	globals types.ValueMap
-	stack   *types.ValueStack
-	dag     *dag.DAG
+	builtins types.ValueMap
+	stack    *types.ValueStack
+	dag      *dag.DAG
 }
 
 func NewRuntime(
 	options build.BuildOptions, script string, ast *dsl.ASTRoot) *Runtime {
 	stack := types.NewValueStack()
 
-	// The globals namespace is currently used only for builtins,
-	// because the right syntax for assigning globals is not yet
-	// decided.
-	globals := types.NewValueMap()
-	defineBuiltins(globals)
-	stack.Push(globals)
+	builtins := types.NewValueMap()
+	defineBuiltins(builtins)
+	stack.Push(builtins)
 
 	// Local variables are per-script, but we only support a single
 	// script right now. So might as well initialize the script-local
@@ -53,12 +50,12 @@ func NewRuntime(
 	stack.Push(locals)
 
 	return &Runtime{
-		options: options,
-		script:  script,
-		ast:     ast,
-		globals: globals,
-		stack:   &stack,
-		dag:     dag.NewDAG(),
+		options:  options,
+		script:   script,
+		ast:      ast,
+		builtins: builtins,
+		stack:    &stack,
+		dag:      dag.NewDAG(),
 	}
 }
 
@@ -102,7 +99,7 @@ func (self *Runtime) runInlinePlugins() []error {
 	inlines := self.ast.FindInlinePlugins()
 	ns := self.stack.Inner()
 	for _, inline := range inlines {
-		meta, err = plugins.LoadMetaPlugin(inline.Language())
+		meta, err = plugins.LoadMetaPlugin(inline.Language(), self.builtins)
 		if err != nil {
 			errs = append(errs, MakeLocationError(inline, err))
 			continue

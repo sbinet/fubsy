@@ -1,10 +1,15 @@
 # fubsy build script to build fubsy itself
 
 # XXX this requires:
-#   * export GOPATH=`pwd`
+#   * export GOPATH=...
+#   * export CGO_CFLAGS=...
+#   * export CGO_LDFLAGS=...
+# (the required values for all environment variables are printed
+# by build.sh)
 #
 # XXX this omits:
-#   * probing for database libraries (no configure phase!)
+#   * probing for optional dependencies (KyotoCabinet, Python, etc.)
+#     (no configure phase!)
 #   * setting build tags based on that
 
 main {
