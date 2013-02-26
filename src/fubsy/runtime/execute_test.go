@@ -13,6 +13,7 @@ import (
 
 	"fubsy/dag"
 	"fubsy/dsl"
+	"fubsy/testutils"
 	"fubsy/types"
 )
 
@@ -61,6 +62,43 @@ func Test_evaluate_simple(t *testing.T) {
 	fnode := dsl.NewASTFileFinder(patterns)
 	expect = dag.NewFinderNode("*.c", "blah")
 	assertEvaluateOK(t, rt, expect, fnode)
+}
+
+func Test_evaluate_list(t *testing.T) {
+	rt := minimalRuntime()
+	rt.stack.Assign("blop", types.FuString("bar"))
+	elements := []dsl.ASTExpression{
+		dsl.NewASTString("\"foo\""),
+		dsl.NewASTName("blop"),
+		dsl.NewASTString("\"baz\""),
+	}
+	astlist := dsl.NewASTList(elements)
+
+	actual, errs := rt.evaluate(astlist)
+	testutils.NoErrors(t, errs)
+	expect := types.MakeFuList("foo", "bar", "baz")
+	assert.Equal(t, expect, actual)
+}
+
+func Test_evaluate_list_errors(t *testing.T) {
+	rt := minimalRuntime()
+	rt.stack.Assign("src", types.FuString("foo.c"))
+	elements := []dsl.ASTExpression{
+		dsl.NewASTString("\"whee!\""),
+		dsl.NewASTName("bogus"),
+		dsl.NewASTName("src"),
+		dsl.NewASTString("\"bop\""),
+		dsl.NewASTName("morebogus"),
+	}
+	astlist := dsl.NewASTList(elements)
+
+	actual, errs := rt.evaluate(astlist)
+	if len(errs) != 2 {
+		t.Fatalf("expected 2 errors, but got %d: %v", len(errs), errs)
+	}
+	assert.Equal(t, "name not defined: 'bogus'", errs[0].Error())
+	assert.Equal(t, "name not defined: 'morebogus'", errs[1].Error())
+	assert.Nil(t, actual)
 }
 
 // evaluate more complex expressions

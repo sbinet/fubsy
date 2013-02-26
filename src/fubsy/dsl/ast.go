@@ -465,6 +465,10 @@ func (self *ASTList) String() string {
 	return "[" + strings.Join(elements, ", ") + "]"
 }
 
+func (self *ASTList) Elements() []ASTExpression {
+	return self.elements
+}
+
 func NewASTFunctionCall(
 	function ASTExpression,
 	args []ASTExpression,

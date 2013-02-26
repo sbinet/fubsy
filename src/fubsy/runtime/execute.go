@@ -35,6 +35,8 @@ func (self *Runtime) evaluate(
 	switch expr := expr_.(type) {
 	case *dsl.ASTString:
 		result = types.FuString(expr.Value())
+	case *dsl.ASTList:
+		result, errs = self.evaluateList(expr)
 	case *dsl.ASTName:
 		result, errs = self.evaluateName(expr)
 	case *dsl.ASTFileFinder:
@@ -57,6 +59,23 @@ func (self *Runtime) evaluate(
 		errs[i] = MakeLocationError(expr_, err)
 	}
 	return
+}
+
+func (self *Runtime) evaluateList(expr *dsl.ASTList) (types.FuObject, []error) {
+	elements := expr.Elements()
+	result := make(types.FuList, len(elements))
+	var allerrs []error
+	var errs []error
+	for i, element := range elements {
+		result[i], errs = self.evaluate(element)
+		if len(errs) != 0 {
+			allerrs = append(allerrs, errs...)
+		}
+	}
+	if allerrs != nil {
+		return nil, allerrs
+	}
+	return result, nil
 }
 
 func (self *Runtime) evaluateName(expr *dsl.ASTName) (types.FuObject, []error) {
