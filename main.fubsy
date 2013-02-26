@@ -46,6 +46,11 @@ main {
         "gofmt -w $TARGET"
     }
 
+    # generate Python embedding
+    "$src/plugins/empython.c": ["$src/runtime/builtins.go", "genplugins.py"] {
+        "python genplugins.py $SOURCE $TARGETS"
+    }
+
     # and build fubsy: all package *.a files and the binary
     # (ignoring the package files because I don't know what
     # the current platform is: need to run "go env" and parse
@@ -84,7 +89,7 @@ main {
     ActionNode("test/fubsy/log"): <$src/log/*.go> {
         "go test $tagflag fubsy/log"
     }
-    ActionNode("test/fubsy/plugins"): <$src/plugins/*.go> {
+    ActionNode("test/fubsy/plugins"): <$src/plugins/*.go $src/plugins/*.[ch]> {
         "go test $tagflag fubsy/plugins"
     }
     ActionNode("test/fubsy/runtime"): <$src/runtime/*.go> {

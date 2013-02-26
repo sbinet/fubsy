@@ -62,6 +62,8 @@ run "$golex -o src/fubsy/dsl/fulex.go src/fubsy/dsl/fulex.l"
 run "go tool yacc -p fu -o src/fubsy/dsl/fugrammar.go src/fubsy/dsl/fugrammar.y"
 run "gofmt -w src/fubsy/dsl/fulex.go src/fubsy/dsl/fugrammar.go"
 
+run "python genplugins.py src/fubsy/runtime/builtins.go src/fubsy/plugins/empython.c"
+
 # uncomment this to run benchmarks
 #benchopt="-test.bench=.*"
 

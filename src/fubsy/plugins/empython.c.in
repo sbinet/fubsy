@@ -56,36 +56,11 @@ call_builtin(void *gofunc, PyObject *self, PyObject *args) {
 }
 
 /* gofunc members are set by InstallBuiltins() in python.go */
-static builtin_t builtins[] = {
-    {"println", NULL},
-    {"mkdir", NULL},
-    {"remove", NULL},
-    {"build", NULL},
-    {"FileNode", NULL},
-    {"ActionNode", NULL},
-};
+@builtins@
 
-static PyObject*
-py_println(PyObject *self, PyObject *args) {
-    return call_builtin(builtins[0].gofunc, self, args);
-}
+@pycfunctions@
 
-static PyObject*
-py_mkdir(PyObject *self, PyObject *args) {
-    return call_builtin(builtins[1].gofunc, self, args);
-}
-
-static PyObject*
-py_remove(PyObject *self, PyObject *args) {
-    return call_builtin(builtins[2].gofunc, self, args);
-}
-
-static PyMethodDef methods[] = {
-    {"println", py_println, METH_VARARGS, NULL},
-    {"mkdir", py_mkdir, METH_VARARGS, NULL},
-    {"remove", py_remove, METH_VARARGS, NULL},
-    {NULL, NULL, 0, NULL},
-};
+@pymethodtable@
 
 void
 setCallback(int idx, void *gofunc) {

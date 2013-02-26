@@ -5,7 +5,7 @@
 ^y.output$
 ^[a-z]+\.test$
 ^src/fubsy/dsl/fu(grammar|lex)\.go$
-^src/fubsy/db/kyotodb(_test)?\.go$
+^src/fubsy/plugins/empython\.c$
 ^doc/\.build$
 ^examples/.*/classes$
 ^coverage-
