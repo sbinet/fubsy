@@ -1,5 +1,11 @@
 #!/bin/sh
 
+showvar() {
+    name=$1
+    val=`eval echo \\$$name`
+    echo "$name=\"$val\" ; export $name"
+}
+
 run() {
     echo $1
     eval $1
@@ -25,7 +31,7 @@ fi
 
 top=`pwd`
 export GOPATH=$top:$top/.build/1
-echo "GOPATH=$GOPATH"
+showvar GOPATH
 
 # set build tags based on what configure.sh found when it probed
 tagdir=".build/tags"
@@ -37,11 +43,12 @@ configdir=".build/config"
 checkexists -f $configdir/cgo-cflags
 CGO_CFLAGS=`cat $configdir/cgo-cflags | sed 's/ *$//' | tr -d '\n'`
 export CGO_CFLAGS
-echo "CGO_CFLAGS=\"$CGO_CFLAGS\""
+showvar CGO_CFLAGS
+
 checkexists -f $configdir/cgo-ldflags
 CGO_LDFLAGS=`cat $configdir/cgo-ldflags | sed 's/ *$//' | tr -d '\n'`
 export CGO_LDFLAGS
-echo "CGO_LDFLAGS=\"$CGO_LDFLAGS\""
+showvar CGO_LDFLAGS
 
 set -e
 
