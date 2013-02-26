@@ -1,13 +1,9 @@
 // +build python
 
 #include <Python.h>
+#include <assert.h>
+#include "empython.h"
 #include "_cgo_export.h"
-
-// pointers to Go functions (defined in fubsy/runtime)
-void *fn_reverse = NULL;
-void *fn_println = NULL;
-void *fn_mkdir = NULL;
-void *fn_remove = NULL;
 
 static PyObject*
 call_builtin(void *gofunc, PyObject *self, PyObject *args) {
@@ -59,19 +55,29 @@ call_builtin(void *gofunc, PyObject *self, PyObject *args) {
     return ret;
 }
 
+/* gofunc members are set by InstallBuiltins() in python.go */
+static builtin_t builtins[] = {
+    {"println", NULL},
+    {"mkdir", NULL},
+    {"remove", NULL},
+    {"build", NULL},
+    {"FileNode", NULL},
+    {"ActionNode", NULL},
+};
+
 static PyObject*
 py_println(PyObject *self, PyObject *args) {
-    return call_builtin(fn_println, self, args);
+    return call_builtin(builtins[0].gofunc, self, args);
 }
 
 static PyObject*
 py_mkdir(PyObject *self, PyObject *args) {
-    return call_builtin(fn_mkdir, self, args);
+    return call_builtin(builtins[1].gofunc, self, args);
 }
 
 static PyObject*
 py_remove(PyObject *self, PyObject *args) {
-    return call_builtin(fn_remove, self, args);
+    return call_builtin(builtins[2].gofunc, self, args);
 }
 
 static PyMethodDef methods[] = {
@@ -80,6 +86,14 @@ static PyMethodDef methods[] = {
     {"remove", py_remove, METH_VARARGS, NULL},
     {NULL, NULL, 0, NULL},
 };
+
+void
+setCallback(int idx, void *gofunc) {
+    int max = sizeof(builtins) / sizeof(builtins[0]);
+    assert(idx < max);
+    //assert(strcmp(builtins[idx].name, name) == 0);
+    builtins[idx].gofunc = gofunc;
+}
 
 int
 installBuiltins() {

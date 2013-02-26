@@ -35,29 +35,38 @@ func Test_PythonPlugin_builtins(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
 
-	// this isn't really the builtin Fubsy mkdir() function: we can't
+	// this isn't really the builtin Fubsy println() function: we can't
 	// use it because it's in the runtime package, and we don't want
 	// to because it has side-effects... but we're stuck with a
 	// hardcoded set of builtin function names for now, so we have to
 	// reuse one of them
 	calls := []string{}
-	fn_mkdir := func(args types.ArgSource) (types.FuObject, []error) {
+	fn_println := func(args types.ArgSource) (types.FuObject, []error) {
 		s := args.Args()[0].ValueString()
 		calls = append(calls, s)
 		return nil, nil
 	}
-	builtins := types.NewValueMap()
-	builtins.Assign("mkdir", types.NewFixedFunction("mkdir", 1, fn_mkdir))
+	builtins := StubBuiltinList{types.NewFixedFunction("println", 1, fn_println)}
 
 	pp, err := LoadMetaPlugin("python2", builtins)
 	assert.Nil(t, err)
 
 	values, err := pp.Run(`
-fubsy.mkdir("ding")
-fubsy.mkdir("dong")
+fubsy.println("ding")
+fubsy.println("dong")
 `)
 	_ = values
 	expect := []string{"ding", "dong"}
 	assert.Nil(t, err)
 	assert.Equal(t, expect, calls)
+}
+
+type StubBuiltinList []types.FuCallable
+
+func (self StubBuiltinList) NumBuiltins() int {
+	return len(self)
+}
+
+func (self StubBuiltinList) Builtin(idx int) (string, types.FuCode) {
+	return self[idx].Name(), self[idx].Code()
 }

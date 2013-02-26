@@ -8,7 +8,7 @@ package plugins
 
 import (
 	"errors"
-	//"fmt"
+	"fmt"
 	"strings"
 	"unsafe"
 
@@ -18,9 +18,8 @@ import (
 	"fubsy/types"
 )
 
-// void *fn_println;
-// void *fn_mkdir;
-// int installBuiltins(void);
+// #include <stdlib.h>
+// #include "empython.h"
 import "C"
 
 type PythonPlugin struct {
@@ -35,23 +34,16 @@ func (self PythonPlugin) String() string {
 	return "PythonPlugin"
 }
 
-func (self PythonPlugin) InstallBuiltins(builtins types.Namespace) error {
-	var fn types.FuCode
-	var fnptr unsafe.Pointer
-
-	getPointer := func(name string) unsafe.Pointer {
-		if fnobj, ok := builtins.Lookup(name); ok {
-			if fncallable, ok := fnobj.(types.FuCallable); ok {
-				fn = fncallable.Code()
-				fnptr = *(*unsafe.Pointer)(unsafe.Pointer(&fn))
-				return fnptr
-			}
-		}
-		return nil
+func (self PythonPlugin) InstallBuiltins(builtins BuiltinList) error {
+	fmt.Printf("InstallBuiltins: builtins = %T %v (num = %d)\n",
+		builtins, builtins, builtins.NumBuiltins())
+	for idx := 0; idx < builtins.NumBuiltins(); idx++ {
+		_, code := builtins.Builtin(idx)
+		fnptr := *(*unsafe.Pointer)(unsafe.Pointer(&code))
+		fmt.Printf("InstallBuiltins(): setting callback %d = %p (from %p)\n",
+			idx, fnptr, code)
+		C.setCallback(C.int(idx), fnptr)
 	}
-
-	C.fn_println = getPointer("println")
-	C.fn_mkdir = getPointer("mkdir")
 
 	if C.installBuiltins() < 0 {
 		return errors.New(

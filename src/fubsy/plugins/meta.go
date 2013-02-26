@@ -14,8 +14,15 @@ import (
 // Finding and using meta-plugins, i.e. plugins that interface with
 // other languages.
 
+// ordered collection of builtin Fubsy functions that can be called
+// from another language
+type BuiltinList interface {
+	NumBuiltins() int
+	Builtin(idx int) (name string, code types.FuCode)
+}
+
 type MetaPlugin interface {
-	InstallBuiltins(builtins types.Namespace) error
+	InstallBuiltins(builtins BuiltinList) error
 
 	// Execute the code in content, making the values in builtins
 	// available to it in a language-specific way. Return a map of
@@ -46,7 +53,7 @@ func init() {
 	metaCache = make(map[string]MetaPlugin)
 }
 
-func LoadMetaPlugin(language string, builtins types.Namespace) (MetaPlugin, error) {
+func LoadMetaPlugin(language string, builtins BuiltinList) (MetaPlugin, error) {
 	meta, ok := metaCache[language]
 	if ok && meta != nil {
 		return meta, nil
