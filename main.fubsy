@@ -50,7 +50,7 @@ main {
     # (ignoring the package files because I don't know what
     # the current platform is: need to run "go env" and parse
     # out GOHOSTOS, GOHOSTARCH)
-    localsrc = <$src/**/*.go>
+    localsrc = <$src/**/*.go $src/**/*.[ch]>
     "bin/fubsy": localsrc {
         "go install $tagflag -v fubsy/..."
     }
