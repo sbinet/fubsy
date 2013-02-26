@@ -53,7 +53,6 @@ func Test_PythonPlugin_builtins(t *testing.T) {
 	assert.Nil(t, err)
 
 	values, err := pp.Run(`
-import fubsy     # XXX this should be automatic!
 fubsy.mkdir("ding")
 fubsy.mkdir("dong")
 `)

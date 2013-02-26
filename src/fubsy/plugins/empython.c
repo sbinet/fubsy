@@ -83,9 +83,23 @@ static PyMethodDef methods[] = {
 
 int
 installBuiltins() {
-    PyObject *module = Py_InitModule("fubsy", methods);
-    if (!module) {
+    PyObject *fubsy, *main;
+
+    fubsy = Py_InitModule("fubsy", methods);
+    if (!fubsy) {
         return -1;
     }
+
+    /* "import fubsy" in __main__, so it's visible to inline plugins for free */
+    main = PyImport_ImportModule("__main__");
+    if (!main) {
+        return -1;
+    }
+    Py_INCREF(fubsy);                         /* AddObject() steals a ref */
+    if (PyModule_AddObject(main, "fubsy", fubsy) < 0) {
+        return -1;
+    }
+
+    Py_DECREF(main);
     return 0;
 }
