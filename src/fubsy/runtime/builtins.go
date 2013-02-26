@@ -7,6 +7,7 @@ package runtime
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"fubsy/dag"
@@ -15,9 +16,65 @@ import (
 
 // builtin functions (and other objects?)
 
-// Add all builtin functions to ns.
-func defineBuiltins(ns types.Namespace) {
-	functions := []*types.FuFunction{
+// implements types.Namespace, plugins.BuiltinList
+type BuiltinList struct {
+	builtins []types.FuCallable
+}
+
+// Namespace methods
+func (self BuiltinList) Lookup(name string) (types.FuObject, bool) {
+	idx, callable := self.find(name)
+	if idx == -1 {
+		return nil, false
+	}
+	return callable, true
+}
+
+func (self BuiltinList) Assign(name string, value types.FuObject) {
+	panic("list of builtin functions is immutable")
+}
+
+func (self BuiltinList) ForEach(
+	callback func(name string, value types.FuObject) error) error {
+	for _, b := range self.builtins {
+		err := callback(b.Name(), b)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (self BuiltinList) Dump(writer io.Writer, indent string) {
+	for _, b := range self.builtins {
+		fmt.Fprintf(writer, "%s%s = %s\n", indent, b.Name(), b)
+	}
+}
+
+// private methods
+func (self BuiltinList) find(name string) (int, types.FuCallable) {
+	for i, b := range self.builtins {
+		if b.Name() == name {
+			return i, b
+		}
+	}
+	return -1, nil
+}
+
+// methods of plugins.BuiltinList
+func (self BuiltinList) NumBuiltins() int {
+	return len(self.builtins)
+}
+
+func (self BuiltinList) Builtin(idx int) (string, types.FuCode) {
+	// panic if idx out of range
+	b := self.builtins[idx]
+	return b.Name(), b.Code()
+}
+
+// Return a new namespace containing all builtin functions.
+func defineBuiltins() BuiltinList {
+	builtins := []types.FuCallable{
 		types.NewVariadicFunction("println", 0, -1, fn_println),
 		types.NewVariadicFunction("mkdir", 0, -1, fn_mkdir),
 		types.NewVariadicFunction("remove", 0, -1, fn_remove),
@@ -28,10 +85,7 @@ func defineBuiltins(ns types.Namespace) {
 		types.NewFixedFunction("FileNode", 1, fn_FileNode),
 		types.NewFixedFunction("ActionNode", 1, fn_ActionNode),
 	}
-
-	for _, function := range functions {
-		ns.Assign(function.Name(), function)
-	}
+	return BuiltinList{builtins}
 }
 
 func fn_println(argsource types.ArgSource) (types.FuObject, []error) {

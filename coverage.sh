@@ -25,7 +25,8 @@ fi
 exclude="fubsy/testutils,\
 github.com/stretchrcom/testify/assert,\
 code.google.com/p/go-bit/bit,\
-github.com/ogier/pflag"
+github.com/ogier/pflag,\
+github.com/sbinet/go-python"
 
 echo "testing packages: $packages"
 build1=".build/1"

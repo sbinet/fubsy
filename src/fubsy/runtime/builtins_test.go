@@ -5,6 +5,7 @@
 package runtime
 
 import (
+	"errors"
 	//"fmt"
 	"io/ioutil"
 	"os"
@@ -19,9 +20,43 @@ import (
 	"fubsy/types"
 )
 
+func Test_BuiltinList(t *testing.T) {
+	blist := BuiltinList{}
+	fn, ok := blist.Lookup("foo")
+	assert.False(t, ok)
+	assert.Nil(t, fn)
+
+	callable := types.NewFixedFunction("foo", 3, nil)
+	blist.builtins = append(blist.builtins, callable)
+	fn, ok = blist.Lookup("foo")
+	assert.True(t, ok)
+	assert.Equal(t, callable, fn)
+
+	blist.builtins = append(
+		blist.builtins, types.NewFixedFunction("bar", 0, nil))
+	blist.builtins = append(
+		blist.builtins, types.NewFixedFunction("bop", 0, nil))
+	blist.builtins = append(
+		blist.builtins, types.NewFixedFunction("bam", 0, nil))
+	blist.builtins = append(
+		blist.builtins, types.NewFixedFunction("pow", 0, nil))
+
+	assert.Equal(t, 5, blist.NumBuiltins())
+	actual := make([]string, 0, 5)
+	visit := func(name string, code types.FuObject) error {
+		actual = append(actual, name)
+		if name == "bam" {
+			return errors.New("bam!")
+		}
+		return nil
+	}
+	err := blist.ForEach(visit)
+	assert.Equal(t, []string{"foo", "bar", "bop", "bam"}, actual)
+	assert.Equal(t, "bam!", err.Error())
+}
+
 func Test_defineBuiltins(t *testing.T) {
-	ns := types.NewValueMap()
-	defineBuiltins(ns)
+	ns := defineBuiltins()
 
 	fn, ok := ns.Lookup("println")
 	assert.True(t, ok)
@@ -32,6 +67,11 @@ func Test_defineBuiltins(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, fn)
 	assert.Equal(t, fn.(types.FuCallable).Code(), types.FuCode(fn_remove))
+
+	// there will never be a builtin with this name: guaranteed!
+	fn, ok = ns.Lookup("sad425.-afgasdf")
+	assert.False(t, ok)
+	assert.Nil(t, fn)
 }
 
 func Test_println(t *testing.T) {

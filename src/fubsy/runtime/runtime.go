@@ -30,7 +30,7 @@ type Runtime struct {
 	script  string // filename
 	ast     *dsl.ASTRoot
 
-	builtins types.ValueMap
+	builtins BuiltinList
 	stack    *types.ValueStack
 	dag      *dag.DAG
 }
@@ -39,8 +39,7 @@ func NewRuntime(
 	options build.BuildOptions, script string, ast *dsl.ASTRoot) *Runtime {
 	stack := types.NewValueStack()
 
-	builtins := types.NewValueMap()
-	defineBuiltins(builtins)
+	builtins := defineBuiltins()
 	stack.Push(builtins)
 
 	// Local variables are per-script, but we only support a single
