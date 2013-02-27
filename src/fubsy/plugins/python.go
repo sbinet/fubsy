@@ -8,7 +8,7 @@ package plugins
 
 import (
 	"errors"
-	"fmt"
+	//"fmt"
 	"strings"
 	"unsafe"
 
@@ -35,13 +35,9 @@ func (self PythonPlugin) String() string {
 }
 
 func (self PythonPlugin) InstallBuiltins(builtins BuiltinList) error {
-	fmt.Printf("InstallBuiltins: builtins = %T %v (num = %d)\n",
-		builtins, builtins, builtins.NumBuiltins())
 	for idx := 0; idx < builtins.NumBuiltins(); idx++ {
 		_, code := builtins.Builtin(idx)
 		fnptr := *(*unsafe.Pointer)(unsafe.Pointer(&code))
-		fmt.Printf("InstallBuiltins(): setting callback %d = %p (from %p)\n",
-			idx, fnptr, code)
 		C.setCallback(C.int(idx), fnptr)
 	}
 
