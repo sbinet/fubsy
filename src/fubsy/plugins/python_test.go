@@ -17,7 +17,7 @@ import (
 
 func Test_PythonPlugin_Run(t *testing.T) {
 	pp, err := NewPythonPlugin()
-	assert.Nil(t, err)
+	testutils.NoError(t, err)
 	values, err := pp.Run(`
 foo = ["abc", "def"]
 bar = "!".join(foo)`)
@@ -25,7 +25,7 @@ bar = "!".join(foo)`)
 	// PythonPlugin doesn't yet harvest Python values, so we cannot do
 	// anything to test values
 	_ = values
-	assert.Nil(t, err)
+	testutils.NoError(t, err)
 
 	values, err = pp.Run("foo = 1/0")
 	assert.Equal(t, "inline Python plugin raised an exception", err.Error())
@@ -49,7 +49,7 @@ func Test_PythonPlugin_builtins(t *testing.T) {
 	builtins := StubBuiltinList{types.NewFixedFunction("println", 1, fn_println)}
 
 	pp, err := LoadMetaPlugin("python2", builtins)
-	assert.Nil(t, err)
+	testutils.NoError(t, err)
 
 	values, err := pp.Run(`
 fubsy.println("ding")
@@ -57,7 +57,7 @@ fubsy.println("dong")
 `)
 	_ = values
 	expect := []string{"ding", "dong"}
-	assert.Nil(t, err)
+	testutils.NoError(t, err)
 	assert.Equal(t, expect, calls)
 }
 

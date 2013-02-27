@@ -20,6 +20,10 @@ func NewPythonPlugin() (MetaPlugin, error) {
 	return nil, NotAvailableError{"Python"}
 }
 
+func (self PythonPlugin) InstallBuiltins(builtins BuiltinList) error {
+	panic("dummy implementation")
+}
+
 func (self PythonPlugin) Run(content string) (types.ValueMap, error) {
 	panic("dummy implementation")
 }
