@@ -15,23 +15,34 @@ import (
 )
 
 // Ensure that errs is empty. If not, fail the current test
-// (non-fatally) and return false. Otherwise return true.
-func NoErrors(t *testing.T, errs []error) bool {
+// and return false. Otherwise return true.
+func NoErrors(t *testing.T, errs []error) {
 	if len(errs) == 0 {
-		return true
+		return
 	}
 	formatted := make([]string, len(errs))
 	for i, err := range errs {
 		formatted[i] = fmt.Sprintf("%T: %s", err, err.Error())
 	}
-	caller := ""
-	_, file, line, ok := runtime.Caller(1)
-	if ok {
-		caller = fmt.Sprintf("%s:%d: ", filepath.Base(file), line)
+	t.Fatalf("%sexpected no errors, but got %d:\n%s",
+		caller(1), len(errs), strings.Join(formatted, "\n"))
+}
+
+// Ensure that err is nil. If not, fail the current test and return
+// false; otherwise return true.
+func NoError(t *testing.T, err error) {
+	if err == nil {
+		return
 	}
-	t.Errorf("%sexpected no errors, but got %d:\n%s",
-		caller, len(errs), strings.Join(formatted, "\n"))
-	return false
+	t.Fatalf("%sexpected no error, but got %T: %s", caller(1), err, err.Error())
+}
+
+func caller(skip int) string {
+	_, file, line, ok := runtime.Caller(skip + 1)
+	if ok {
+		return fmt.Sprintf("%s:%d: ", filepath.Base(file), line)
+	}
+	return ""
 }
 
 // Create a temporary directory. Return the name of the directory and
