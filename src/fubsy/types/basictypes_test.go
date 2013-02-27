@@ -14,29 +14,29 @@ import (
 func Test_FuString_stringify(t *testing.T) {
 	var s FuObject
 
-	s = FuString("hello")
+	s = MakeFuString("hello")
 	assert.Equal(t, "\"hello\"", s.String())
 	assert.Equal(t, "hello", s.ValueString())
 	assert.Equal(t, "hello", s.CommandString())
 
-	s = FuString("bip bop")
+	s = MakeFuString("bip bop")
 	assert.Equal(t, "\"bip bop\"", s.String())
 	assert.Equal(t, "bip bop", s.ValueString())
 	assert.Equal(t, "'bip bop'", s.CommandString())
 
-	s = FuString("don't start")
+	s = MakeFuString("don't start")
 	assert.Equal(t, "\"don't start\"", s.String())
 	assert.Equal(t, "don't start", s.ValueString())
 	assert.Equal(t, "\"don't start\"", s.CommandString())
 }
 
 func Test_basictypes_Equal(t *testing.T) {
-	s1 := FuString("foo")
-	s2 := FuString("foo")
-	s3 := FuString("bar")
-	l1 := FuList([]FuObject{s1, s3})
-	l2 := FuList([]FuObject{s2, s3})
-	l3 := FuList([]FuObject{s3})
+	s1 := MakeFuString("foo")
+	s2 := MakeFuString("foo")
+	s3 := MakeFuString("bar")
+	l1 := MakeFuList(s1, s3)
+	l2 := MakeFuList(s2, s3)
+	l3 := MakeFuList(s3)
 
 	// FuString.Equal is just like builtin string ==
 	assert.True(t, s1.Equal(s1))
@@ -55,20 +55,20 @@ func Test_basictypes_Equal(t *testing.T) {
 }
 
 func Test_FuString_Add_strings(t *testing.T) {
-	s1 := FuString("hello")
-	s2 := FuString("world")
+	s1 := MakeFuString("hello")
+	s2 := MakeFuString("world")
 	var result FuObject
 	var err error
 
 	// s1 + s1
 	result, err = s1.Add(s1)
 	assert.Nil(t, err)
-	assert.Equal(t, "hellohello", result.(FuString))
+	assert.Equal(t, "hellohello", result.(FuString).value)
 
 	// s1 + s2
 	result, err = s1.Add(s2)
 	assert.Nil(t, err)
-	assert.Equal(t, "helloworld", result.(FuString))
+	assert.Equal(t, "helloworld", result.(FuString).value)
 
 	// s1 + s2 + s1 + s2
 	// (equivalent to ((s1.Add(s2)).Add(s1)).Add(s2), except we have
@@ -79,16 +79,16 @@ func Test_FuString_Add_strings(t *testing.T) {
 	assert.Nil(t, err)
 	result, err = result.Add(s2)
 	assert.Nil(t, err)
-	assert.Equal(t, "helloworldhelloworld", result.(FuString))
+	assert.Equal(t, "helloworldhelloworld", result.(FuString).value)
 
 	// neither s1 nor s2 is affected by all this adding
-	assert.Equal(t, "hello", string(s1))
-	assert.Equal(t, "world", string(s2))
+	assert.Equal(t, "hello", s1.value)
+	assert.Equal(t, "world", s2.value)
 }
 
 func Test_FuString_Add_list(t *testing.T) {
-	cmd := FuString("ls")
-	args := MakeFuList("-l", "-a", "foo")
+	cmd := MakeFuString("ls")
+	args := MakeStringList("-l", "-a", "foo")
 	result, err := cmd.Add(args)
 	assert.Nil(t, err)
 	assert.Equal(t, `["ls", "-l", "-a", "foo"]`, result.String())
@@ -96,7 +96,7 @@ func Test_FuString_Add_list(t *testing.T) {
 
 func Test_FuString_Lookup(t *testing.T) {
 	// strings have no attributes
-	s := FuString("blah")
+	s := MakeFuString("blah")
 	val, ok := s.Lookup("foo")
 	assert.Nil(t, val)
 	assert.False(t, ok)
@@ -126,17 +126,17 @@ func Test_expand_re(t *testing.T) {
 
 func Test_FuString_ActionExpand(t *testing.T) {
 	ns := makeNamespace("foo", "hello", "meep", "blorf")
-	input := FuString("meep meep!")
+	input := MakeFuString("meep meep!")
 	output, err := input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
 
-	input = FuString("meep $foo blah")
+	input = MakeFuString("meep $foo blah")
 	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "meep hello blah", output.ValueString())
 
-	input = FuString("hello ${foo} $meep")
+	input = MakeFuString("hello ${foo} $meep")
 	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "hello hello blorf", output.ValueString())
@@ -146,7 +146,7 @@ func Test_FuString_ActionExpand(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "hello  blorf", output.ValueString())
 
-	ns.Assign("foo", FuString("ping$pong"))
+	ns.Assign("foo", MakeFuString("ping$pong"))
 	output, err = input.ActionExpand(ns, nil)
 	assert.Equal(t, "undefined variable 'pong' in string", err.Error())
 	assert.Nil(t, output)
@@ -158,13 +158,13 @@ func Test_FuString_ActionExpand_recursive(t *testing.T) {
 		"sources", "$file",
 		"file", "f1.c")
 	expect := "/usr/bin/gcc -c f1.c"
-	input := FuString("$CC -c $sources")
+	input := MakeFuString("$CC -c $sources")
 	output, err := input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, expect, output.ValueString())
 
 	// same thing, but now files is a list
-	ns.Assign("files", FuList([]FuObject{FuString("f1.c")}))
+	ns.Assign("files", MakeStringList("f1.c"))
 	output, err = input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, expect, output.ValueString())
@@ -173,7 +173,7 @@ func Test_FuString_ActionExpand_recursive(t *testing.T) {
 func Test_FuString_ActionExpand_cycle(t *testing.T) {
 	ns := makeNamespace(
 		"a", "x.$a.y")
-	s := FuString("oh hi it's $a")
+	s := MakeFuString("oh hi it's $a")
 	_, err := s.ActionExpand(ns, nil)
 	assert.Equal(t, "cyclic variable reference: a -> a", err.Error())
 }
@@ -181,50 +181,50 @@ func Test_FuString_ActionExpand_cycle(t *testing.T) {
 func Test_FuList_stringify(t *testing.T) {
 	var l FuObject
 
-	l = MakeFuList("beep", "meep")
+	l = MakeStringList("beep", "meep")
 	assert.Equal(t, `["beep", "meep"]`, l.String())
 	assert.Equal(t, `beep meep`, l.ValueString())
 	assert.Equal(t, `beep meep`, l.CommandString())
 
-	l = MakeFuList("beep", "", "meep")
+	l = MakeStringList("beep", "", "meep")
 	assert.Equal(t, `["beep", "", "meep"]`, l.String())
 	assert.Equal(t, `beep  meep`, l.ValueString())
 	assert.Equal(t, `beep '' meep`, l.CommandString())
 
-	l = MakeFuList("foo", "*.c", "ding dong", "")
+	l = MakeStringList("foo", "*.c", "ding dong", "")
 	assert.Equal(t, `["foo", "*.c", "ding dong", ""]`, l.String())
 	assert.Equal(t, `foo *.c ding dong `, l.ValueString())
 	assert.Equal(t, `foo '*.c' 'ding dong' ''`, l.CommandString())
 }
 
 func Test_FuList_Add_list(t *testing.T) {
-	l1 := MakeFuList("foo", "bar")
-	l2 := MakeFuList("qux")
+	l1 := MakeStringList("foo", "bar")
+	l2 := MakeStringList("qux")
 
 	result, err := l1.Add(l2)
-	expect := MakeFuList("foo", "bar", "qux")
+	expect := MakeStringList("foo", "bar", "qux")
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
 
 	result, err = l2.Add(l1)
-	expect = MakeFuList("qux", "foo", "bar")
+	expect = MakeStringList("qux", "foo", "bar")
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
 }
 
 func Test_FuList_Add_string(t *testing.T) {
-	cmd := MakeFuList("ls", "-la")
-	arg := FuString("stuff/")
+	cmd := MakeStringList("ls", "-la")
+	arg := MakeFuString("stuff/")
 
 	result, err := cmd.Add(arg)
-	expect := MakeFuList("ls", "-la", "stuff/")
+	expect := MakeStringList("ls", "-la", "stuff/")
 	assert.Nil(t, err)
 	assert.Equal(t, expect, result)
 }
 
 func Test_FuList_ActionExpand(t *testing.T) {
 	ns := makeNamespace()
-	input := MakeFuList("gob", "mob")
+	input := MakeStringList("gob", "mob")
 	output, err := input.ActionExpand(ns, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, input, output)
@@ -236,7 +236,7 @@ func Test_FuList_ActionExpand_cycle(t *testing.T) {
 		"b", "a",
 		"c", "it's a $list",
 		"foo", "ok")
-	list := MakeFuList("yo", "$foo", "$c", "$b")
+	list := MakeStringList("yo", "$foo", "$c", "$b")
 	ns.Assign("list", list)
 
 	_, err := list.ActionExpand(ns, nil)
@@ -245,22 +245,22 @@ func Test_FuList_ActionExpand_cycle(t *testing.T) {
 
 func Test_ExpandString_cycle(t *testing.T) {
 	ns := makeNamespace()
-	ns.Assign("a", FuString("aaa$b"))
-	ns.Assign("b", FuString("$d bbb$c"))
-	ns.Assign("c", FuString("${a}ccc"))
-	ns.Assign("d", FuString("no problem"))
+	ns.Assign("a", MakeFuString("aaa$b"))
+	ns.Assign("b", MakeFuString("$d bbb$c"))
+	ns.Assign("c", MakeFuString("${a}ccc"))
+	ns.Assign("d", MakeFuString("no problem"))
 
 	_, _, err := ExpandString("hello $a", ns, nil)
 	assert.Equal(t, "cyclic variable reference: a -> b -> c -> a", err.Error())
 
 	// we only detect and report the first cycle
-	ns.Assign("c", FuString("${b}ccc${a}"))
+	ns.Assign("c", MakeFuString("${b}ccc${a}"))
 	_, _, err = ExpandString("hello $c", ns, nil)
 	assert.Equal(t, "cyclic variable reference: c -> b -> c", err.Error())
 
 	// same treatment mixing types
-	ns.Assign("s", FuString("list = $l"))
-	ns.Assign("l", MakeFuList("foo", "string = $s", "bar"))
+	ns.Assign("s", MakeFuString("list = $l"))
+	ns.Assign("l", MakeStringList("foo", "string = $s", "bar"))
 	_, _, err = ExpandString("${s}", ns, nil)
 	assert.Equal(t, "cyclic variable reference: s -> l -> s", err.Error())
 }
@@ -292,7 +292,7 @@ func Test_ShellQuote(t *testing.T) {
 func makeNamespace(keyval ...string) Namespace {
 	ns := NewValueMap()
 	for i := 0; i < len(keyval); i += 2 {
-		ns[keyval[i]] = FuString(keyval[i+1])
+		ns[keyval[i]] = MakeFuString(keyval[i+1])
 	}
 	return ns
 }

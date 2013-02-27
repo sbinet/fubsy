@@ -112,15 +112,15 @@ func Test_FileNode_buildrule(t *testing.T) {
 func Test_FileNode_Add(t *testing.T) {
 	node0 := NewFileNode("foo/bar")
 	node1 := NewFileNode("foo/baz")
-	obj0 := types.FuString(".c")
-	obj1 := types.MakeFuList("a", "b")
+	obj0 := types.MakeFuString(".c")
+	obj1 := types.MakeStringList("a", "b")
 
 	var err error
 	var expect types.FuObject
 	var actual types.FuObject
 
 	// node + node = list of nodes
-	expect = types.FuList([]types.FuObject{node0, node1})
+	expect = types.MakeFuList(node0, node1)
 	actual, err = node0.Add(node1)
 	assert.Nil(t, err)
 	assert.True(t, expect.Equal(actual))
@@ -132,8 +132,8 @@ func Test_FileNode_Add(t *testing.T) {
 	assert.True(t, expect.Equal(actual))
 
 	// node + list = flattened list
-	expect = types.FuList([]types.FuObject{
-		node0, types.FuString("a"), types.FuString("b")})
+	expect = types.MakeFuList(
+		node0, types.MakeFuString("a"), types.MakeFuString("b"))
 	actual, err = node0.Add(obj1)
 	assert.Nil(t, err)
 	assert.True(t, expect.Equal(actual))
@@ -158,8 +158,8 @@ func Test_FileNode_Expand(t *testing.T) {
 	// make it so "$foo$bar" expands to "$foo", and ensure that
 	// expansion stops there
 	// XXX argh: currently this expands to "'$'foo": hmmmmm
-	// ns.Assign("foo", types.FuString("$"))
-	// ns.Assign("bar", types.FuString("foo"))
+	// ns.Assign("foo", types.MakeFuString("$"))
+	// ns.Assign("bar", types.MakeFuString("foo"))
 	// xnode, err = node.ActionExpand(ns, nil)
 	// assert.Nil(t, err)
 	// assert.Equal(t, "$foo", xnode.String())

@@ -80,22 +80,25 @@ type FuObject interface {
 
 // a Fubsy string is a Go string, until there's a demonstrated need
 // for something more
-type FuString string
+type FuString struct {
+	value string
+}
 
-// a Fubsy list is a slice of Fubsy objects
-type FuList []FuObject
+func MakeFuString(s string) FuString {
+	return FuString{value: s}
+}
 
 func (self FuString) String() string {
 	// need to worry about escaping when the DSL supports it!
-	return "\"" + string(self) + "\""
+	return "\"" + self.value + "\""
 }
 
 func (self FuString) ValueString() string {
-	return string(self)
+	return self.value
 }
 
 func (self FuString) CommandString() string {
-	return ShellQuote(string(self))
+	return ShellQuote(self.value)
 }
 
 func (self FuString) Equal(other_ FuObject) bool {
@@ -107,13 +110,13 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 	switch other := other_.(type) {
 	case FuString:
 		// "foo" + "bar" == "foobar"
-		return FuString(self + other), nil
+		return MakeFuString(self.value + other.value), nil
 	case FuList:
 		// "foo" + ["bar"] == ["foo", "bar"]
-		newlist := make(FuList, len(other)+1)
-		newlist[0] = self
-		copy(newlist[1:], other)
-		return newlist, nil
+		values := make([]FuObject, len(other.values)+1)
+		values[0] = self
+		copy(values[1:], other.values)
+		return MakeFuList(values...), nil
 	default:
 		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
 	}
@@ -138,20 +141,39 @@ func init() {
 }
 
 func (self FuString) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, error) {
-	_, s, err := ExpandString(string(self), ns, ctx)
+	_, s, err := ExpandString(self.value, ns, ctx)
 	if err != nil {
 		return nil, err
 	}
-	return FuString(s), nil
+	return MakeFuString(s), nil
 }
 
 func (self FuString) Typename() string {
 	return "string"
 }
 
+// a Fubsy list is a slice of Fubsy objects
+type FuList struct {
+	values []FuObject
+}
+
+// Convert a variable number of strings to a FuList of FuString.
+func MakeStringList(strings ...string) FuList {
+	values := make([]FuObject, len(strings))
+	for i, s := range strings {
+		values[i] = MakeFuString(s)
+	}
+	return MakeFuList(values...)
+}
+
+// Convert a variable number of FuObjects to a FuList.
+func MakeFuList(objects ...FuObject) FuList {
+	return FuList{values: objects}
+}
+
 func (self FuList) String() string {
-	result := make([]string, len(self))
-	for i, obj := range self {
+	result := make([]string, len(self.values))
+	for i, obj := range self.values {
 		result[i] = obj.String()
 	}
 	return "[" + strings.Join(result, ", ") + "]"
@@ -161,16 +183,16 @@ func (self FuList) ValueString() string {
 	// ValueString() doesn't make a lot of sense for FuList, since it
 	// doesn't contain a single filename to open or command to run ...
 	// but we have to provide *something*!
-	result := make([]string, len(self))
-	for i, obj := range self {
+	result := make([]string, len(self.values))
+	for i, obj := range self.values {
 		result[i] = obj.ValueString()
 	}
 	return strings.Join(result, " ")
 }
 
 func (self FuList) CommandString() string {
-	result := make([]string, 0, len(self))
-	for _, val := range self {
+	result := make([]string, 0, len(self.values))
+	for _, val := range self.values {
 		csval := val.CommandString()
 		if len(csval) > 0 {
 			result = append(result, csval)
@@ -186,10 +208,10 @@ func (self FuList) Equal(other_ FuObject) bool {
 
 func (self FuList) Add(other FuObject) (FuObject, error) {
 	otherlist := other.List()
-	result := make(FuList, len(self)+len(otherlist))
-	copy(result, self)
-	copy(result[len(self):], otherlist)
-	return result, nil
+	values := make([]FuObject, len(self.values)+len(otherlist))
+	copy(values, self.values)
+	copy(values[len(self.values):], otherlist)
+	return MakeFuList(values...), nil
 }
 
 func (self FuList) Lookup(name string) (FuObject, bool) {
@@ -197,19 +219,19 @@ func (self FuList) Lookup(name string) (FuObject, bool) {
 }
 
 func (self FuList) List() []FuObject {
-	return self
+	return self.values
 }
 
 func (self FuList) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, error) {
-	result := make(FuList, 0, len(self))
-	for _, val := range self {
+	values := make([]FuObject, 0, len(self.values))
+	for _, val := range self.values {
 		xval, err := val.ActionExpand(ns, ctx)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, xval.List()...)
+		values = append(values, xval.List()...)
 	}
-	return result, nil
+	return MakeFuList(values...), nil
 }
 
 func (self FuList) Typename() string {
@@ -270,15 +292,6 @@ func (self StubObject) Typename() string {
 func unsupportedOperation(self FuObject, other FuObject, detail string) error {
 	return fmt.Errorf("unsupported operation: "+detail,
 		other.Typename(), self.Typename())
-}
-
-// Convert a variable number of strings to a FuList of FuString.
-func MakeFuList(strings ...string) FuList {
-	result := make(FuList, len(strings))
-	for i, s := range strings {
-		result[i] = FuString(s)
-	}
-	return result
 }
 
 // object passed around when expanding values in order to detect and

@@ -17,7 +17,7 @@ func Test_ValueMap_basics(t *testing.T) {
 	val, ok = ns.Lookup("bar")
 	assert.False(t, ok)
 
-	ns.Assign("foo", FuString("blurp"))
+	ns.Assign("foo", MakeFuString("blurp"))
 	val, ok = ns.Lookup("foo")
 	assert.True(t, ok)
 	assert.Equal(t, "blurp", val.ValueString())
@@ -30,11 +30,11 @@ func Test_ValueStack_Lookup(t *testing.T) {
 	val, ok := empty.Lookup("foo")
 	assert.False(t, ok)
 
-	list1 := FuList([]FuObject{FuString("ding"), FuString("dong")})
-	list2 := FuList([]FuObject{FuString("shadow")})
+	list1 := MakeStringList("ding", "dong")
+	list2 := MakeStringList("shadow")
 
 	ns0 := NewValueMap()
-	ns0.Assign("foo", FuString("hello"))
+	ns0.Assign("foo", MakeFuString("hello"))
 	ns0.Assign("bar", list1)
 	ns1 := NewValueMap()
 	ns1.Assign("foo", list2)
@@ -57,9 +57,9 @@ func Test_ValueStack_Assign(t *testing.T) {
 	stack.Push(ns0)
 	assert.Equal(t, 1, len(stack))
 
-	val1 := FuString("hello")
-	val2 := FuString("world")
-	val3 := FuString("fnord")
+	val1 := MakeFuString("hello")
+	val2 := MakeFuString("world")
+	val3 := MakeFuString("fnord")
 
 	stack.Assign("foo", val1)
 	val, ok := stack.Lookup("foo")

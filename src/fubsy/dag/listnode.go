@@ -41,7 +41,7 @@ func newListNode(members ...types.FuObject) *ListNode {
 	name := strings.Join(names, ",")
 	node := &ListNode{
 		nodebase:     makenodebase(name),
-		types.FuList: members,
+		types.FuList: types.MakeFuList(members...),
 	}
 	return node
 }
@@ -52,14 +52,14 @@ func ListNodeFromNodes(nodes []Node) *ListNode {
 		names[i] = node.Name()
 	}
 	name := strings.Join(names, ",")
-	lnode := &ListNode{
-		nodebase:     makenodebase(name),
-		types.FuList: make(types.FuList, len(nodes)),
-	}
+	values := make([]types.FuObject, len(nodes))
 	for i, node := range nodes {
-		lnode.FuList[i] = node
+		values[i] = node
 	}
-	return lnode
+	return &ListNode{
+		nodebase:     makenodebase(name),
+		types.FuList: types.MakeFuList(values...),
+	}
 }
 
 func MakeListNode(dag *DAG, member ...types.FuObject) *ListNode {
@@ -86,12 +86,13 @@ func (self *ListNode) Equal(other_ types.FuObject) bool {
 }
 
 func (self *ListNode) Add(other types.FuObject) (types.FuObject, error) {
+	values := self.FuList.List()
 	otherlist := other.List()
-	result := make([]types.FuObject, len(self.FuList)+len(otherlist))
-	for i, obj := range self.FuList {
+	result := make([]types.FuObject, len(values)+len(otherlist))
+	for i, obj := range values {
 		result[i] = obj
 	}
-	j := len(self.FuList)
+	j := len(values)
 	for i, obj := range otherlist {
 		if _, ok := obj.(Node); !ok {
 			err := fmt.Errorf(
@@ -115,8 +116,9 @@ func (self *ListNode) copy() Node {
 }
 
 func (self *ListNode) Nodes() []Node {
-	result := make([]Node, len(self.FuList))
-	for i, obj := range self.FuList {
+	values := self.FuList.List()
+	result := make([]Node, len(values))
+	for i, obj := range values {
 		result[i] = obj.(Node)
 	}
 	return result
@@ -128,7 +130,7 @@ func (self *ListNode) NodeExpand(ns types.Namespace) error {
 	}
 
 	var err error
-	for _, obj := range self.FuList {
+	for _, obj := range self.FuList.List() {
 		err = obj.(Node).NodeExpand(ns)
 		if err != nil {
 			return err
@@ -145,20 +147,21 @@ func (self *ListNode) ActionExpand(
 	if err != nil {
 		return nil, err
 	}
-	result := make(types.FuList, 0, len(self.FuList))
-	for _, obj := range self.FuList {
+	values := self.FuList.List()
+	xvalues := make([]types.FuObject, 0, len(values))
+	for _, obj := range values {
 		// ok to panic here: already enforced in newListNode()
 		node := obj.(Node)
 		exp, err := node.ActionExpand(ns, ctx)
 		if err != nil {
 			return nil, err
 		} else if exp == nil {
-			result = append(result, node)
+			xvalues = append(xvalues, node)
 		} else {
-			result = append(result, exp.List()...)
+			xvalues = append(xvalues, exp.List()...)
 		}
 	}
-	return result, nil
+	return types.MakeFuList(xvalues...), nil
 }
 
 func (self *ListNode) Exists() (bool, error) {

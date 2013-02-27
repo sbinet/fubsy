@@ -23,7 +23,7 @@ func Test_FuFunction_constructors(t *testing.T) {
 }
 
 func Test_FuFunction_CheckArgs_fixed(t *testing.T) {
-	val := FuString("a")
+	val := MakeFuString("a")
 	args := MakeBasicArgs(nil, []FuObject{}, nil)
 	fn := NewFixedFunction("meep", 0, nil)
 
@@ -58,7 +58,7 @@ func Test_FuFunction_CheckArgs_fixed(t *testing.T) {
 
 func Test_FuFunction_CheckArgs_minmax(t *testing.T) {
 	fn := NewVariadicFunction("bar", 2, 4, nil)
-	val := FuString("a")
+	val := MakeFuString("a")
 	args := MakeBasicArgs(nil, []FuObject{val}, nil)
 	err := fn.CheckArgs(args)
 	assert.Equal(t,
@@ -88,7 +88,7 @@ func Test_FuFunction_CheckArgs_minmax(t *testing.T) {
 
 func Test_FuFunction_CheckArgs_unlimited(t *testing.T) {
 	fn := NewVariadicFunction("println", 0, -1, nil)
-	val := FuString("a")
+	val := MakeFuString("a")
 	args := MakeBasicArgs(nil, []FuObject{val}, nil)
 
 	err := fn.CheckArgs(args)
@@ -103,7 +103,7 @@ func Test_BasicArgs(t *testing.T) {
 	var args BasicArgs
 	var _ ArgSource = args
 
-	args.args = MakeFuList("foo", "bar")
+	args.args = MakeStringList("foo", "bar").List()
 	assert.Nil(t, args.Receiver())
 	assert.Equal(t, args.args, args.Args())
 }

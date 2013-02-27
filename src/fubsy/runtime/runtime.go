@@ -223,8 +223,8 @@ func (self *Runtime) nodify(values types.FuObject) []dag.Node {
 	case types.FuString:
 		result = []dag.Node{dag.MakeFileNode(self.dag, values.ValueString())}
 	case types.FuList:
-		result = make([]dag.Node, 0, len(values))
-		for _, val := range values {
+		result = make([]dag.Node, 0, len(values.List()))
+		for _, val := range values.List() {
 			result = append(result, self.nodify(val)...)
 		}
 	case *dag.ListNode:

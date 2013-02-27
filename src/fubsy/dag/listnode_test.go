@@ -82,15 +82,15 @@ func Test_ListNode_ActionExpand(t *testing.T) {
 	list = newListNode(node1, list, node0)
 	assertExpand([]Node{node1, node0, node1, node0}, list)
 
-	ns.Assign("a", types.FuString("argghh"))
+	ns.Assign("a", types.MakeFuString("argghh"))
 	list = newListNode(node1, NewStubNode("say $a"), node0)
 	assertExpand([]Node{node1, NewStubNode("say argghh"), node0}, list)
 }
 
 func Test_ListNode_expand_cycle(t *testing.T) {
 	ns := types.NewValueMap()
-	ns.Assign("a", types.FuString("$b"))
-	ns.Assign("b", types.FuString("$a"))
+	ns.Assign("a", types.MakeFuString("$b"))
+	ns.Assign("b", types.MakeFuString("$a"))
 
 	var err error
 	inner := NewStubNode("foo/$a")

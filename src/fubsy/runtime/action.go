@@ -94,7 +94,7 @@ func (self *SequenceAction) AddAction(action Action) {
 }
 
 func (self *SequenceAction) AddCommand(command *dsl.ASTString) {
-	raw := types.FuString(command.Value())
+	raw := types.MakeFuString(command.Value())
 	self.AddAction(NewCommandAction(raw))
 }
 

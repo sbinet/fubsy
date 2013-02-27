@@ -98,14 +98,14 @@ func (self *FinderNode) Add(other_ types.FuObject) (types.FuObject, error) {
 	case types.FuList:
 		// <pat> + [a, b, c] = [<pat>, a, b, c]
 		// (a, b, c must all be Nodes)
-		members := make([]types.FuObject, 1+len(other))
+		members := make([]types.FuObject, 1+len(other.List()))
 		members[0] = self
 
-		for i, obj := range other {
+		for i, obj := range other.List() {
 			switch obj := obj.(type) {
 			case types.FuString:
 				// <*.c> + ["extra/stuff.c"] should just work
-				members[i+1] = NewFileNode(string(obj))
+				members[i+1] = NewFileNode(obj.ValueString())
 			case Node:
 				members[i+1] = obj
 			default:
@@ -119,7 +119,7 @@ func (self *FinderNode) Add(other_ types.FuObject) (types.FuObject, error) {
 		result = newListNode(members...)
 	case types.FuString:
 		// <pat> + "foo" = [<pat>, FileNode("foo")]
-		result = newListNode(self, NewFileNode(string(other)))
+		result = newListNode(self, NewFileNode(other.ValueString()))
 	case Node:
 		result = newListNode(self, other)
 	default:
@@ -202,11 +202,11 @@ func (self *FinderNode) ActionExpand(
 	if err != nil {
 		return nil, err
 	}
-	var result types.FuList
+	var values []types.FuObject
 	for _, filename := range filenames {
-		result = append(result, types.FuString(filename))
+		values = append(values, types.MakeFuString(filename))
 	}
-	return result, nil
+	return types.MakeFuList(values...), nil
 }
 
 // Add dir to the set of prune directories.

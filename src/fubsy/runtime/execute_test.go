@@ -24,7 +24,7 @@ func Test_assign(t *testing.T) {
 
 	errs := rt.assign(node)
 	assert.Equal(t, 0, len(errs))
-	expect := types.FuString("foo")
+	expect := types.MakeFuString("foo")
 	assertIn(t, rt.Namespace(), "a", expect)
 
 	// AST for a = foo (another variable, to provoke an error)
@@ -42,7 +42,7 @@ func Test_evaluate_simple(t *testing.T) {
 	snode := stringnode("meep")
 	rt := minimalRuntime()
 	ns := rt.Namespace()
-	expect = types.FuString("meep")
+	expect = types.MakeFuString("meep")
 	assertEvaluateOK(t, rt, expect, snode)
 
 	// the expression foo evaluates to the string "meep" if foo is set
@@ -66,7 +66,7 @@ func Test_evaluate_simple(t *testing.T) {
 
 func Test_evaluate_list(t *testing.T) {
 	rt := minimalRuntime()
-	rt.stack.Assign("blop", types.FuString("bar"))
+	rt.stack.Assign("blop", types.MakeFuString("bar"))
 	elements := []dsl.ASTExpression{
 		dsl.NewASTString("\"foo\""),
 		dsl.NewASTName("blop"),
@@ -76,13 +76,13 @@ func Test_evaluate_list(t *testing.T) {
 
 	actual, errs := rt.evaluate(astlist)
 	testutils.NoErrors(t, errs)
-	expect := types.MakeFuList("foo", "bar", "baz")
+	expect := types.MakeStringList("foo", "bar", "baz")
 	assert.Equal(t, expect, actual)
 }
 
 func Test_evaluate_list_errors(t *testing.T) {
 	rt := minimalRuntime()
-	rt.stack.Assign("src", types.FuString("foo.c"))
+	rt.stack.Assign("src", types.MakeFuString("foo.c"))
 	elements := []dsl.ASTExpression{
 		dsl.NewASTString("\"whee!\""),
 		dsl.NewASTName("bogus"),
@@ -112,9 +112,9 @@ func Test_evaluate_complex(t *testing.T) {
 	// case 1: two strings just get concatenated
 	rt := minimalRuntime()
 	ns := rt.Namespace()
-	ns.Assign("a", types.FuString("foo"))
-	ns.Assign("b", types.FuString("bar"))
-	expect := types.FuString("foobar")
+	ns.Assign("a", types.MakeFuString("foo"))
+	ns.Assign("b", types.MakeFuString("bar"))
+	expect := types.MakeFuString("foobar")
 	assertEvaluateOK(t, rt, expect, addnode)
 
 	// case 2: adding a function to a string fails
@@ -139,7 +139,7 @@ func Test_prepareCall(t *testing.T) {
 	ns := rt.Namespace()
 	ns.Assign("dummy1", dummy1)
 	ns.Assign("dummy2", dummy2)
-	ns.Assign("x", types.FuString("whee!"))
+	ns.Assign("x", types.MakeFuString("whee!"))
 
 	noargs := []dsl.ASTExpression{}
 	onearg := []dsl.ASTExpression{dsl.NewASTString("\"meep\"")}
@@ -161,7 +161,7 @@ func Test_prepareCall(t *testing.T) {
 	callable, args, errs = rt.prepareCall(astcall)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, dummy2, callable)
-	assert.Equal(t, []types.FuObject{types.FuString("meep")}, args.Args())
+	assert.Equal(t, []types.FuObject{types.MakeFuString("meep")}, args.Args())
 
 	// attempt to call dummy2() incorrectly (1 arg, but it's an undefined name)
 	astcall = dsl.NewASTFunctionCall(
@@ -196,7 +196,7 @@ func Test_evaluateCall(t *testing.T) {
 			panic("foo() called with wrong number of args")
 		}
 		calls = append(calls, "foo")
-		return types.FuString("foo!"), nil
+		return types.MakeFuString("foo!"), nil
 	}
 	fn_bar := func(argsource types.ArgSource) (types.FuObject, []error) {
 		if len(argsource.Args()) != 1 {
@@ -219,12 +219,12 @@ func Test_evaluateCall(t *testing.T) {
 	// call foo() correctly (no args)
 	args.SetArgs([]types.FuObject{})
 	result, errs = rt.evaluateCall(foo, args, nil)
-	assert.Equal(t, types.FuString("foo!"), result)
+	assert.Equal(t, types.MakeFuString("foo!"), result)
 	assert.Equal(t, 0, len(errs))
 	assert.Equal(t, []string{"foo"}, calls)
 
 	// call foo() incorrectly (1 arg)
-	args.SetArgs([]types.FuObject{types.FuString("meep")})
+	args.SetArgs([]types.FuObject{types.MakeFuString("meep")})
 	result, errs = rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, 1, len(errs))
 	assert.Equal(t,
@@ -254,7 +254,7 @@ func Test_evaluateCall_no_expand(t *testing.T) {
 	calls := 0
 	fn_foo := func(argsource types.ArgSource) (types.FuObject, []error) {
 		calls++
-		return types.FuString("arg: " + argsource.Args()[0].ValueString()), nil
+		return types.MakeFuString("arg: " + argsource.Args()[0].ValueString()), nil
 	}
 	foo := types.NewFixedFunction("foo", 1, fn_foo)
 	rt := minimalRuntime()
@@ -264,16 +264,16 @@ func Test_evaluateCall_no_expand(t *testing.T) {
 	// expansion does *not* happen -- evaluateCall() doesn't know
 	// which phase it's in, so it has to rely on someone else to
 	// ActionExpand() each value in the build phase
-	args.SetArgs([]types.FuObject{types.FuString(">$src<")})
+	args.SetArgs([]types.FuObject{types.MakeFuString(">$src<")})
 	result, errs := rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, 1, calls)
-	assert.Equal(t, types.FuString("arg: >$src<"), result)
+	assert.Equal(t, types.MakeFuString("arg: >$src<"), result)
 	if len(errs) != 0 {
 		t.Errorf("expected no errors, but got: %v", errs)
 	}
 
 	// now make a value that expands to three values
-	expansion := types.MakeFuList("a", "b", "c")
+	expansion := types.MakeStringList("a", "b", "c")
 	var val types.FuObject = types.NewStubObject("val", expansion)
 	valexp, _ := val.ActionExpand(nil, nil)
 	assert.Equal(t, expansion, valexp) // this actually tests StubObject
@@ -283,7 +283,7 @@ func Test_evaluateCall_no_expand(t *testing.T) {
 	args.SetArgs([]types.FuObject{val})
 	result, errs = rt.evaluateCall(foo, args, nil)
 	assert.Equal(t, 2, calls)
-	assert.Equal(t, types.FuString("arg: val"), result)
+	assert.Equal(t, types.MakeFuString("arg: val"), result)
 	if len(errs) != 0 {
 		t.Errorf("expected no errors, but got: %v", errs)
 	}
@@ -326,7 +326,7 @@ func Test_evaluateCall_method(t *testing.T) {
 	rt := minimalRuntime()
 	ns := rt.Namespace()
 	ns.Assign("a", aobj)
-	ns.Assign("x", types.FuString("hello"))
+	ns.Assign("x", types.MakeFuString("hello"))
 
 	// what the hell, let's test the precall feature too
 	var precalledCallable types.FuCallable
@@ -343,8 +343,7 @@ func Test_evaluateCall_method(t *testing.T) {
 
 	result, errs := rt.evaluateCall(callable, args, precall)
 	assert.Equal(t, precalledCallable, callable)
-	assert.Equal(t,
-		(types.FuList)(precalledArgs.Args()), types.MakeFuList("hello"))
+	assert.Equal(t, precalledArgs.Args(), types.MakeStringList("hello").List())
 	assert.Nil(t, result)
 	if len(errs) == 1 {
 		assert.Equal(t,

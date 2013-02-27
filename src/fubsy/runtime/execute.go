@@ -34,7 +34,7 @@ func (self *Runtime) evaluate(
 	result types.FuObject, errs []error) {
 	switch expr := expr_.(type) {
 	case *dsl.ASTString:
-		result = types.FuString(expr.Value())
+		result = types.MakeFuString(expr.Value())
 	case *dsl.ASTList:
 		result, errs = self.evaluateList(expr)
 	case *dsl.ASTName:
@@ -63,11 +63,11 @@ func (self *Runtime) evaluate(
 
 func (self *Runtime) evaluateList(expr *dsl.ASTList) (types.FuObject, []error) {
 	elements := expr.Elements()
-	result := make(types.FuList, len(elements))
+	values := make([]types.FuObject, len(elements))
 	var allerrs []error
 	var errs []error
 	for i, element := range elements {
-		result[i], errs = self.evaluate(element)
+		values[i], errs = self.evaluate(element)
 		if len(errs) != 0 {
 			allerrs = append(allerrs, errs...)
 		}
@@ -75,7 +75,7 @@ func (self *Runtime) evaluateList(expr *dsl.ASTList) (types.FuObject, []error) {
 	if allerrs != nil {
 		return nil, allerrs
 	}
-	return result, nil
+	return types.MakeFuList(values...), nil
 }
 
 func (self *Runtime) evaluateName(expr *dsl.ASTName) (types.FuObject, []error) {
@@ -138,9 +138,8 @@ func (self *Runtime) prepareCall(expr *dsl.ASTFunctionCall) (
 	}
 
 	var astargs []dsl.ASTExpression
-	var arglist types.FuList
 	astargs = expr.Args()
-	arglist = make(types.FuList, len(astargs))
+	arglist := make([]types.FuObject, len(astargs))
 	for i, astarg := range astargs {
 		arglist[i], errs = self.evaluate(astarg)
 		if len(errs) > 0 {

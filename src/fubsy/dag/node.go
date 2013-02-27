@@ -222,10 +222,10 @@ func (self *nodebase) CommandString() string {
 
 func defaultNodeAdd(self Node, other types.FuObject) (types.FuObject, error) {
 	otherlist := other.List()
-	result := make(types.FuList, 0, 1+len(otherlist))
-	result = append(result, self)
-	result = append(result, otherlist...)
-	return result, nil
+	values := make([]types.FuObject, 0, 1+len(otherlist))
+	values = append(values, self)
+	values = append(values, otherlist...)
+	return types.MakeFuList(values...), nil
 }
 
 func defaultNodeActionExpand(

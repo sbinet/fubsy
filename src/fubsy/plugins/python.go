@@ -64,7 +64,7 @@ func callBuiltin(
 		// in Go syntax.
 		argp := unsafe.Pointer(uintptr(cargs) + i*unsafe.Sizeof(cargs))
 		arg := C.GoString(*(**C.char)(argp))
-		fuargs[i] = types.FuString(arg)
+		fuargs[i] = types.MakeFuString(arg)
 	}
 	args := types.MakeBasicArgs(nil, fuargs, nil)
 

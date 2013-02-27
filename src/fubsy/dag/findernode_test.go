@@ -78,14 +78,14 @@ func Test_FinderNode_Add_Expand(t *testing.T) {
 	// sum = <**/*.c> + "urgh"
 	expect = []string{
 		"main.c", "src/foo.c", "urgh"}
-	sum, err = finder1.Add(types.FuString("urgh"))
+	sum, err = finder1.Add(types.MakeFuString("urgh"))
 	assert.Nil(t, err)
 	assertExpand(t, nil, expect, sum)
 
 	// sum = <**/*.c> + ["a", "b", "c"]
 	expect = []string{
 		"main.c", "src/foo.c", "a", "b", "c"}
-	list := types.MakeFuList("a", "b", "c")
+	list := types.MakeStringList("a", "b", "c")
 	sum, err = finder1.Add(list)
 	assert.Nil(t, err)
 	assertExpand(t, nil, expect, sum)
@@ -253,7 +253,7 @@ func Test_FinderNode_Expand_vars(t *testing.T) {
 		"lib1/foo.c", "lib1/sub/blah.c", "include/bop.h", "include/bip.h")
 
 	ns := types.NewValueMap()
-	ns.Assign("libsrc", types.FuString("lib1"))
+	ns.Assign("libsrc", types.MakeFuString("lib1"))
 	finder := NewFinderNode("$libsrc/**/*.c")
 	expect := []string{
 		"lib1/foo.c",
@@ -264,9 +264,9 @@ func Test_FinderNode_Expand_vars(t *testing.T) {
 
 func Test_FinderNode_expand_cycle(t *testing.T) {
 	ns := types.NewValueMap()
-	ns.Assign("a", types.FuString("$b"))
-	ns.Assign("b", types.FuString("$c$d"))
-	ns.Assign("c", types.FuString("$a"))
+	ns.Assign("a", types.MakeFuString("$b"))
+	ns.Assign("b", types.MakeFuString("$c$d"))
+	ns.Assign("c", types.MakeFuString("$a"))
 
 	var err error
 	finder := NewFinderNode("src/$a/*.h")

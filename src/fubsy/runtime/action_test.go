@@ -37,5 +37,7 @@ func Test_SequenceAction_create(t *testing.T) {
 	action.AddFunctionCall(fcall)
 
 	assert.Equal(t, 3, len(action.subactions))
-	assert.Equal(t, "ls -lR foo/bar", action.subactions[0].(*CommandAction).raw)
+	assert.Equal(t,
+		"ls -lR foo/bar",
+		action.subactions[0].(*CommandAction).raw.ValueString())
 }

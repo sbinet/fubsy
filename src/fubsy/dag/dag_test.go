@@ -35,8 +35,8 @@ func Test_DAG_add_lookup(t *testing.T) {
 
 func Test_DAG_ExpandNodes(t *testing.T) {
 	ns := types.NewValueMap()
-	ns.Assign("sdir", types.FuString("src/tool1"))
-	ns.Assign("ext", types.FuString("cpp"))
+	ns.Assign("sdir", types.MakeFuString("src/tool1"))
+	ns.Assign("ext", types.MakeFuString("cpp"))
 
 	tdag := NewTestDAG()
 	tdag.Add("bin/tool1", "$sdir/main.$ext", "$sdir/util.$ext", "$sdir/foo.h")

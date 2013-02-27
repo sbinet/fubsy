@@ -107,7 +107,7 @@ func Test_println(t *testing.T) {
 	defer cleanup2()
 
 	args := RuntimeArgs{
-		BasicArgs: types.MakeBasicArgs(nil, types.MakeFuList(), nil),
+		BasicArgs: types.MakeBasicArgs(nil, []types.FuObject{}, nil),
 	}
 
 	result, errs := fn_println(args)
@@ -119,7 +119,7 @@ func Test_println(t *testing.T) {
 	rfile.Truncate(0)
 	rfile.Seek(0, 0)
 
-	args.SetArgs(types.MakeFuList("hello", "world"))
+	args.SetArgs(types.MakeStringList("hello", "world").List())
 	fn_println(args)
 	data, err = ioutil.ReadFile("stdout")
 	assert.Nil(t, err)
@@ -145,7 +145,7 @@ func Test_mkdir(t *testing.T) {
 	assert.Equal(t, []string{}, dirContents("."))
 
 	// easiest case: create a single dir
-	pargs = types.MakeFuList("foo")
+	pargs = types.MakeStringList("foo").List()
 	args.SetArgs(pargs)
 	result, errs = fn_mkdir(args)
 	assert.Nil(t, result)
@@ -154,7 +154,7 @@ func Test_mkdir(t *testing.T) {
 	assert.True(t, isDir("foo"))
 
 	// create multiple dirs, including "foo" which already exists
-	pargs = types.MakeFuList("meep/meep/meep", "foo", "meep/beep")
+	pargs = types.MakeStringList("meep/meep/meep", "foo", "meep/beep").List()
 	args.SetArgs(pargs)
 	result, errs = fn_mkdir(args)
 	assert.Nil(t, result)
@@ -168,7 +168,7 @@ func Test_mkdir(t *testing.T) {
 	// now with an error in the middle of the list (*but* we still
 	// create the other requested dirs!)
 	testutils.TouchFiles("meep/zap")
-	pargs = types.MakeFuList("meep/bap", "meep/zap/zip", "foo/bar")
+	pargs = types.MakeStringList("meep/bap", "meep/zap/zip", "foo/bar").List()
 	args.SetArgs(pargs)
 	result, errs = fn_mkdir(args)
 	assert.Nil(t, result)
@@ -178,7 +178,7 @@ func Test_mkdir(t *testing.T) {
 	assert.True(t, isDir("foo/bar"))
 
 	// finally, with multiple errors
-	pargs = append(pargs, types.FuString("meep/zap/blop"))
+	pargs = append(pargs, types.MakeFuString("meep/zap/blop"))
 	args.SetArgs(pargs)
 	result, errs = fn_mkdir(args)
 	assert.Nil(t, result)
@@ -201,14 +201,14 @@ func Test_remove(t *testing.T) {
 	assert.Equal(t, 0, len(errs))
 
 	// remove() ignores non-existent files
-	args.SetArgs(types.MakeFuList("foo", "bar/bleep/meep", "qux"))
+	args.SetArgs(types.MakeStringList("foo", "bar/bleep/meep", "qux").List())
 	result, errs = fn_remove(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
 
 	// remove() removes regular files
 	testutils.TouchFiles("foo", "bar/bleep/meep", "bar/bleep/feep", "qux")
-	args.SetArgs(types.MakeFuList("foo", "bar/bleep/meep", "bogus"))
+	args.SetArgs(types.MakeStringList("foo", "bar/bleep/meep", "bogus").List())
 	result, errs = fn_remove(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
@@ -218,7 +218,7 @@ func Test_remove(t *testing.T) {
 
 	// remove() removes files and directories too
 	testutils.TouchFiles("foo", "bar/bleep/meep", "qux")
-	args.SetArgs(types.MakeFuList("bogus", "bar", "morebogus", "qux"))
+	args.SetArgs(types.MakeStringList("bogus", "bar", "morebogus", "qux").List())
 	result, errs = fn_remove(args)
 	assert.Nil(t, result)
 	assert.Equal(t, 0, len(errs))
@@ -229,7 +229,7 @@ func Test_remove(t *testing.T) {
 	testutils.ChmodRO("bar")
 	defer testutils.ChmodOwnerAll("bar")
 
-	args.SetArgs(types.MakeFuList("bar", "qux"))
+	args.SetArgs(types.MakeStringList("bar", "qux").List())
 	result, errs = fn_remove(args)
 	assert.Nil(t, result)
 	assert.Equal(t, "remove bar/bong: permission denied", errs[0].Error())
@@ -259,7 +259,7 @@ func isDir(name string) bool {
 
 func Test_FileNode(t *testing.T) {
 	args := RuntimeArgs{
-		BasicArgs: types.MakeBasicArgs(nil, types.MakeFuList("a.txt"), nil),
+		BasicArgs: types.MakeBasicArgs(nil, types.MakeStringList("a.txt").List(), nil),
 		runtime:   minimalRuntime(),
 	}
 	node0, errs := fn_FileNode(args)
@@ -281,7 +281,7 @@ func Test_FileNode(t *testing.T) {
 
 func Test_ActionNode(t *testing.T) {
 	args := RuntimeArgs{
-		BasicArgs: types.MakeBasicArgs(nil, types.MakeFuList("test/x"), nil),
+		BasicArgs: types.MakeBasicArgs(nil, types.MakeStringList("test/x").List(), nil),
 		runtime:   minimalRuntime(),
 	}
 	node0, errs := fn_ActionNode(args)

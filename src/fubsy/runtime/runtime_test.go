@@ -44,7 +44,7 @@ func Test_Runtime_runMainPhase_valid(t *testing.T) {
 	assert.Equal(t, 0, len(errors))
 	val, ok := rt.stack.Lookup("src")
 	assert.True(t, ok)
-	assert.Equal(t, types.FuString("foo.c"), val)
+	assert.Equal(t, types.MakeFuString("foo.c"), val)
 	assert.NotNil(t, rt.dag)
 
 	// this seems *awfully* detailed and brittle, but DAG doesn't
@@ -86,9 +86,9 @@ func parseScript(t *testing.T, filename string, content string) *Runtime {
 }
 
 func Test_nodify(t *testing.T) {
-	sval1 := types.FuString("hello.txt")
-	sval2 := types.FuString("foo.c")
-	lval1 := types.FuList([]types.FuObject{sval1, sval2})
+	sval1 := types.MakeFuString("hello.txt")
+	sval2 := types.MakeFuString("foo.c")
+	lval1 := types.MakeFuList(sval1, sval2)
 	finder1 := dag.NewFinderNode("*.c", "*.h")
 	finder2 := dag.NewFinderNode("**/*.java")
 

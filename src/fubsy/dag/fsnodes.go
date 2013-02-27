@@ -57,7 +57,7 @@ func (self *FileNode) Add(other_ types.FuObject) (types.FuObject, error) {
 	switch other := other_.(type) {
 	case types.FuString:
 		// caller must add it to the appropriate DAG!
-		result = NewFileNode(self.name + string(other))
+		result = NewFileNode(self.name + other.ValueString())
 	default:
 		result, err = defaultNodeAdd(self, other)
 	}
