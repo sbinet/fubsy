@@ -27,11 +27,11 @@ main {
 
     # some tools needed to build/test
     golex = "bin/golex"
-    gocov = "bin/gocov"
+    gocov = ".build/1/bin/gocov"
     golex: <src/github.com/cznic/**/*.go> {
         "go install -v github.com/cznic/golex"
     }
-    gocov: <src/github.com/axw/gocov/**/*.go> {
+    gocov: <.build/1/src/github.com/axw/gocov/**/*.go> {
         "go install -v github.com/axw/gocov/gocov"
     }
 

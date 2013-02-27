@@ -67,6 +67,8 @@ getdeps() {
         run "go get -v -d github.com/sbinet/go-python"
     fi
 
+    run "go get -v -d github.com/axw/gocov"
+
     # we build separate from download mainly because of go-python,
     # which has a Makefile for good reasons of its own
     # (also, perhaps building should be done in build.sh...?)
@@ -82,9 +84,7 @@ getdeps() {
     run "mv bin/golex $build1/bin/."
 
     rm -rf pkg/$goplatform/github.com/axw
-    run "GOPATH=$top go install -v github.com/axw/gocov/gocov"
-    run "mv pkg/$goplatform/github.com/axw $build1/pkg/$goplatform/github.com/."
-    run "mv bin/gocov $build1/bin/."
+    run "go install -v github.com/axw/gocov/gocov"
 
     if tagset python; then
         run "make -C $build1/src/github.com/sbinet/go-python install"
