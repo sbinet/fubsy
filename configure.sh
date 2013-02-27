@@ -68,6 +68,7 @@ getdeps() {
     fi
 
     run "go get -v -d github.com/axw/gocov"
+    run "go get -v -d github.com/cznic/golex"
 
     # we build separate from download mainly because of go-python,
     # which has a Makefile for good reasons of its own
@@ -79,9 +80,7 @@ getdeps() {
     mkdir -p $build1/pkg/$goplatform/github.com
 
     rm -rf pkg/$goplatform/github.com/cznic
-    run "GOPATH=$top go install -v github.com/cznic/..."
-    run "mv pkg/$goplatform/github.com/cznic $build1/pkg/$goplatform/github.com/."
-    run "mv bin/golex $build1/bin/."
+    run "go install -v github.com/cznic/golex"
 
     rm -rf pkg/$goplatform/github.com/axw
     run "go install -v github.com/axw/gocov/gocov"

@@ -26,9 +26,9 @@ main {
     # ...and you'll just have to edit it manually to modify tags
 
     # some tools needed to build/test
-    golex = "bin/golex"
+    golex = ".build/1/bin/golex"
     gocov = ".build/1/bin/gocov"
-    golex: <src/github.com/cznic/**/*.go> {
+    golex: <.build/1/src/github.com/cznic/**/*.go> {
         "go install -v github.com/cznic/golex"
     }
     gocov: <.build/1/src/github.com/axw/gocov/**/*.go> {
