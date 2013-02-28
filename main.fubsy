@@ -47,7 +47,9 @@ main {
     }
 
     # generate Python embedding
-    "$src/plugins/empython.c": ["$src/runtime/builtins.go", "genplugins.py"] {
+    "$src/plugins/empython.c": ["$src/runtime/builtins.go",
+                                "$src/plugins/empython.c.in",
+                                "genplugins.py"] {
         "python genplugins.py $SOURCE $TARGETS"
     }
 
