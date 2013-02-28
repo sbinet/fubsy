@@ -102,8 +102,8 @@ func (self *FuFunction) Equal(other_ FuObject) bool {
 	return ok && &self.code == &other.code && self.name == other.name
 }
 
-func (self *FuFunction) Add(other_ FuObject) (FuObject, error) {
-	return nil, unsupportedOperation(self, other_, "cannot add %s to %s")
+func (self *FuFunction) Add(other FuObject) (FuObject, error) {
+	return UnsupportedAdd(self, other, "")
 }
 
 func (self *FuFunction) List() []FuObject {

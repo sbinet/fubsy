@@ -123,7 +123,7 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 		copy(values[1:], other.values)
 		return MakeFuList(values...), nil
 	default:
-		return nil, unsupportedOperation(self, other, "cannot add %s to %s")
+		return UnsupportedAdd(self, other, "")
 	}
 	panic("unreachable code")
 }
@@ -281,11 +281,6 @@ func (self StubObject) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject,
 		return self, nil
 	}
 	return self.expansion, nil
-}
-
-func unsupportedOperation(self FuObject, other FuObject, detail string) error {
-	return fmt.Errorf("unsupported operation: "+detail,
-		other.Typename(), self.Typename())
 }
 
 // object passed around when expanding values in order to detect and
