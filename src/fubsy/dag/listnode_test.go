@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchrcom/testify/assert"
 
+	"fubsy/testutils"
 	"fubsy/types"
 )
 
@@ -61,6 +62,38 @@ func Test_MakeListNode(t *testing.T) {
 	list1 := MakeListNode(graph, NewStubNode("blah"))
 	list2 := MakeListNode(graph, NewStubNode("blah"))
 	assert.Equal(t, &list1, &list2)
+}
+
+func Test_ListNode_Add(t *testing.T) {
+	nodelist := newListNode()
+	otherlist := types.MakeFuList()
+
+	actual, err := nodelist.Add(otherlist)
+	testutils.NoError(t, err)
+	if _, ok := actual.(*ListNode); !ok {
+		t.Fatalf("expected object of type *ListNode, but got %T", actual)
+	}
+	assert.Equal(t, 0, len(actual.List()))
+
+	node0 := NewStubNode("bla")
+	node1 := NewStubNode("pog")
+	otherlist = types.MakeFuList(node0, node1)
+	actual, err = nodelist.Add(otherlist)
+	testutils.NoError(t, err)
+	nodes := actual.(*ListNode).List()
+	if len(nodes) != 2 {
+		t.Errorf("expected ListNode with 2 nodes, but got %v", actual)
+	} else {
+		assert.Equal(t, []types.FuObject{node0, node1}, nodes)
+	}
+
+	otherlist = types.MakeStringList("foo")
+	actual, err = nodelist.Add(otherlist)
+	assert.Nil(t, actual)
+	assert.Equal(t,
+		"unsupported operation: cannot add list to ListNode "+
+			"(second operand contains string)",
+		err.Error())
 }
 
 func Test_ListNode_ActionExpand(t *testing.T) {

@@ -6,7 +6,6 @@ package dag
 
 import (
 	"errors"
-	"fmt"
 	"hash/fnv"
 	"os"
 	"path/filepath"
@@ -113,11 +112,8 @@ func (self *FinderNode) Add(other_ types.FuObject) (types.FuObject, error) {
 			case Node:
 				members[i+1] = obj
 			default:
-				err := fmt.Errorf(
-					"unsupported operation: cannot add list containing "+
-						"%s %v to %s %v",
-					obj.Typename(), obj, self.Typename(), self)
-				return nil, err
+				return types.UnsupportedAdd(
+					self, other, "second operand contains "+obj.Typename())
 			}
 		}
 		result = newListNode(members...)
@@ -127,11 +123,7 @@ func (self *FinderNode) Add(other_ types.FuObject) (types.FuObject, error) {
 	case Node:
 		result = newListNode(self, other)
 	default:
-		err := fmt.Errorf(
-			"unsupported operation: cannot add "+
-				"%s %v to %s %v",
-			other.Typename(), other, self.Typename(), self)
-		return nil, err
+		return types.UnsupportedAdd(self, other, "")
 	}
 	return result, nil
 }

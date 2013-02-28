@@ -99,11 +99,8 @@ func (self *ListNode) Add(other types.FuObject) (types.FuObject, error) {
 	j := len(values)
 	for i, obj := range otherlist {
 		if _, ok := obj.(Node); !ok {
-			err := fmt.Errorf(
-				"unsupported operation: cannot add "+
-					"%s %v to %s %v",
-				obj, obj.Typename(), self.Typename(), self)
-			return nil, err
+			return types.UnsupportedAdd(
+				self, other, "second operand contains "+obj.Typename())
 		}
 		result[j+i] = obj
 	}

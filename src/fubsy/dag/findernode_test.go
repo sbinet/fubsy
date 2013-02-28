@@ -37,6 +37,51 @@ func Test_FinderNode_Equal(t *testing.T) {
 	assert.False(t, finder1.Equal(finder3))
 }
 
+func Test_FinderNode_Add(t *testing.T) {
+	finder1 := NewFinderNode("*.c")
+	finder2 := NewFinderNode("*.h")
+	str1 := types.MakeFuString("foo.txt")
+	str2 := types.MakeFuString("bar.txt")
+	file1 := NewFileNode("foo.txt")
+	file2 := NewFileNode("bar.txt")
+	list := types.MakeFuList(str1, str2)
+	stub := types.NewStubObject("bla", nil)
+
+	sum, err := finder1.Add(finder2)
+	testutils.NoError(t, err)
+	assert.Equal(t, []types.FuObject{finder1, finder2}, sum.List())
+
+	sum, err = finder1.Add(file1)
+	testutils.NoError(t, err)
+	assert.Equal(t, []types.FuObject{finder1, file1}, sum.List())
+
+	sum, err = finder1.Add(str1)
+	testutils.NoError(t, err)
+	assert.Equal(t, []types.FuObject{finder1, file1}, sum.List())
+
+	sum, err = finder1.Add(list)
+	testutils.NoError(t, err)
+	assert.Equal(t, []types.FuObject{finder1, file1, file2}, sum.List())
+
+	list = types.MakeFuList(file2, file1)
+	sum, err = finder1.Add(list)
+	testutils.NoError(t, err)
+	assert.Equal(t, []types.FuObject{finder1, file2, file1}, sum.List())
+
+	sum, err = finder1.Add(stub)
+	assert.Equal(t,
+		"unsupported operation: cannot add stub to FinderNode", err.Error())
+	assert.Nil(t, sum)
+
+	list = types.MakeFuList(str1, stub)
+	sum, err = finder1.Add(list)
+	assert.Equal(t,
+		"unsupported operation: cannot add list to FinderNode "+
+			"(second operand contains stub)",
+		err.Error())
+	assert.Nil(t, sum)
+}
+
 func Test_FinderNode_Add_Expand(t *testing.T) {
 	cleanup := testutils.Chtemp()
 	defer cleanup()
