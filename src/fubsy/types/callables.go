@@ -64,6 +64,7 @@ type FuCallable interface {
 }
 
 type FuFunction struct {
+	NullLookupT
 	name    string
 	minargs int
 	maxargs int
@@ -72,11 +73,11 @@ type FuFunction struct {
 }
 
 func NewFixedFunction(name string, numargs int, code FuCode) *FuFunction {
-	return &FuFunction{name, numargs, numargs, nil, code}
+	return &FuFunction{name: name, minargs: numargs, maxargs: numargs, code: code}
 }
 
 func NewVariadicFunction(name string, minargs, maxargs int, code FuCode) *FuFunction {
-	return &FuFunction{name, minargs, maxargs, nil, code}
+	return &FuFunction{name: name, minargs: minargs, maxargs: maxargs, code: code}
 }
 
 func (self *FuFunction) String() string {
@@ -99,10 +100,6 @@ func (self *FuFunction) Equal(other_ FuObject) bool {
 
 func (self *FuFunction) Add(other_ FuObject) (FuObject, error) {
 	return nil, unsupportedOperation(self, other_, "cannot add %s to %s")
-}
-
-func (self *FuFunction) Lookup(name string) (FuObject, bool) {
-	return DefaultLookup(self, name)
 }
 
 func (self *FuFunction) List() []FuObject {

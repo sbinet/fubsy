@@ -81,6 +81,7 @@ type FuObject interface {
 // a Fubsy string is a Go string, until there's a demonstrated need
 // for something more
 type FuString struct {
+	NullLookupT
 	value string
 }
 
@@ -123,10 +124,6 @@ func (self FuString) Add(other_ FuObject) (FuObject, error) {
 	panic("unreachable code")
 }
 
-func (self FuString) Lookup(name string) (FuObject, bool) {
-	return DefaultLookup(self, name)
-}
-
 func (self FuString) List() []FuObject {
 	return []FuObject{self}
 }
@@ -154,6 +151,7 @@ func (self FuString) Typename() string {
 
 // a Fubsy list is a slice of Fubsy objects
 type FuList struct {
+	NullLookupT
 	values []FuObject
 }
 
@@ -212,10 +210,6 @@ func (self FuList) Add(other FuObject) (FuObject, error) {
 	copy(values, self.values)
 	copy(values[len(self.values):], otherlist)
 	return MakeFuList(values...), nil
-}
-
-func (self FuList) Lookup(name string) (FuObject, bool) {
-	return DefaultLookup(self, name)
 }
 
 func (self FuList) List() []FuObject {
@@ -377,12 +371,6 @@ func ExpandString(s string, ns Namespace, ctx *ExpandContext) (bool, string, err
 	}
 	result += cur
 	return true, result, nil
-}
-
-// A default implementation of FuObject.Lookup() for use by types that
-// have no attributes.
-func DefaultLookup(obj FuObject, name string) (FuObject, bool) {
-	return nil, false
 }
 
 const shellmeta = "# `\"'\\&?*[]{}();$><|"
