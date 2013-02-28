@@ -23,6 +23,12 @@ func Test_ListNode_basics(t *testing.T) {
 	assert.Equal(t, "foo,bar baz,qux", list1.ValueString())
 	assert.Equal(t, "foo 'bar baz' qux", list1.CommandString())
 
+	expect1 := []types.FuObject{node0, node1, node2}
+	assert.Equal(t, expect1, list1.List())
+
+	expect2 := []Node{node0, node1, node2}
+	assert.Equal(t, expect2, list1.Nodes())
+
 	list2 := newListNode(node0, node1, node2)
 	assert.True(t, list1.Equal(list2))
 
@@ -32,6 +38,22 @@ func Test_ListNode_basics(t *testing.T) {
 	list4 := list3.copy().(*ListNode)
 	assert.False(t, list3 == list4)
 	assert.True(t, list3.Equal(list4))
+}
+
+func Test_ListNodeFromNodes(t *testing.T) {
+	nodes := []Node{}
+	list := ListNodeFromNodes(nodes)
+	assert.Equal(t, []types.FuObject{}, list.List())
+	assert.Equal(t, nodes, list.Nodes())
+
+	node0 := NewStubNode("foo")
+	node1 := NewStubNode("bar baz")
+	node2 := NewStubNode("qux")
+	nodes = []Node{node0, node1, node2}
+
+	list = ListNodeFromNodes(nodes)
+	assert.Equal(t, []types.FuObject{node0, node1, node2}, list.List())
+	assert.Equal(t, nodes, list.Nodes())
 }
 
 func Test_MakeListNode(t *testing.T) {

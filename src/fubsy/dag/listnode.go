@@ -90,7 +90,7 @@ func (self *ListNode) Equal(other_ types.FuObject) bool {
 }
 
 func (self *ListNode) Add(other types.FuObject) (types.FuObject, error) {
-	values := self.FuList.List()
+	values := self.List()
 	otherlist := other.List()
 	result := make([]types.FuObject, len(values)+len(otherlist))
 	for i, obj := range values {
@@ -120,7 +120,7 @@ func (self *ListNode) copy() Node {
 }
 
 func (self *ListNode) Nodes() []Node {
-	values := self.FuList.List()
+	values := self.List()
 	result := make([]Node, len(values))
 	for i, obj := range values {
 		result[i] = obj.(Node)
@@ -134,7 +134,7 @@ func (self *ListNode) NodeExpand(ns types.Namespace) error {
 	}
 
 	var err error
-	for _, obj := range self.FuList.List() {
+	for _, obj := range self.List() {
 		err = obj.(Node).NodeExpand(ns)
 		if err != nil {
 			return err
@@ -151,7 +151,7 @@ func (self *ListNode) ActionExpand(
 	if err != nil {
 		return nil, err
 	}
-	values := self.FuList.List()
+	values := self.List()
 	xvalues := make([]types.FuObject, 0, len(values))
 	for _, obj := range values {
 		// ok to panic here: already enforced in newListNode()
