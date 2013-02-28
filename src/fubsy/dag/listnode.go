@@ -68,8 +68,8 @@ func MakeListNode(dag *DAG, member ...types.FuObject) *ListNode {
 	return node
 }
 
-func (self *ListNode) Lookup(name string) (types.FuObject, bool) {
-	return self.FuList.Lookup(name)
+func (self *ListNode) Typename() string {
+	return "ListNode"
 }
 
 func (self *ListNode) String() string {
@@ -110,8 +110,8 @@ func (self *ListNode) Add(other types.FuObject) (types.FuObject, error) {
 	return newListNode(result...), nil
 }
 
-func (self *ListNode) Typename() string {
-	return "ListNode"
+func (self *ListNode) Lookup(name string) (types.FuObject, bool) {
+	return self.FuList.Lookup(name)
 }
 
 func (self *ListNode) copy() Node {

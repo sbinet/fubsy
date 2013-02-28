@@ -33,11 +33,6 @@ func (self *ActionNode) Typename() string {
 	return "ActionNode"
 }
 
-func (self *ActionNode) copy() Node {
-	var c ActionNode = *self
-	return &c
-}
-
 func (self *ActionNode) Equal(other_ types.FuObject) bool {
 	other, ok := other_.(*ActionNode)
 	return ok && other.name == self.name
@@ -55,6 +50,11 @@ func (self *ActionNode) ActionExpand(
 	ns types.Namespace, ctx *types.ExpandContext) (
 	types.FuObject, error) {
 	return defaultNodeActionExpand(self, ns)
+}
+
+func (self *ActionNode) copy() Node {
+	var c ActionNode = *self
+	return &c
 }
 
 func (self *ActionNode) Exists() (bool, error) {

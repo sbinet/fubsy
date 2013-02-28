@@ -247,26 +247,26 @@ type StubNode struct {
 	sig    []byte
 }
 
-func (self *StubNode) SetExists(exists bool) {
-	self.exists = exists
-}
-
-func (self *StubNode) SetSignature(sig []byte) {
-	self.sig = sig
-}
-
 func (self *StubNode) Typename() string {
 	return "StubNode"
-}
-
-func (self *StubNode) copy() Node {
-	var c StubNode = *self
-	return &c
 }
 
 func (self *StubNode) Equal(other_ types.FuObject) bool {
 	other, ok := other_.(*StubNode)
 	return ok && self.name == other.name
+}
+
+func (self *StubNode) Add(other types.FuObject) (types.FuObject, error) {
+	panic("should be unused in tests")
+}
+
+func (self *StubNode) List() []types.FuObject {
+	return []types.FuObject{self}
+}
+
+func (self *StubNode) copy() Node {
+	var c StubNode = *self
+	return &c
 }
 
 func (self *StubNode) Exists() (bool, error) {
@@ -277,16 +277,16 @@ func (self *StubNode) ActionExpand(ns types.Namespace, ctx *types.ExpandContext)
 	return self, nil
 }
 
+func (self *StubNode) SetExists(exists bool) {
+	self.exists = exists
+}
+
+func (self *StubNode) SetSignature(sig []byte) {
+	self.sig = sig
+}
+
 func (self *StubNode) Signature() ([]byte, error) {
 	return self.sig, nil
-}
-
-func (self *StubNode) Add(other types.FuObject) (types.FuObject, error) {
-	panic("should be unused in tests")
-}
-
-func (self *StubNode) List() []types.FuObject {
-	return []types.FuObject{self}
 }
 
 func NewStubNode(name string) *StubNode {

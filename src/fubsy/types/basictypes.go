@@ -15,6 +15,10 @@ import (
 )
 
 type FuObject interface {
+	// Return a brief, human-readable description of the type of this
+	// object. Used in error messages.
+	Typename() string
+
 	// Return a string representation of this object for
 	// debugging/diagnosis. When feasible, it should return the Fubsy
 	// syntax that would reproduce this value, i.e. with
@@ -72,10 +76,6 @@ type FuObject interface {
 	// FuList.ActionExpand() returns a FuList. FinalExpand() never
 	// returns nil.
 	ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, error)
-
-	// Return a brief, human-readable description of the type of this
-	// object. Used in error messages.
-	Typename() string
 }
 
 // a Fubsy string is a Go string, until there's a demonstrated need
@@ -87,6 +87,10 @@ type FuString struct {
 
 func MakeFuString(s string) FuString {
 	return FuString{value: s}
+}
+
+func (self FuString) Typename() string {
+	return "string"
 }
 
 func (self FuString) String() string {
@@ -145,14 +149,15 @@ func (self FuString) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, e
 	return MakeFuString(s), nil
 }
 
-func (self FuString) Typename() string {
-	return "string"
-}
-
 // a Fubsy list is a slice of Fubsy objects
 type FuList struct {
 	NullLookupT
 	values []FuObject
+}
+
+// Convert a variable number of FuObjects to a FuList.
+func MakeFuList(objects ...FuObject) FuList {
+	return FuList{values: objects}
 }
 
 // Convert a variable number of strings to a FuList of FuString.
@@ -164,9 +169,8 @@ func MakeStringList(strings ...string) FuList {
 	return MakeFuList(values...)
 }
 
-// Convert a variable number of FuObjects to a FuList.
-func MakeFuList(objects ...FuObject) FuList {
-	return FuList{values: objects}
+func (self FuList) Typename() string {
+	return "list"
 }
 
 func (self FuList) String() string {
@@ -228,10 +232,6 @@ func (self FuList) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, err
 	return MakeFuList(values...), nil
 }
 
-func (self FuList) Typename() string {
-	return "list"
-}
-
 // stub implementation of FuObject (for use in tests)
 type StubObject struct {
 	name string
@@ -245,6 +245,10 @@ type StubObject struct {
 
 func NewStubObject(name string, expansion FuObject) StubObject {
 	return StubObject{name: name, expansion: expansion}
+}
+
+func (self StubObject) Typename() string {
+	return "stub"
 }
 
 func (self StubObject) String() string {
@@ -277,10 +281,6 @@ func (self StubObject) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject,
 		return self, nil
 	}
 	return self.expansion, nil
-}
-
-func (self StubObject) Typename() string {
-	return "stub"
 }
 
 func unsupportedOperation(self FuObject, other FuObject, detail string) error {

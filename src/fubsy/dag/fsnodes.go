@@ -41,11 +41,6 @@ func (self *FileNode) Typename() string {
 	return "FileNode"
 }
 
-func (self *FileNode) copy() Node {
-	var c FileNode = *self
-	return &c
-}
-
 func (self *FileNode) Equal(other_ types.FuObject) bool {
 	other, ok := other_.(*FileNode)
 	return ok && other.name == self.name
@@ -72,6 +67,11 @@ func (self *FileNode) ActionExpand(
 	ns types.Namespace, ctx *types.ExpandContext) (
 	types.FuObject, error) {
 	return defaultNodeActionExpand(self, ns)
+}
+
+func (self *FileNode) copy() Node {
+	var c FileNode = *self
+	return &c
 }
 
 func (self *FileNode) Exists() (bool, error) {

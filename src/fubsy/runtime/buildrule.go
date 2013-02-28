@@ -63,6 +63,10 @@ func (self *BuildRule) setLocals(ns types.Namespace) {
 }
 
 // Implement FuObject so we can expose BuildRules to the DSL
+func (self *BuildRule) Typename() string {
+	return "BuildRule"
+}
+
 func (self *BuildRule) String() string {
 	return fmt.Sprintf("%v: %v {%v}", self.targets, self.sources, self.action)
 }
@@ -97,8 +101,4 @@ func (self *BuildRule) ActionExpand(
 	ns types.Namespace, ctx *types.ExpandContext) (
 	types.FuObject, error) {
 	return nil, errors.New("BuildRule objects cannot be expanded")
-}
-
-func (self *BuildRule) Typename() string {
-	return "BuildRule"
 }

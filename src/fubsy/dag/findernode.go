@@ -72,6 +72,10 @@ func MakeFinderNode(dag *DAG, includes ...string) *FinderNode {
 	return node
 }
 
+func (self *FinderNode) Typename() string {
+	return "FinderNode"
+}
+
 func (self *FinderNode) String() string {
 	return "<" + strings.Join(self.includes, " ") + ">"
 }
@@ -143,8 +147,30 @@ func (self *FinderNode) List() []types.FuObject {
 	return []types.FuObject{self}
 }
 
-func (self *FinderNode) Typename() string {
-	return "FinderNode"
+// Walk the filesystem for files matching this FinderNode's include
+// patterns. Return the list of matching filenames as a FuList of
+// FileNode.
+func (self *FinderNode) ActionExpand(
+	ns types.Namespace, ctx *types.ExpandContext) (
+	types.FuObject, error) {
+
+	// if case this node was not already expanded by
+	// DAG.ExpandNodes(), do it now so variable references are
+	// followed
+	var err error
+	err = self.NodeExpand(ns)
+	if err != nil {
+		return nil, err
+	}
+	filenames, err := self.FindFiles()
+	if err != nil {
+		return nil, err
+	}
+	var values []types.FuObject
+	for _, filename := range filenames {
+		values = append(values, types.MakeFuString(filename))
+	}
+	return types.MakeFuList(values...), nil
 }
 
 func (self *FinderNode) copy() Node {
@@ -181,32 +207,6 @@ func (self *FinderNode) NodeExpand(ns types.Namespace) error {
 	}
 	self.expanded = true
 	return nil
-}
-
-// Walk the filesystem for files matching this FinderNode's include
-// patterns. Return the list of matching filenames as a FuList of
-// FileNode.
-func (self *FinderNode) ActionExpand(
-	ns types.Namespace, ctx *types.ExpandContext) (
-	types.FuObject, error) {
-
-	// if case this node was not already expanded by
-	// DAG.ExpandNodes(), do it now so variable references are
-	// followed
-	var err error
-	err = self.NodeExpand(ns)
-	if err != nil {
-		return nil, err
-	}
-	filenames, err := self.FindFiles()
-	if err != nil {
-		return nil, err
-	}
-	var values []types.FuObject
-	for _, filename := range filenames {
-		values = append(values, types.MakeFuString(filename))
-	}
-	return types.MakeFuList(values...), nil
 }
 
 // Add dir to the set of prune directories.

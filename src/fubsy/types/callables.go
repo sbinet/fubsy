@@ -80,6 +80,10 @@ func NewVariadicFunction(name string, minargs, maxargs int, code FuCode) *FuFunc
 	return &FuFunction{name: name, minargs: minargs, maxargs: maxargs, code: code}
 }
 
+func (self *FuFunction) Typename() string {
+	return "function"
+}
+
 func (self *FuFunction) String() string {
 	return self.name + "()"
 }
@@ -108,10 +112,6 @@ func (self *FuFunction) List() []FuObject {
 
 func (self *FuFunction) ActionExpand(ns Namespace, ctx *ExpandContext) (FuObject, error) {
 	return self, nil
-}
-
-func (self *FuFunction) Typename() string {
-	return "function"
 }
 
 func (self *FuFunction) Name() string {
