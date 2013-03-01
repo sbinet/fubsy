@@ -48,6 +48,8 @@ class Generator(object):
                         "%s, line %d: invalid substitution: @%s@"
                         % (self.infile.name, lineno, match.group(1)))
                 method(outfile)
+                outfile.write("#line %d \"%s\"\n" %
+                              (lineno+1, self.infile.name))
             else:
                 outfile.write(line)
 
