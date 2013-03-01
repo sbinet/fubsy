@@ -36,8 +36,8 @@ echo "testing packages: $packages"
 build1=".build/1"
 set -e
 for pkg in $packages; do
-    json=coverage-`basename $pkg`.json
-    report=coverage-`basename $pkg`.txt
+    json=.build/coverage-`basename $pkg`.json
+    report=.build/coverage-`basename $pkg`.txt
     run "$build1/bin/gocov test $tagflag -exclude $exclude $pkg > $json"
     run "$build1/bin/gocov report $json > $report"
 done

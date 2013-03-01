@@ -8,5 +8,4 @@
 ^src/fubsy/plugins/empython\.c$
 ^doc/\.build$
 ^examples/.*/classes$
-^coverage-
 (^|/)\.fubsy$
