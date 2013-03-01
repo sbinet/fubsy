@@ -63,7 +63,7 @@ call_builtin(void *gofunc, PyObject *self, PyObject *args) {
 @pymethodtable@
 
 void
-setCallback(int idx, void *gofunc) {
+set_callback(int idx, void *gofunc) {
     int max = sizeof(builtins) / sizeof(builtins[0]);
     assert(idx < max);
     //assert(strcmp(builtins[idx].name, name) == 0);
@@ -71,7 +71,7 @@ setCallback(int idx, void *gofunc) {
 }
 
 int
-installBuiltins() {
+install_builtins() {
     PyObject *fubsy, *main;
 
     fubsy = Py_InitModule("fubsy", methods);
@@ -91,4 +91,119 @@ installBuiltins() {
 
     Py_DECREF(main);
     return 0;
+}
+
+int
+run_python(char *content, char **error, valuelist_t **exported) {
+    int ret = 0;
+    PyObject *main, *maindict, *key, *value;
+    Py_ssize_t dictpos;
+    int itemidx;
+
+    main = PyImport_AddModule("__main__");
+    if (!main) {
+        PyErr_Print();
+        *error = "unable to access Python __main__ module";
+        ret = -1;
+        goto done;
+    }
+    maindict = PyModule_GetDict(main);
+
+    ret = PyRun_SimpleString(content);
+    if (ret < 0) {
+        // would be nice to report at least exception type and value
+        // (Python prints it to stderr along with a traceback, so the
+        // error state has already been cleared by this point)
+        *error = "inline Python plugin raised an exception";
+        goto done;
+    }
+
+    Py_ssize_t maxitems = PyDict_Size(maindict);
+    *exported = (valuelist_t *) calloc(1, sizeof(valuelist_t));
+    (**exported).names = (char **) calloc(maxitems, sizeof(char *));
+    (**exported).values = (PyObject **) calloc(maxitems, sizeof(PyObject *));
+
+    itemidx = 0;
+    dictpos = 0;
+    while (PyDict_Next(maindict, &dictpos, &key, &value)) {
+        char *name = PyString_AS_STRING(key);
+        if (name[0] == '_' || !PyCallable_Check(value))
+            continue;
+
+        (**exported).names[itemidx] = name;
+        (**exported).values[itemidx] = value;
+        itemidx++;
+    }
+    (**exported).numitems = itemidx;
+
+ done:
+    return ret;
+}
+
+char *
+call_python(PyObject *callable, void *args_, char **error) {
+    // in Go, args is *[]string
+    goslice_t *args = (goslice_t *) args_;
+
+    PyObject
+        *pyargs = NULL,
+        *pyresult = NULL,
+        *pystr = NULL;
+    char *result = NULL;
+
+    pyargs = PyTuple_New((Py_ssize_t) args->len);
+    if (!pyargs) {
+        PyErr_Print();
+        *error = "unable to call Python code (failed to create arg tuple)";
+        goto done;
+    }
+
+    gostring_t *argvalues = (gostring_t *) args->data;
+    int i;
+    for (i = 0; i < args->len; i++) {
+        gostring_t *arg = argvalues + i;
+        PyObject *pyarg;
+        pyarg = PyString_FromStringAndSize(arg->bytes, (Py_ssize_t) arg->len);
+        if (!pyarg) {
+            PyErr_Print();
+            *error = "unable to call Python code (failed to create arg string)";
+            goto done;
+        }
+        PyTuple_SET_ITEM(pyargs, (Py_ssize_t) i, pyarg);
+    }
+
+    pyresult = PyObject_Call(callable, pyargs, NULL);
+    if (!pyresult) {
+        PyErr_Print();
+        *error = "Python function raised an exception";
+        goto done;
+    }
+
+    // if Python returns None, we'll return NULL, which becomes nil in Go
+    if (pyresult != Py_None) {
+        pystr = PyObject_Str(pyresult);
+        if (!pystr) {
+            PyErr_Print();
+            *error = "unable to convert Python result to string";
+            goto done;
+        }
+        result = PyString_AS_STRING(pystr);
+    }
+
+ done:
+    Py_XDECREF(pyargs);
+    Py_XDECREF(pyresult);
+    Py_XDECREF(pystr);
+    return result;
+}
+
+void Py_DECREF_(PyObject *o) {
+    Py_DECREF(o);
+}
+
+void
+free_valuelist(valuelist_t *list) {
+    free(list->names);
+    free(list->values);
+    free(list);
 }

@@ -109,7 +109,6 @@ func (self *Runtime) runInlinePlugins() []error {
 			errs = append(errs, MakeLocationError(inline, err))
 		}
 		for name, val := range values {
-			// warn on shadowing?
 			ns.Assign(name, val)
 		}
 	}
