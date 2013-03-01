@@ -22,6 +22,10 @@ else
     packages=$*
 fi
 
+tagdir=".build/tags"
+buildtags=`cd $tagdir && echo *`
+tagflag="-tags='$buildtags'"
+
 exclude="fubsy/testutils,\
 github.com/stretchrcom/testify/assert,\
 code.google.com/p/go-bit/bit,\
@@ -34,6 +38,6 @@ set -e
 for pkg in $packages; do
     json=coverage-`basename $pkg`.json
     report=coverage-`basename $pkg`.txt
-    run "$build1/bin/gocov test -exclude $exclude $pkg > $json"
+    run "$build1/bin/gocov test $tagflag -exclude $exclude $pkg > $json"
     run "$build1/bin/gocov report $json > $report"
 done
